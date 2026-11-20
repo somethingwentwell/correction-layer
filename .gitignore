@@ -1,0 +1,7 @@
+# Nothing generated belongs in this design repository.
+__pycache__/
+*.pyc
+.DS_Store
+*.log
+*.jsonl
+.env

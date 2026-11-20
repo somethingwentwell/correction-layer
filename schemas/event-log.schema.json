@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "event-log.schema.json",
+  "title": "Ledger export (segment)",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. A contiguous segment of a workspace ledger, as exported.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Relative path to this schema, used by tools/check_repo.py."
+    },
+    "_note": {
+      "type": "string",
+      "description": "Marks an example file as proposed/illustrative."
+    },
+    "schema_version": {
+      "const": "cl.event_log/1"
+    },
+    "workspace_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "display_tz": {
+      "type": "string"
+    },
+    "chain": {
+      "type": "object",
+      "properties": {
+        "algorithm": {
+          "type": "string"
+        },
+        "first_seq": {
+          "type": "integer"
+        },
+        "last_seq": {
+          "type": "integer"
+        },
+        "first_prev_hash": {
+          "$ref": "common.schema.json#/$defs/hash"
+        },
+        "head_hash": {
+          "$ref": "common.schema.json#/$defs/hash"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "first_seq",
+        "last_seq",
+        "first_prev_hash",
+        "head_hash"
+      ]
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "event.schema.json"
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "workspace_id",
+    "display_tz",
+    "chain",
+    "events"
+  ],
+  "additionalProperties": false
+}

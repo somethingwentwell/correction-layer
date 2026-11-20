@@ -1,0 +1,368 @@
+{
+  "$schema": "../../schemas/artifact.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies, prices and addresses are fictional. Content hashes are digests of descriptive labels, not of real files.",
+  "schema_version": "cl.artifact/1",
+  "artifact_id": "art_MRP2026A",
+  "name": "Meridian-Renewal-Proposal.docx",
+  "version": {
+    "seq": 1,
+    "content_hash": "sha256:591950830e24e0d5129184832002b6838b92de55b70242bbea5deb4258240147",
+    "size_bytes": 184320,
+    "observed_at": "2026-11-12T01:58:12Z"
+  },
+  "identity": {
+    "declared_extension": ".docx",
+    "detected_type": "docx",
+    "detection": "container_inspection",
+    "extension_matches": true
+  },
+  "artifact_type": "document",
+  "parser": {
+    "id": "docx-core",
+    "version": "0.1.0"
+  },
+  "coverage": [
+    {
+      "component": "body.text",
+      "state": "parsed",
+      "content_bearing": true
+    },
+    {
+      "component": "body.tables",
+      "state": "parsed",
+      "content_bearing": true
+    },
+    {
+      "component": "headers_footers",
+      "state": "parsed",
+      "content_bearing": true
+    },
+    {
+      "component": "footnotes",
+      "state": "absent",
+      "content_bearing": true
+    },
+    {
+      "component": "text_boxes",
+      "state": "absent",
+      "content_bearing": true
+    },
+    {
+      "component": "comments",
+      "state": "parsed",
+      "content_bearing": false,
+      "detail": "1 unresolved comment"
+    },
+    {
+      "component": "tracked_changes",
+      "state": "absent",
+      "content_bearing": false
+    },
+    {
+      "component": "hidden_text",
+      "state": "absent",
+      "content_bearing": true
+    },
+    {
+      "component": "field_codes",
+      "state": "absent",
+      "content_bearing": false
+    },
+    {
+      "component": "embedded.objects",
+      "state": "absent",
+      "content_bearing": true
+    },
+    {
+      "component": "text_in_images",
+      "state": "absent",
+      "content_bearing": true,
+      "detail": "No images in the document"
+    },
+    {
+      "component": "macros",
+      "state": "absent",
+      "content_bearing": false
+    },
+    {
+      "component": "external_links",
+      "state": "absent",
+      "content_bearing": false
+    }
+  ],
+  "content": {
+    "abridged": true,
+    "blocks": [
+      {
+        "locator": "docx:/body/p[1]",
+        "kind": "heading",
+        "text": "Renewal proposal for Meridian Clinics Pte Ltd",
+        "label": "Title (page 1)"
+      },
+      {
+        "locator": "docx:/body/p[18]",
+        "kind": "paragraph",
+        "text": "Pricing reflects the renewal terms discussed in October.",
+        "label": "Page 2, paragraph 6"
+      },
+      {
+        "locator": "docx:/body/tbl[2]/row[1]",
+        "kind": "table_row",
+        "text": "Item | Qty | Unit price | Amount",
+        "label": "Pricing table, header (page 3)"
+      },
+      {
+        "locator": "docx:/body/tbl[2]/row[2]",
+        "kind": "table_row",
+        "text": "HX-200 Flow Sensor | 12 | USD 1,180.00 | USD 14,160.00",
+        "label": "Pricing table, row 1 (page 3)"
+      },
+      {
+        "locator": "docx:/body/tbl[2]/row[3]",
+        "kind": "table_row",
+        "text": "CAL-1Y Calibration Plan (1 year) | 12 | USD 300.00 | USD 3,600.00",
+        "label": "Pricing table, row 2 (page 3)"
+      },
+      {
+        "locator": "docx:/body/tbl[2]/row[4]",
+        "kind": "table_row",
+        "text": "Total | | | USD 17,760.00",
+        "label": "Pricing table, Total (page 3)"
+      },
+      {
+        "locator": "docx:/body/p[44]",
+        "kind": "paragraph",
+        "text": "Valid until: 12 January 2027",
+        "label": "Page 3, below the pricing table"
+      }
+    ]
+  },
+  "fields": [
+    {
+      "path": "customer.name",
+      "value": {
+        "type": "text",
+        "text": "Meridian Clinics Pte Ltd"
+      },
+      "method": "mapping",
+      "confidence": 1.0,
+      "mapping_id": "map_SALESPRP1",
+      "locations": [
+        {
+          "locator": "docx:/body/p[1]",
+          "label": "Title (page 1)"
+        }
+      ]
+    },
+    {
+      "path": "quote.valid_until",
+      "value": {
+        "type": "date",
+        "date": "2027-01-12"
+      },
+      "method": "pattern",
+      "confidence": 1.0,
+      "mapping_id": "map_SALESPRP1",
+      "locations": [
+        {
+          "locator": "docx:/body/p[44]",
+          "label": "Page 3, below the pricing table"
+        }
+      ]
+    },
+    {
+      "path": "quote.line_items[0].item_code",
+      "value": {
+        "type": "text",
+        "text": "HX-200"
+      },
+      "method": "mapping",
+      "confidence": 1.0,
+      "mapping_id": "map_SALESPRP1",
+      "locations": [
+        {
+          "locator": "docx:/body/tbl[2]/row[2]/cell[1]",
+          "label": "Pricing table, row 1, Item (page 3)"
+        }
+      ]
+    },
+    {
+      "path": "quote.line_items[0].quantity",
+      "value": {
+        "type": "number",
+        "number": "12"
+      },
+      "method": "mapping",
+      "confidence": 1.0,
+      "mapping_id": "map_SALESPRP1",
+      "locations": [
+        {
+          "locator": "docx:/body/tbl[2]/row[2]/cell[2]",
+          "label": "Pricing table, row 1, Qty (page 3)"
+        }
+      ]
+    },
+    {
+      "path": "quote.line_items[0].unit_price",
+      "value": {
+        "type": "money",
+        "amount": "1180.00",
+        "currency": "USD"
+      },
+      "method": "mapping",
+      "confidence": 1.0,
+      "mapping_id": "map_SALESPRP1",
+      "locations": [
+        {
+          "locator": "docx:/body/tbl[2]/row[2]/cell[3]",
+          "label": "Pricing table, row 1, Unit price (page 3)"
+        }
+      ]
+    },
+    {
+      "path": "quote.line_items[0].currency",
+      "value": {
+        "type": "text",
+        "text": "USD"
+      },
+      "method": "mapping",
+      "confidence": 1.0,
+      "mapping_id": "map_SALESPRP1",
+      "locations": [
+        {
+          "locator": "docx:/body/tbl[2]/row[2]",
+          "label": "Pricing table, row 1 (page 3)"
+        }
+      ]
+    },
+    {
+      "path": "quote.line_items[0].amount",
+      "value": {
+        "type": "money",
+        "amount": "14160.00",
+        "currency": "USD"
+      },
+      "method": "mapping",
+      "confidence": 1.0,
+      "mapping_id": "map_SALESPRP1",
+      "locations": [
+        {
+          "locator": "docx:/body/tbl[2]/row[2]/cell[4]",
+          "label": "Pricing table, row 1, Amount (page 3)"
+        }
+      ]
+    },
+    {
+      "path": "quote.line_items[1].item_code",
+      "value": {
+        "type": "text",
+        "text": "CAL-1Y"
+      },
+      "method": "mapping",
+      "confidence": 1.0,
+      "mapping_id": "map_SALESPRP1",
+      "locations": [
+        {
+          "locator": "docx:/body/tbl[2]/row[3]/cell[1]",
+          "label": "Pricing table, row 2, Item (page 3)"
+        }
+      ]
+    },
+    {
+      "path": "quote.line_items[1].quantity",
+      "value": {
+        "type": "number",
+        "number": "12"
+      },
+      "method": "mapping",
+      "confidence": 1.0,
+      "mapping_id": "map_SALESPRP1",
+      "locations": [
+        {
+          "locator": "docx:/body/tbl[2]/row[3]/cell[2]",
+          "label": "Pricing table, row 2, Qty (page 3)"
+        }
+      ]
+    },
+    {
+      "path": "quote.line_items[1].unit_price",
+      "value": {
+        "type": "money",
+        "amount": "300.00",
+        "currency": "USD"
+      },
+      "method": "mapping",
+      "confidence": 1.0,
+      "mapping_id": "map_SALESPRP1",
+      "locations": [
+        {
+          "locator": "docx:/body/tbl[2]/row[3]/cell[3]",
+          "label": "Pricing table, row 2, Unit price (page 3)"
+        }
+      ]
+    },
+    {
+      "path": "quote.line_items[1].currency",
+      "value": {
+        "type": "text",
+        "text": "USD"
+      },
+      "method": "mapping",
+      "confidence": 1.0,
+      "mapping_id": "map_SALESPRP1",
+      "locations": [
+        {
+          "locator": "docx:/body/tbl[2]/row[3]",
+          "label": "Pricing table, row 2 (page 3)"
+        }
+      ]
+    },
+    {
+      "path": "quote.line_items[1].amount",
+      "value": {
+        "type": "money",
+        "amount": "3600.00",
+        "currency": "USD"
+      },
+      "method": "mapping",
+      "confidence": 1.0,
+      "mapping_id": "map_SALESPRP1",
+      "locations": [
+        {
+          "locator": "docx:/body/tbl[2]/row[3]/cell[4]",
+          "label": "Pricing table, row 2, Amount (page 3)"
+        }
+      ]
+    },
+    {
+      "path": "quote.total",
+      "value": {
+        "type": "money",
+        "amount": "17760.00",
+        "currency": "USD"
+      },
+      "method": "mapping",
+      "confidence": 1.0,
+      "mapping_id": "map_SALESPRP1",
+      "locations": [
+        {
+          "locator": "docx:/body/tbl[2]/row[4]/cell[4]",
+          "label": "Pricing table, Total (page 3)"
+        }
+      ]
+    }
+  ],
+  "risk_flags": [
+    {
+      "flag": "unresolved_comments",
+      "count": 1,
+      "locations": [
+        {
+          "locator": "docx:/body/p[18]/comment[1]",
+          "label": "Page 2, comment by Priya Nair"
+        }
+      ],
+      "detail": "Comment text is stored as evidence, not shown here."
+    }
+  ]
+}

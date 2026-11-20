@@ -1,0 +1,205 @@
+{
+  "$schema": "../../schemas/run.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies, prices and addresses are fictional. Content hashes are digests of descriptive labels, not of real files.",
+  "schema_version": "cl.run/1",
+  "run_id": "run_MRP00003",
+  "trace_id": "trc_MRP2026A1",
+  "trigger": {
+    "kind": "auto_recheck",
+    "reason": "A trusted source changed while an action was pending",
+    "action_id": "act_MRPSEND2"
+  },
+  "started_at": "2026-11-12T02:41:23Z",
+  "completed_at": "2026-11-12T02:41:23Z",
+  "as_of": "2026-11-12T02:41:23Z",
+  "display_tz": "Asia/Singapore",
+  "actor": {
+    "kind": "system",
+    "id": "sys_ENGINE01",
+    "display_name": "Check engine"
+  },
+  "context": {
+    "workspace_id": "ws_HALDEN01",
+    "project_id": "prj_MERID26R",
+    "area_ids": [],
+    "work_type": "sales_proposal",
+    "status": "resolved",
+    "basis": [
+      "binding",
+      "marker",
+      "default_work_type",
+      "mapping_match"
+    ]
+  },
+  "artifact": {
+    "artifact_id": "art_MRP2026A",
+    "name": "Meridian-Renewal-Proposal.docx",
+    "version_seq": 2,
+    "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+    "artifact_type": "document",
+    "parser": {
+      "id": "docx-core",
+      "version": "0.1.0"
+    }
+  },
+  "action": {
+    "type": "send_external",
+    "params_digest": null
+  },
+  "policy": {
+    "policy_rev": 10,
+    "policy_as_of": "2026-11-11T08:20:03Z",
+    "ruleset_digest": "sha256:87a5299514f220bf8c4c3e0d3daead406d37b38edc53faa8be3d6078a0430d42",
+    "engine_version": "0.1.0"
+  },
+  "sources": [
+    {
+      "source_id": "src_PRICELST",
+      "snapshot_id": "snap_PL2026Q4B",
+      "imported_at": "2026-11-12T02:41:22Z",
+      "confirmed_at": "2026-11-12T02:41:22Z",
+      "age_days": 0,
+      "fresh": true,
+      "fresh_until": "2026-12-27T02:41:22Z"
+    }
+  ],
+  "inventory": {
+    "workspace_active_rules": 10,
+    "in_scope": 7,
+    "out_of_scope": 3,
+    "out_of_scope_recomputable": true
+  },
+  "coverage_gaps": [],
+  "results": [
+    {
+      "rule_id": "rul_PRICECUR",
+      "revision": 1,
+      "title": "Quoted prices match the current price list",
+      "rule_status": "active",
+      "method": "source_backed",
+      "enforcement": "block",
+      "effective_enforcement": "block",
+      "outcome": "pass",
+      "reason": "2 of 2 lines match the price list",
+      "source_snapshot_id": "snap_PL2026Q4B",
+      "compared": 2,
+      "findings": []
+    },
+    {
+      "rule_id": "rul_SGDMERID",
+      "revision": 1,
+      "title": "Meridian Clinics quotes are in SGD",
+      "rule_status": "active",
+      "method": "deterministic",
+      "enforcement": "block",
+      "effective_enforcement": "block",
+      "outcome": "pass",
+      "reason": "3 of 3 amounts are in SGD",
+      "compared": 3,
+      "findings": []
+    },
+    {
+      "rule_id": "rul_TOTALSOK",
+      "revision": 1,
+      "title": "Line totals and the grand total add up",
+      "rule_status": "active",
+      "method": "deterministic",
+      "enforcement": "block",
+      "effective_enforcement": "block",
+      "outcome": "pass",
+      "reason": "2 line amounts and the total were recomputed and match",
+      "compared": 3,
+      "findings": []
+    },
+    {
+      "rule_id": "rul_CUSTMTCH",
+      "revision": 1,
+      "title": "Customer named in the document matches the project",
+      "rule_status": "active",
+      "method": "deterministic",
+      "enforcement": "block",
+      "effective_enforcement": "block",
+      "outcome": "pass",
+      "reason": "The document names Meridian Clinics Pte Ltd, which is this project's customer",
+      "compared": 1,
+      "findings": []
+    },
+    {
+      "rule_id": "rul_VALIDDAT",
+      "revision": 1,
+      "title": "Quote has a validity date at least 30 days ahead",
+      "rule_status": "active",
+      "method": "deterministic",
+      "enforcement": "block",
+      "effective_enforcement": "block",
+      "outcome": "pass",
+      "reason": "Valid until 12 Jan 2027, which is 61 days after the check date",
+      "compared": 1,
+      "findings": []
+    },
+    {
+      "rule_id": "rul_BIGDEAL1",
+      "revision": 1,
+      "title": "Large quotes (100,000 or more) include a Credit terms section",
+      "rule_status": "active",
+      "method": "deterministic",
+      "enforcement": "block",
+      "effective_enforcement": "block",
+      "outcome": "not_applicable",
+      "reason": "Condition 'total is 100,000 or more' is false: the total is 24,600.00",
+      "findings": []
+    },
+    {
+      "rule_id": "rul_NOMARKUP",
+      "revision": 1,
+      "title": "No unresolved comments or tracked changes",
+      "rule_status": "trial",
+      "method": "deterministic",
+      "enforcement": "block",
+      "effective_enforcement": "warn",
+      "outcome": "fail",
+      "reason": "1 unresolved comment. This rule is on trial, so it is a note only",
+      "compared": 1,
+      "findings": [
+        {
+          "finding_id": "fnd_MRP3M001",
+          "location": {
+            "locator": "docx:/body/p[18]/comment[1]",
+            "label": "Page 2, comment by Priya Nair"
+          },
+          "found": {
+            "type": "text",
+            "text": "1 unresolved comment"
+          },
+          "expected": {
+            "type": "text",
+            "text": "no unresolved comments"
+          },
+          "message": "The document has an unresolved comment",
+          "fix_hint": "Resolve or delete the comment before sending."
+        }
+      ]
+    }
+  ],
+  "verdict": "ready",
+  "counts": {
+    "in_scope": 7,
+    "pass": 5,
+    "fail": 0,
+    "unknown": 0,
+    "not_applicable": 1,
+    "error": 0,
+    "conflict": 0,
+    "waived": 0,
+    "skipped": 0,
+    "notes": 1,
+    "blocking_findings": 0
+  },
+  "fix_proposal_ids": [],
+  "receipt_id": "rcp_MRP00003",
+  "reproducibility": {
+    "deterministic": true,
+    "inputs_digest": "sha256:08a7a3b1117e91acc60d65d0a3dde3fb7e9dc21df6262a355643d63f669c8bf2",
+    "non_reproducible_rules": []
+  }
+}

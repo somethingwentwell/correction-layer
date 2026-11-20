@@ -1,0 +1,321 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "context.schema.json",
+  "title": "Resolved context and session brief",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. What a client receives from hello or resolve: where it is, which rules apply there, and what is gated. Advisory.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Relative path to this schema, used by tools/check_repo.py."
+    },
+    "_note": {
+      "type": "string",
+      "description": "Marks an example file as proposed/illustrative."
+    },
+    "schema_version": {
+      "const": "cl.context/1"
+    },
+    "session_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "resolved_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "enforcement_tier": {
+      "enum": [
+        "advisory",
+        "gateway"
+      ]
+    },
+    "workspace": {
+      "type": "object",
+      "properties": {
+        "workspace_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "display_tz": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "workspace_id",
+        "name",
+        "display_tz"
+      ]
+    },
+    "resolution": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "resolved",
+            "ambiguous",
+            "unknown"
+          ]
+        },
+        "basis": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "binding",
+              "marker",
+              "area_marker",
+              "confirmed_by_user",
+              "default_work_type",
+              "mapping_match",
+              "lineage"
+            ]
+          }
+        },
+        "project": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "project_id": {
+                  "$ref": "common.schema.json#/$defs/id"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "facts": {
+                  "type": "object"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "project_id",
+                "name",
+                "facts"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "area_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/id"
+          }
+        },
+        "work_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "$ref": "common.schema.json#/$defs/id"
+              },
+              "name": {
+                "type": "string"
+              },
+              "why": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "project_id",
+              "name",
+              "why"
+            ]
+          }
+        },
+        "context_changed": {
+          "type": "boolean"
+        },
+        "question": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "basis",
+        "project",
+        "area_ids",
+        "work_type",
+        "candidates"
+      ]
+    },
+    "policy_rev": {
+      "type": "integer"
+    },
+    "brief": {
+      "type": "object",
+      "properties": {
+        "in_scope_rule_count": {
+          "type": "integer",
+          "description": "Always exact, even when the list below is shortened."
+        },
+        "must_pass_count": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "rule_id": {
+                "$ref": "common.schema.json#/$defs/id"
+              },
+              "revision": {
+                "type": "integer"
+              },
+              "statement": {
+                "type": "string"
+              },
+              "enforcement": {
+                "$ref": "common.schema.json#/$defs/enforcement"
+              },
+              "status": {
+                "$ref": "common.schema.json#/$defs/rule_status"
+              },
+              "method": {
+                "$ref": "common.schema.json#/$defs/method"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "rule_id",
+              "revision",
+              "statement",
+              "enforcement",
+              "status"
+            ]
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source_id": {
+                "$ref": "common.schema.json#/$defs/id"
+              },
+              "name": {
+                "type": "string"
+              },
+              "snapshot_id": {
+                "$ref": "common.schema.json#/$defs/id"
+              },
+              "imported_at": {
+                "$ref": "common.schema.json#/$defs/timestamp"
+              },
+              "fresh": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "source_id",
+              "name",
+              "fresh"
+            ]
+          }
+        },
+        "guidance": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Notes for people and assistants that are not enforced."
+        },
+        "instructions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "in_scope_rule_count",
+        "must_pass_count",
+        "truncated",
+        "rules",
+        "sources"
+      ]
+    },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "label": {
+            "enum": [
+              "GATED",
+              "ADVISORY",
+              "OBSERVED",
+              "NOT_COVERED"
+            ]
+          },
+          "qualifier": {
+            "enum": [
+              "exclusive",
+              "by_convention",
+              "same_account"
+            ],
+            "description": "For GATED only: is the gated route the only route?"
+          },
+          "adapter_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "needs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "action",
+          "label"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "session_id",
+    "resolved_at",
+    "enforcement_tier",
+    "workspace",
+    "resolution",
+    "policy_rev",
+    "brief",
+    "coverage"
+  ],
+  "additionalProperties": false
+}

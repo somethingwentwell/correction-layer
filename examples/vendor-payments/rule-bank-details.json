@@ -1,0 +1,107 @@
+{
+  "$schema": "../../schemas/rule.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies, prices and addresses are fictional. Content hashes are digests of descriptive labels, not of real files.",
+  "schema_version": "cl.rule/1",
+  "rule_id": "rul_BANKREGR",
+  "revision": 1,
+  "status": "active",
+  "supersedes": null,
+  "title": "Payee bank details match the vendor register",
+  "statement": "For every row in the payment table, the bank account must equal the bank account for that vendor in Vendor register, using the latest register, confirmed within the last 7 days.",
+  "origin": {
+    "kind": "human_correction",
+    "correction_id": "cor_BANK0001"
+  },
+  "owner": "usr_TOMAS001",
+  "review_by": "2027-04-30",
+  "scope": {
+    "level": "area",
+    "workspace_id": "ws_CASTLEBK1",
+    "project_selector": null,
+    "project_id": "prj_APRUNS26",
+    "area_id": "area_PAYBATCH",
+    "artifact_id": null,
+    "work_types": [
+      "vendor_payment_batch"
+    ],
+    "artifact_types": [
+      "spreadsheet"
+    ],
+    "actions": [
+      "export_bank_file"
+    ]
+  },
+  "applies_when": null,
+  "method": "source_backed",
+  "enforcement": "block",
+  "locked": true,
+  "check": {
+    "kind": "field_matches_source",
+    "targets": [
+      "payment.rows[*].bank_account"
+    ],
+    "params": {
+      "lookup_key": {
+        "vendor_id": "payment.rows[*].vendor_id"
+      },
+      "source_value": "bank_account",
+      "compare": "text_equal_normalized"
+    }
+  },
+  "requires": {
+    "fields": [
+      "payment.rows[*].vendor_id",
+      "payment.rows[*].bank_account"
+    ],
+    "components": [
+      "sheets.cells",
+      "sheets.hidden"
+    ]
+  },
+  "source": {
+    "source_id": "src_VENDRREG",
+    "max_age_days": 7,
+    "require_latest": true,
+    "missing_key": "fail"
+  },
+  "message": {
+    "problem": "Bank account does not match the vendor register",
+    "fix_hint": "Use the bank account recorded in the vendor register, or have the register updated by its owner first."
+  },
+  "cases": [
+    {
+      "case_id": "case_BANK00N1",
+      "kind": "negative",
+      "description": "October batch as paid: one payee with a superseded bank account",
+      "artifact_hash": "sha256:672fcd8dfa20fb320dc81217bb9fe282cbeb7907d467643de98a15a3d2dde694",
+      "source_snapshot_id": "snap_VR202610A",
+      "expect": "fail",
+      "last_result": "fail",
+      "last_run_at": "2026-11-02T10:14:00Z"
+    },
+    {
+      "case_id": "case_BANK00P1",
+      "kind": "positive",
+      "description": "October batch with the account corrected",
+      "artifact_hash": "sha256:8f6539140f3e9a24fe3390c13af7905c925aea1d724aa17668a89dab25285b7a",
+      "source_snapshot_id": "snap_VR202610A",
+      "expect": "pass",
+      "last_result": "pass",
+      "last_run_at": "2026-11-02T10:14:00Z"
+    }
+  ],
+  "exception_policy": {
+    "grantable_by": [
+      "rule_owner"
+    ],
+    "max_days": 3
+  },
+  "approval": {
+    "proposed_by": "usr_AISHA001",
+    "approved_by": "usr_TOMAS001",
+    "approved_at": "2026-11-02T10:31:00Z",
+    "activated_at": "2026-11-02T10:31:00Z",
+    "self_approval": false,
+    "policy_rev": 5
+  }
+}

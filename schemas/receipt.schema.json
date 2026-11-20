@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "receipt.schema.json",
+  "title": "Validation receipt",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. Signed evidence that one exact artifact version met the in-scope rules for one action. Evidence, not authorization.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Relative path to this schema, used by tools/check_repo.py."
+    },
+    "_note": {
+      "type": "string",
+      "description": "Marks an example file as proposed/illustrative."
+    },
+    "schema_version": {
+      "const": "cl.receipt/1"
+    },
+    "receipt_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "run_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "trace_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "workspace_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "area_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/id"
+      }
+    },
+    "work_type": {
+      "type": "string"
+    },
+    "artifact": {
+      "type": "object",
+      "properties": {
+        "artifact_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "version_seq": {
+          "type": "integer"
+        },
+        "content_hash": {
+          "$ref": "common.schema.json#/$defs/hash"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "content_hash"
+      ]
+    },
+    "action": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "params_digest": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/hash"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "params_digest"
+      ]
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "policy_rev": {
+          "type": "integer"
+        },
+        "ruleset_digest": {
+          "$ref": "common.schema.json#/$defs/hash"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "policy_rev",
+        "ruleset_digest"
+      ]
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/source_use"
+      }
+    },
+    "parser": {
+      "$ref": "common.schema.json#/$defs/parser"
+    },
+    "engine_version": {
+      "type": "string"
+    },
+    "exceptions_applied": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/id"
+      }
+    },
+    "attestations": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/id"
+      }
+    },
+    "verdict": {
+      "const": "ready"
+    },
+    "issued_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "expires_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "single_use": {
+      "const": true
+    },
+    "status": {
+      "enum": [
+        "valid",
+        "invalidated",
+        "expired",
+        "consumed"
+      ]
+    },
+    "status_reason": {
+      "type": "string"
+    },
+    "consumed_by": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "grants_permission": {
+      "const": false,
+      "description": "A receipt never authorizes an action."
+    },
+    "signature": {
+      "type": "object",
+      "properties": {
+        "alg": {
+          "type": "string"
+        },
+        "key_id": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "alg",
+        "key_id",
+        "value"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "receipt_id",
+    "run_id",
+    "workspace_id",
+    "project_id",
+    "area_ids",
+    "work_type",
+    "artifact",
+    "action",
+    "policy",
+    "sources",
+    "parser",
+    "engine_version",
+    "exceptions_applied",
+    "attestations",
+    "verdict",
+    "issued_at",
+    "expires_at",
+    "single_use",
+    "status",
+    "grants_permission",
+    "signature"
+  ],
+  "additionalProperties": false
+}

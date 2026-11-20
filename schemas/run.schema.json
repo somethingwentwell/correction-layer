@@ -1,0 +1,510 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "run.schema.json",
+  "title": "Check run",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. One check of one artifact version for one action. Holds a result for EVERY rule in scope, not only failures.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Relative path to this schema, used by tools/check_repo.py."
+    },
+    "_note": {
+      "type": "string",
+      "description": "Marks an example file as proposed/illustrative."
+    },
+    "schema_version": {
+      "const": "cl.run/1"
+    },
+    "run_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "trace_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "trigger": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "user_request",
+            "agent_call",
+            "auto_recheck",
+            "pre_action",
+            "backtest",
+            "case_suite"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "action_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "reason"
+      ]
+    },
+    "started_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "completed_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "as_of": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "display_tz": {
+      "type": "string"
+    },
+    "actor": {
+      "$ref": "common.schema.json#/$defs/actor"
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "workspace_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "project_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "area_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/id"
+          }
+        },
+        "work_type": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "resolved"
+          ]
+        },
+        "basis": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "workspace_id",
+        "project_id",
+        "area_ids",
+        "work_type",
+        "status",
+        "basis"
+      ]
+    },
+    "artifact": {
+      "type": "object",
+      "properties": {
+        "artifact_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version_seq": {
+          "type": "integer"
+        },
+        "content_hash": {
+          "$ref": "common.schema.json#/$defs/hash"
+        },
+        "artifact_type": {
+          "type": "string"
+        },
+        "parser": {
+          "$ref": "common.schema.json#/$defs/parser"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "version_seq",
+        "content_hash",
+        "parser"
+      ]
+    },
+    "action": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "params_digest": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/hash"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ]
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "policy_rev": {
+          "type": "integer"
+        },
+        "policy_as_of": {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        "ruleset_digest": {
+          "$ref": "common.schema.json#/$defs/hash"
+        },
+        "engine_version": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "policy_rev",
+        "ruleset_digest",
+        "engine_version"
+      ]
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/source_use"
+      }
+    },
+    "inventory": {
+      "type": "object",
+      "properties": {
+        "workspace_active_rules": {
+          "type": "integer"
+        },
+        "in_scope": {
+          "type": "integer"
+        },
+        "out_of_scope": {
+          "type": "integer"
+        },
+        "out_of_scope_recomputable": {
+          "const": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "workspace_active_rules",
+        "in_scope",
+        "out_of_scope",
+        "out_of_scope_recomputable"
+      ]
+    },
+    "coverage_gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "component": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "attestation_id": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/id"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "component",
+          "state"
+        ]
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rule_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "rule_status": {
+            "$ref": "common.schema.json#/$defs/rule_status"
+          },
+          "method": {
+            "$ref": "common.schema.json#/$defs/method"
+          },
+          "enforcement": {
+            "$ref": "common.schema.json#/$defs/enforcement"
+          },
+          "effective_enforcement": {
+            "allOf": [
+              {
+                "$ref": "common.schema.json#/$defs/enforcement"
+              }
+            ],
+            "description": "After caps: trial and model_review rules are capped at warn."
+          },
+          "outcome": {
+            "$ref": "common.schema.json#/$defs/outcome"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Always present: why this outcome."
+          },
+          "unknown_reason": {
+            "enum": [
+              "source_stale",
+              "source_missing",
+              "key_not_in_source",
+              "ambiguous_key",
+              "field_not_found",
+              "low_confidence",
+              "unsupported_content",
+              "awaiting_attestation",
+              "action_details_missing",
+              "applicability_undecidable"
+            ]
+          },
+          "underlying_outcome": {
+            "$ref": "common.schema.json#/$defs/outcome"
+          },
+          "exception_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "conflicts_with": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/id"
+            }
+          },
+          "source_snapshot_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "compared": {
+            "type": "integer"
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "finding_id": {
+                  "$ref": "common.schema.json#/$defs/id"
+                },
+                "location": {
+                  "$ref": "common.schema.json#/$defs/location"
+                },
+                "field_path": {
+                  "type": "string"
+                },
+                "found": {
+                  "$ref": "common.schema.json#/$defs/typed_value"
+                },
+                "expected": {
+                  "$ref": "common.schema.json#/$defs/typed_value"
+                },
+                "evidence": {
+                  "type": "object",
+                  "properties": {
+                    "source_id": {
+                      "$ref": "common.schema.json#/$defs/id"
+                    },
+                    "snapshot_id": {
+                      "$ref": "common.schema.json#/$defs/id"
+                    },
+                    "source_row": {
+                      "type": "integer"
+                    },
+                    "source_key": {
+                      "type": "object"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "message": {
+                  "type": "string"
+                },
+                "fix_hint": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "finding_id",
+                "location",
+                "found",
+                "expected",
+                "message"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "rule_id",
+          "revision",
+          "title",
+          "method",
+          "enforcement",
+          "effective_enforcement",
+          "outcome",
+          "reason",
+          "findings"
+        ]
+      },
+      "minItems": 0
+    },
+    "verdict": {
+      "$ref": "common.schema.json#/$defs/verdict"
+    },
+    "counts": {
+      "type": "object",
+      "properties": {
+        "in_scope": {
+          "type": "integer"
+        },
+        "pass": {
+          "type": "integer"
+        },
+        "fail": {
+          "type": "integer",
+          "description": "Rules that failed with effective enforcement block"
+        },
+        "unknown": {
+          "type": "integer",
+          "description": "Rules with outcome unknown and effective enforcement block"
+        },
+        "error": {
+          "type": "integer",
+          "description": "Rules that errored with effective enforcement block"
+        },
+        "conflict": {
+          "type": "integer",
+          "description": "Rules in conflict with effective enforcement block"
+        },
+        "not_applicable": {
+          "type": "integer"
+        },
+        "waived": {
+          "type": "integer"
+        },
+        "skipped": {
+          "type": "integer"
+        },
+        "notes": {
+          "type": "integer",
+          "description": "Rules not met or not verifiable with effective enforcement warn"
+        },
+        "blocking_findings": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "in_scope",
+        "pass",
+        "fail",
+        "unknown",
+        "error",
+        "conflict",
+        "not_applicable",
+        "waived",
+        "skipped",
+        "notes",
+        "blocking_findings"
+      ]
+    },
+    "fix_proposal_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/id"
+      }
+    },
+    "receipt_id": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reproducibility": {
+      "type": "object",
+      "properties": {
+        "deterministic": {
+          "type": "boolean"
+        },
+        "inputs_digest": {
+          "$ref": "common.schema.json#/$defs/hash"
+        },
+        "non_reproducible_rules": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/id"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "deterministic",
+        "inputs_digest"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "trace_id",
+    "trigger",
+    "started_at",
+    "completed_at",
+    "as_of",
+    "display_tz",
+    "actor",
+    "context",
+    "artifact",
+    "action",
+    "policy",
+    "sources",
+    "inventory",
+    "coverage_gaps",
+    "results",
+    "verdict",
+    "counts",
+    "receipt_id",
+    "reproducibility"
+  ],
+  "additionalProperties": false
+}

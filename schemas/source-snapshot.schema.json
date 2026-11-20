@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "source-snapshot.schema.json",
+  "title": "Trusted source and snapshot",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. A trusted source's registration and one immutable snapshot of it.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Relative path to this schema, used by tools/check_repo.py."
+    },
+    "_note": {
+      "type": "string",
+      "description": "Marks an example file as proposed/illustrative."
+    },
+    "schema_version": {
+      "const": "cl.source_snapshot/1"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "source_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "workspace_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "owner": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "authority_statement": {
+          "type": "string",
+          "description": "What the owner vouches for, in words."
+        },
+        "kind": {
+          "enum": [
+            "file_import",
+            "connector"
+          ]
+        },
+        "key_columns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "value_columns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "freshness": {
+          "type": "object",
+          "properties": {
+            "max_age_days": {
+              "type": "integer"
+            },
+            "require_latest": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "max_age_days",
+            "require_latest"
+          ]
+        },
+        "available_to_projects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Project ids, or [\"*\"] for all projects in the workspace"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "workspace_id",
+        "name",
+        "owner",
+        "kind",
+        "key_columns",
+        "value_columns",
+        "freshness",
+        "available_to_projects"
+      ]
+    },
+    "snapshot": {
+      "type": "object",
+      "properties": {
+        "snapshot_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "content_hash": {
+          "$ref": "common.schema.json#/$defs/hash"
+        },
+        "imported_by": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "imported_at": {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        "confirmed_at": {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        "effective_from": {
+          "$ref": "common.schema.json#/$defs/date"
+        },
+        "row_count": {
+          "type": "integer"
+        },
+        "rows_unusable": {
+          "type": "integer",
+          "description": "Rows rejected at import (e.g. formulas without cached values)"
+        },
+        "supersedes": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "origin_file": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "detected_type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "detected_type"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "snapshot_id",
+        "content_hash",
+        "imported_by",
+        "imported_at",
+        "row_count",
+        "supersedes"
+      ]
+    },
+    "rows_excerpt": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "row": {
+            "type": "integer"
+          },
+          "key": {
+            "type": "object"
+          },
+          "values": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "row",
+          "key",
+          "values"
+        ]
+      },
+      "description": "A few rows, for illustration only."
+    }
+  },
+  "required": [
+    "schema_version",
+    "source",
+    "snapshot"
+  ],
+  "additionalProperties": false
+}

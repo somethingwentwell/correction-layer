@@ -1,0 +1,27 @@
+# 10 · Open questions
+
+> Each question has a **recommended default** so that work is not blocked, and a note on what would change the answer.
+
+| # | Question | Recommended default | Revisit when |
+|---|----------|---------------------|--------------|
+| Q1 | How is the app packaged: a desktop shell, or a local service with a browser-based interface on loopback? | Local service plus browser-based interface, started from a small launcher. One codebase for solo and team mode | Prototype testing shows users are confused by "an app that opens in a browser" |
+| Q2 | Must registered folders contain a marker file? Some users dislike hidden files in shared folders | Write the marker by default. Offer "no marker" per folder; such folders need one confirmation after a move or on a new device | Shared-drive pilots report friction |
+| Q3 | How long is a receipt valid? | 24 hours, shortened to the earliest freshness limit of any source used; configurable per action | Pilots show approvals routinely arriving later than that |
+| Q4 | If a receipt is replaced after an automatic recheck (same bytes, still Ready), does an existing approval carry over? | No. The approver is asked again, with what changed highlighted (e.g. "price list replaced; 2 of 2 prices still match") | Approver fatigue is observed; a workspace-level opt-in for carry-over on byte-identical artifacts could then be added |
+| Q5 | How prominent should "couldn't verify" be for note-level rules? | Shown under Notes with the same wording as must-pass unknowns, never hidden | Users miss them, or are overwhelmed by them |
+| Q6 | Should one rule be able to block for one action and only note for another? | No. One enforcement per rule; the rule's scope lists the actions it applies to. A second rule covers the softer case | Rule lists fill with near-duplicate pairs |
+| Q7 | Are the retention defaults in [Observability §9.3](02-observability.md#93-retention-proposed-defaults-configurable-per-workspace) right? | Treat them as placeholders. Each deployment sets them with its own legal and customer obligations in mind | Before any pilot with real customer data |
+| Q8 | Is store-level encryption needed in the MVP? | Rely on operating-system disk encryption in the MVP and say so at setup. Encrypt evidence and blobs with the workspace key in team mode | A pilot requires it earlier |
+| Q9 | Is the AI translator on by default, and with which provider? | Off until the workspace owner chooses a provider (including a locally run model) in settings. Onboarding offers it once. Templates always work | Usability tests show the template picker alone is too hard |
+| Q10 | How long is a trial, and does a rule ever promote itself? | 10 checks by default, then the owner is asked. Never automatic | — |
+| Q11 | At what size does the product suggest turning a family of rules into a table? | 5 similar rules | Pilot data |
+| Q12 | Below what count are effectiveness rates suppressed? | 20 first checks in the period | Statistical review before the effectiveness view ships |
+| Q13 | Who defines field dictionaries for new kinds of work? | The product ships the sales-proposal dictionary in the MVP. "Add a field by pointing" for users comes in Phase 2 | A second domain is piloted |
+| Q14 | What is team mode's topology? | A self-hostable workspace host that members' apps connect to. No decision on a vendor-hosted offering | Demand, and a privacy review |
+| Q15 | Should the release-folder adapter stamp the released file itself (a property or visible reference)? | No. Released bytes equal checked bytes; the release record is a separate file beside it | Recipients need an in-document reference |
+| Q16 | What confidence thresholds apply to OCR and to heuristic PDF tables? | Unset. To be chosen from tests on real documents in Phase 2 and 3; until then such values need confirmation | Test results exist |
+| Q17 | Should registered folders be auto-checked on every save? | Not in the MVP. New versions are noticed (OBSERVED) but checked only on request, before a gated action, or automatically when the artifact already has open findings or a pending action. A per-project "check on every save" option comes later | Users ask for it, or pilots show drafts going unchecked for long periods |
+| Q18 | How does this relate to the encode-the-correction codebase? | Separate codebase, shared idea. Later, an importer could bring its regex and path checks in as `text_contains` rules for text artifacts | A user of both asks for it |
+| Q19 | Product name and licence | "Correction Layer" is a working name. Licence undecided; nothing in the design depends on it | Before any public release |
+| Q21 | Which records still lack a proposed schema? | Exception, attestation, fix proposal, change and trace are described in prose and appear inside event payloads, but have no schema file yet. Write them before implementation starts | Phase 0 |
+| Q20 | Should approvals be possible away from the main machine (e.g. on a phone)? | Not in the MVP. In team mode, through the host's authenticated web interface only; never by replying to a message | Team-mode design |

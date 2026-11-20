@@ -1,0 +1,1665 @@
+{
+  "$schema": "../../schemas/event-log.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies, prices and addresses are fictional. Content hashes are digests of descriptive labels, not of real files.",
+  "schema_version": "cl.event_log/1",
+  "workspace_id": "ws_HALDEN01",
+  "display_tz": "Asia/Singapore",
+  "chain": {
+    "algorithm": "sha256(prev_hash + newline + canonical JSON of the event without 'hash' and 'payload')",
+    "first_seq": 58,
+    "last_seq": 94,
+    "first_prev_hash": "sha256:9ffa35fae80078c7926c08992363597466ce38d9c6c5f342c975d1ea734843b8",
+    "head_hash": "sha256:d84df8e45734780465936efa230afb931766cfbecbde66a1be7025b7c251859c",
+    "note": "A contiguous segment of the workspace ledger, 10 to 12 Nov 2026. Earlier events (setup, starter rules) are not included."
+  },
+  "events": [
+    {
+      "event_id": "evt_000058",
+      "seq": 58,
+      "type": "correction.recorded",
+      "occurred_at": "2026-11-10T06:05:12Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "human",
+        "id": "usr_MARCUS01",
+        "display_name": "Marcus Lim"
+      },
+      "subject": {
+        "kind": "correction",
+        "id": "cor_PRICE001"
+      },
+      "refs": {
+        "correction_id": "cor_PRICE001",
+        "artifact_id": "art_PILOTQ01",
+        "content_hash": "sha256:de47ca6e8864e3eec50245f631d2f7445b28eab8caee4a18b9b58ebcbd40402c"
+      },
+      "caused_by": [],
+      "policy_rev": 7,
+      "summary": "Marcus Lim recorded a correction about Meridian-Pilot-Quote.docx, Pricing table row 1.",
+      "payload": {
+        "text": "The HX-200 price here is last year's. Quotes must use the current price list.",
+        "channel": "app",
+        "location": {
+          "locator": "docx:/body/tbl[2]/row[2]/cell[3]",
+          "label": "Pricing table, row 1, Unit price (page 3)"
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:d8380d091eeadde1a71f441de9eed8bd811eb8c4b191af5822d027da1c2474d8",
+      "classification": "rule_text",
+      "prev_hash": "sha256:9ffa35fae80078c7926c08992363597466ce38d9c6c5f342c975d1ea734843b8",
+      "hash": "sha256:ca87774412484aacec814851926a5eae0b14faaff2f5eae47f169d5887a7f3c7",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000059",
+      "seq": 59,
+      "type": "rule.candidate_created",
+      "occurred_at": "2026-11-10T06:05:40Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "system",
+        "id": "sys_TRANSLTR",
+        "display_name": "Correction translator",
+        "on_behalf_of": "usr_MARCUS01"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_PRICECUR"
+      },
+      "refs": {
+        "correction_id": "cor_PRICE001",
+        "rule_id": "rul_PRICECUR",
+        "rule_revision": 1
+      },
+      "caused_by": [
+        "evt_000058"
+      ],
+      "policy_rev": 7,
+      "summary": "Candidate rule drafted from the correction (inactive): Quoted prices match the current price list.",
+      "payload": {
+        "proposed_by": "translator",
+        "ai_model_used": true,
+        "check_kind": "field_matches_source",
+        "suggested_scope_level": "workspace",
+        "status": "candidate"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:5ffe442d9b4f5f4237c91c043eb79f08d15aae58cb3a75050d7654bb8829db28",
+      "classification": "rule_text",
+      "prev_hash": "sha256:ca87774412484aacec814851926a5eae0b14faaff2f5eae47f169d5887a7f3c7",
+      "hash": "sha256:99e064b354d565c9735c66094ffd1aff9e8407e0b79fbefd18b490aa9be6da19",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000060",
+      "seq": 60,
+      "type": "correction.recorded",
+      "occurred_at": "2026-11-10T06:07:02Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "human",
+        "id": "usr_MARCUS01",
+        "display_name": "Marcus Lim"
+      },
+      "subject": {
+        "kind": "correction",
+        "id": "cor_SGD00001"
+      },
+      "refs": {
+        "correction_id": "cor_SGD00001",
+        "artifact_id": "art_PILOTQ01",
+        "content_hash": "sha256:de47ca6e8864e3eec50245f631d2f7445b28eab8caee4a18b9b58ebcbd40402c"
+      },
+      "caused_by": [],
+      "policy_rev": 7,
+      "summary": "Marcus Lim recorded a correction about Meridian-Pilot-Quote.docx, Pricing table.",
+      "payload": {
+        "text": "This customer's quotes must be in SGD",
+        "channel": "app",
+        "location": {
+          "locator": "docx:/body/tbl[2]",
+          "label": "Pricing table (page 3)"
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:d7bc4346b5305f4b6c449a5e79b15367f9d89cff4c6ef39b47317f9a4c8991a1",
+      "classification": "rule_text",
+      "prev_hash": "sha256:99e064b354d565c9735c66094ffd1aff9e8407e0b79fbefd18b490aa9be6da19",
+      "hash": "sha256:31a320d85ebfe1440da2875512075c4c591028654ece2a7d98982d24b2444bd7",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000061",
+      "seq": 61,
+      "type": "rule.candidate_created",
+      "occurred_at": "2026-11-10T06:07:20Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "system",
+        "id": "sys_TRANSLTR",
+        "display_name": "Correction translator",
+        "on_behalf_of": "usr_MARCUS01"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_SGDMERID"
+      },
+      "refs": {
+        "correction_id": "cor_SGD00001",
+        "rule_id": "rul_SGDMERID",
+        "rule_revision": 1
+      },
+      "caused_by": [
+        "evt_000060"
+      ],
+      "policy_rev": 7,
+      "summary": "Candidate rule drafted from the correction (inactive): Meridian Clinics quotes are in SGD.",
+      "payload": {
+        "proposed_by": "translator",
+        "ai_model_used": true,
+        "check_kind": "field_in_set",
+        "suggested_scope_level": "project_group",
+        "status": "candidate"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:2ebfde6fc6a17a77195d3edb62edc5ca7dc38ed512159b326251743d4b6c69f2",
+      "classification": "rule_text",
+      "prev_hash": "sha256:31a320d85ebfe1440da2875512075c4c591028654ece2a7d98982d24b2444bd7",
+      "hash": "sha256:1d4284c554e167dcb1bcad4a561f80dacab8756b36711b116aa479d120fe3c5e",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000062",
+      "seq": 62,
+      "type": "rule.cases_tested",
+      "occurred_at": "2026-11-10T06:16:48Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "human",
+        "id": "usr_MARCUS01",
+        "display_name": "Marcus Lim"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_PRICECUR"
+      },
+      "refs": {
+        "rule_id": "rul_PRICECUR",
+        "rule_revision": 1,
+        "snapshot_id": "snap_PL2026Q4A"
+      },
+      "caused_by": [
+        "evt_000059"
+      ],
+      "policy_rev": 7,
+      "summary": "Examples recorded and tested for Quoted prices match the current price list: 1 blocks, 1 allows, both as expected.",
+      "payload": {
+        "cases": [
+          {
+            "case_id": "case_PRICE0N1",
+            "kind": "negative",
+            "expect": "fail",
+            "result": "fail"
+          },
+          {
+            "case_id": "case_PRICE0P1",
+            "kind": "positive",
+            "expect": "pass",
+            "result": "pass"
+          }
+        ],
+        "all_as_expected": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:2dbcb5ad7d89b4275d57058dab69eef3854ffc2bd936a2409e22e54abef5e0a8",
+      "classification": "meta",
+      "prev_hash": "sha256:1d4284c554e167dcb1bcad4a561f80dacab8756b36711b116aa479d120fe3c5e",
+      "hash": "sha256:89765762c4c281515d53e74877d0b95cb003c72f2b266dc94f6d8de207cbadff",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000063",
+      "seq": 63,
+      "type": "rule.cases_tested",
+      "occurred_at": "2026-11-10T06:18:30Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "human",
+        "id": "usr_MARCUS01",
+        "display_name": "Marcus Lim"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_SGDMERID"
+      },
+      "refs": {
+        "rule_id": "rul_SGDMERID",
+        "rule_revision": 1
+      },
+      "caused_by": [
+        "evt_000061"
+      ],
+      "policy_rev": 7,
+      "summary": "Examples recorded and tested for Meridian Clinics quotes are in SGD: 1 blocks, 1 allows, both as expected.",
+      "payload": {
+        "cases": [
+          {
+            "case_id": "case_SGD000N1",
+            "kind": "negative",
+            "expect": "fail",
+            "result": "fail"
+          },
+          {
+            "case_id": "case_SGD000P1",
+            "kind": "positive",
+            "expect": "pass",
+            "result": "pass"
+          }
+        ],
+        "all_as_expected": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:ff34bb2944234d870ac105889d89fd8c6677a6927cb23b4aeb3449462af660a5",
+      "classification": "meta",
+      "prev_hash": "sha256:89765762c4c281515d53e74877d0b95cb003c72f2b266dc94f6d8de207cbadff",
+      "hash": "sha256:d33faf3c2905493ab68fae93a08f23a3e489929c591b78b7b69b9541be0ed3f9",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000064",
+      "seq": 64,
+      "type": "rule.backtested",
+      "occurred_at": "2026-11-10T06:21:05Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine",
+        "on_behalf_of": "usr_MARCUS01"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_PRICECUR"
+      },
+      "refs": {
+        "rule_id": "rul_PRICECUR",
+        "rule_revision": 1,
+        "snapshot_id": "snap_PL2026Q4A"
+      },
+      "caused_by": [
+        "evt_000062"
+      ],
+      "policy_rev": 7,
+      "summary": "Tried on 9 existing proposals in 4 projects: 3 would need changes. Nothing was blocked.",
+      "payload": {
+        "artifacts_checked": 9,
+        "projects": 4,
+        "would_fail": 3,
+        "would_be_unknown": 0
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:2c3b55e4412d0e05351ce55873670e8fc2a712eb7562d6491c16963c19c2e213",
+      "classification": "meta",
+      "prev_hash": "sha256:d33faf3c2905493ab68fae93a08f23a3e489929c591b78b7b69b9541be0ed3f9",
+      "hash": "sha256:ef9495661fd4fc563e0f6b5471ff33c824c3611b9ffb7113e1c6bab4c77bff71",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000065",
+      "seq": 65,
+      "type": "rule.backtested",
+      "occurred_at": "2026-11-10T06:22:10Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine",
+        "on_behalf_of": "usr_MARCUS01"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_SGDMERID"
+      },
+      "refs": {
+        "rule_id": "rul_SGDMERID",
+        "rule_revision": 1
+      },
+      "caused_by": [
+        "evt_000063"
+      ],
+      "policy_rev": 7,
+      "summary": "Tried on 5 existing proposals for this customer: 2 would need changes. Nothing was blocked.",
+      "payload": {
+        "artifacts_checked": 5,
+        "projects": 1,
+        "would_fail": 2,
+        "would_be_unknown": 0
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:bf33ce590e900b8591f4c5c6492513b1b6b91b49c7a722762da15e5bcf68ec46",
+      "classification": "meta",
+      "prev_hash": "sha256:ef9495661fd4fc563e0f6b5471ff33c824c3611b9ffb7113e1c6bab4c77bff71",
+      "hash": "sha256:860ddcb63db21ef53a97be2f7ade549c1d734fb93b1636f02f5e8b02f79622cd",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000066",
+      "seq": 66,
+      "type": "rule.approved",
+      "occurred_at": "2026-11-10T06:30:44Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "human",
+        "id": "usr_MARCUS01",
+        "display_name": "Marcus Lim"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_PRICECUR"
+      },
+      "refs": {
+        "rule_id": "rul_PRICECUR",
+        "rule_revision": 1
+      },
+      "caused_by": [
+        "evt_000064"
+      ],
+      "policy_rev": 7,
+      "summary": "Marcus Lim approved Quoted prices match the current price list for all sales proposals: must fix.",
+      "payload": {
+        "scope_level": "workspace",
+        "enforcement": "block",
+        "activation": "active",
+        "self_approval": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:33f1ad4082a20d861e5522ebae56f31615d8c4fe986b5a870aa82e9be8617c79",
+      "classification": "meta",
+      "prev_hash": "sha256:860ddcb63db21ef53a97be2f7ade549c1d734fb93b1636f02f5e8b02f79622cd",
+      "hash": "sha256:ebe96a435c0903f7c5d24bd1a36f6021fe6dc1025fd7e035f806a4b44fa989d6",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000067",
+      "seq": 67,
+      "type": "rule.activated",
+      "occurred_at": "2026-11-10T06:30:44Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "system",
+        "id": "sys_POLICY01",
+        "display_name": "Policy store"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_PRICECUR"
+      },
+      "refs": {
+        "rule_id": "rul_PRICECUR",
+        "rule_revision": 1
+      },
+      "caused_by": [
+        "evt_000066"
+      ],
+      "policy_rev": 8,
+      "summary": "Rule turned on: Quoted prices match the current price list. Rules revision 7 became 8.",
+      "payload": {
+        "status": "active",
+        "policy_rev_before": 7,
+        "policy_rev_after": 8
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:7d8d3bb9deaf4463aed17c21e64f61ef3aef02f0059a99da4d5c292b7b0148ef",
+      "classification": "meta",
+      "prev_hash": "sha256:ebe96a435c0903f7c5d24bd1a36f6021fe6dc1025fd7e035f806a4b44fa989d6",
+      "hash": "sha256:ae1abf43abb403c28967cff2a66ddc4e38c274ac60704901608ebd53e736d80c",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000068",
+      "seq": 68,
+      "type": "rule.approved",
+      "occurred_at": "2026-11-10T06:31:02Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "human",
+        "id": "usr_MARCUS01",
+        "display_name": "Marcus Lim"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_SGDMERID"
+      },
+      "refs": {
+        "rule_id": "rul_SGDMERID",
+        "rule_revision": 1
+      },
+      "caused_by": [
+        "evt_000065"
+      ],
+      "policy_rev": 8,
+      "summary": "Marcus Lim approved Meridian Clinics quotes are in SGD for customer Meridian Clinics Pte Ltd: must fix.",
+      "payload": {
+        "scope_level": "project_group",
+        "enforcement": "block",
+        "activation": "active",
+        "self_approval": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:dc86031205d6ff22da2495df8bc63b2c1df7da1e96655d604897d75aae06c8ba",
+      "classification": "meta",
+      "prev_hash": "sha256:ae1abf43abb403c28967cff2a66ddc4e38c274ac60704901608ebd53e736d80c",
+      "hash": "sha256:156c16e814c8ba37d445f6bc8b6692c6b2f56bdae667046dc1f5311b18e28e74",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000069",
+      "seq": 69,
+      "type": "rule.activated",
+      "occurred_at": "2026-11-10T06:31:02Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "system",
+        "id": "sys_POLICY01",
+        "display_name": "Policy store"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_SGDMERID"
+      },
+      "refs": {
+        "rule_id": "rul_SGDMERID",
+        "rule_revision": 1
+      },
+      "caused_by": [
+        "evt_000068"
+      ],
+      "policy_rev": 9,
+      "summary": "Rule turned on: Meridian Clinics quotes are in SGD. Rules revision 8 became 9.",
+      "payload": {
+        "status": "active",
+        "policy_rev_before": 8,
+        "policy_rev_after": 9
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:a6e8109c7ad69b91be0990191dea9f133e052fb8c3e83436f9844d115420210f",
+      "classification": "meta",
+      "prev_hash": "sha256:156c16e814c8ba37d445f6bc8b6692c6b2f56bdae667046dc1f5311b18e28e74",
+      "hash": "sha256:baf56da1a41a7275914727978dbfac9c28ea6e475c2263fd464f11fb1a7d82d4",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000070",
+      "seq": 70,
+      "type": "rule.candidate_created",
+      "occurred_at": "2026-11-11T08:18:20Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "human",
+        "id": "usr_MARCUS01",
+        "display_name": "Marcus Lim"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_NOMARKUP"
+      },
+      "refs": {
+        "rule_id": "rul_NOMARKUP",
+        "rule_revision": 1
+      },
+      "caused_by": [],
+      "policy_rev": 9,
+      "summary": "Candidate rule chosen from the starter pack (inactive): No unresolved comments or tracked changes.",
+      "payload": {
+        "proposed_by": "template",
+        "ai_model_used": false,
+        "check_kind": "no_unresolved_markup",
+        "suggested_scope_level": "workspace",
+        "status": "candidate"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:88ab8281b901da68d11b4e4ed348fdcb1bccb5366f35be76a3e4ccd57bc648c2",
+      "classification": "rule_text",
+      "prev_hash": "sha256:baf56da1a41a7275914727978dbfac9c28ea6e475c2263fd464f11fb1a7d82d4",
+      "hash": "sha256:70a661dec0068b630aa712c0fecf183557e418687f5c43da303c11afeb39f166",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000071",
+      "seq": 71,
+      "type": "rule.cases_tested",
+      "occurred_at": "2026-11-11T08:18:45Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "human",
+        "id": "usr_MARCUS01",
+        "display_name": "Marcus Lim"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_NOMARKUP"
+      },
+      "refs": {
+        "rule_id": "rul_NOMARKUP",
+        "rule_revision": 1
+      },
+      "caused_by": [
+        "evt_000070"
+      ],
+      "policy_rev": 9,
+      "summary": "Examples supplied with the starter pack tested for No unresolved comments or tracked changes: 1 blocks, 1 allows, both as expected.",
+      "payload": {
+        "cases": [
+          {
+            "case_id": "case_MARKUPN1",
+            "kind": "negative",
+            "expect": "fail",
+            "result": "fail"
+          },
+          {
+            "case_id": "case_MARKUPP1",
+            "kind": "positive",
+            "expect": "pass",
+            "result": "pass"
+          }
+        ],
+        "all_as_expected": true,
+        "examples_from": "starter_pack"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:4e9f68645a454c765609d96f1e0fb49469ed39546618ed9d11ffd4a8734e2e47",
+      "classification": "meta",
+      "prev_hash": "sha256:70a661dec0068b630aa712c0fecf183557e418687f5c43da303c11afeb39f166",
+      "hash": "sha256:ae45cbd39d5bf0b38bf48c8f9c9019078c304c9af9335b3c18b8d9715ac96d31",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000072",
+      "seq": 72,
+      "type": "rule.backtested",
+      "occurred_at": "2026-11-11T08:19:10Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine",
+        "on_behalf_of": "usr_MARCUS01"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_NOMARKUP"
+      },
+      "refs": {
+        "rule_id": "rul_NOMARKUP",
+        "rule_revision": 1
+      },
+      "caused_by": [
+        "evt_000071"
+      ],
+      "policy_rev": 9,
+      "summary": "Tried on 9 existing proposals in 4 projects: 2 would get a note. Nothing was blocked.",
+      "payload": {
+        "artifacts_checked": 9,
+        "projects": 4,
+        "would_fail": 2,
+        "would_be_unknown": 0
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:ca89f8eb26c2da388a5f43c337b8feced40be55c4a698bb2b4bb98d29a8d5332",
+      "classification": "meta",
+      "prev_hash": "sha256:ae45cbd39d5bf0b38bf48c8f9c9019078c304c9af9335b3c18b8d9715ac96d31",
+      "hash": "sha256:62ebfd759ab6b7ce74eebd0f65ee8c50594c51c6c77e818709294e4508a7c818",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000073",
+      "seq": 73,
+      "type": "rule.approved",
+      "occurred_at": "2026-11-11T08:20:03Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "human",
+        "id": "usr_MARCUS01",
+        "display_name": "Marcus Lim"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_NOMARKUP"
+      },
+      "refs": {
+        "rule_id": "rul_NOMARKUP",
+        "rule_revision": 1
+      },
+      "caused_by": [
+        "evt_000072"
+      ],
+      "policy_rev": 9,
+      "summary": "Marcus Lim approved No unresolved comments or tracked changes for all sales proposals: on trial for 10 checks.",
+      "payload": {
+        "scope_level": "workspace",
+        "enforcement": "block",
+        "activation": "trial",
+        "trial_checks": 10,
+        "self_approval": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:cc835af5aa0f046e91dba36f1019f32e3c30bf9d4e477852042320ace0fd5662",
+      "classification": "meta",
+      "prev_hash": "sha256:62ebfd759ab6b7ce74eebd0f65ee8c50594c51c6c77e818709294e4508a7c818",
+      "hash": "sha256:c9b0019f930b84ec75d2dc6678a60b4e2754802eb5d4bd83def3c3674cc6533a",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000074",
+      "seq": 74,
+      "type": "rule.activated",
+      "occurred_at": "2026-11-11T08:20:03Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "system",
+        "id": "sys_POLICY01",
+        "display_name": "Policy store"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_NOMARKUP"
+      },
+      "refs": {
+        "rule_id": "rul_NOMARKUP",
+        "rule_revision": 1
+      },
+      "caused_by": [
+        "evt_000073"
+      ],
+      "policy_rev": 10,
+      "summary": "Rule put on trial: No unresolved comments or tracked changes. Rules revision 9 became 10.",
+      "payload": {
+        "status": "trial",
+        "policy_rev_before": 9,
+        "policy_rev_after": 10
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:c67d198fccd337b8027171abd29b7fdeedf75a7e3a4b5c66a21f7594587d8693",
+      "classification": "meta",
+      "prev_hash": "sha256:c9b0019f930b84ec75d2dc6678a60b4e2754802eb5d4bd83def3c3674cc6533a",
+      "hash": "sha256:7796166853acd15f908afa1644e86e2a3544b10ef40deb8deb2fee6edc591d72",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000075",
+      "seq": 75,
+      "type": "session.opened",
+      "occurred_at": "2026-11-12T01:31:07Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "agent",
+        "id": "agt_PRIYAASST",
+        "display_name": "Priya Nair's assistant",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1112"
+      },
+      "subject": {
+        "kind": "session",
+        "id": "ses_PRIYA1112"
+      },
+      "refs": {
+        "session_id": "ses_PRIYA1112"
+      },
+      "caused_by": [],
+      "policy_rev": 10,
+      "summary": "Priya Nair's assistant started a session in a folder of Meridian Clinics - 2026 renewal.",
+      "payload": {
+        "client": {
+          "name": "example-assistant",
+          "version": "3.2"
+        },
+        "binding_id": "fld_MERIDIAN1"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:2a9e04d3b8b7877a40a28b6b04076b00d66915678b275186a9d479fcf8c3ce6f",
+      "classification": "meta",
+      "prev_hash": "sha256:7796166853acd15f908afa1644e86e2a3544b10ef40deb8deb2fee6edc591d72",
+      "hash": "sha256:4ffadb4be74031ecde87dbbb0de8c9d97f2810686a64bfd4df20b272515d1635",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000076",
+      "seq": 76,
+      "type": "context.resolved",
+      "occurred_at": "2026-11-12T01:31:07Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "system",
+        "id": "sys_RESOLVER",
+        "display_name": "Context resolver"
+      },
+      "subject": {
+        "kind": "session",
+        "id": "ses_PRIYA1112"
+      },
+      "refs": {
+        "session_id": "ses_PRIYA1112"
+      },
+      "caused_by": [
+        "evt_000075"
+      ],
+      "policy_rev": 10,
+      "summary": "Context resolved to Meridian Clinics - 2026 renewal, Sales proposal. 7 rules in scope.",
+      "payload": {
+        "status": "resolved",
+        "basis": [
+          "binding",
+          "marker",
+          "default_work_type"
+        ],
+        "in_scope_rule_count": 7,
+        "brief_truncated": false
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:7c947dc81d4247e6d015ed831364a40a13043882b8f81d2a4a48ca853896d98b",
+      "classification": "meta",
+      "prev_hash": "sha256:4ffadb4be74031ecde87dbbb0de8c9d97f2810686a64bfd4df20b272515d1635",
+      "hash": "sha256:6deec035134cd52993681f7247a983a5270c9364b8150a3058be1d6fa27d28db",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000077",
+      "seq": 77,
+      "type": "artifact.observed",
+      "occurred_at": "2026-11-12T01:58:12Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "system",
+        "id": "sys_WATCHER1",
+        "display_name": "Folder watcher"
+      },
+      "subject": {
+        "kind": "artifact",
+        "id": "art_MRP2026A"
+      },
+      "refs": {
+        "artifact_id": "art_MRP2026A",
+        "content_hash": "sha256:591950830e24e0d5129184832002b6838b92de55b70242bbea5deb4258240147",
+        "session_id": "ses_PRIYA1112"
+      },
+      "caused_by": [],
+      "policy_rev": 10,
+      "summary": "New file seen: Meridian-Renewal-Proposal.docx, version 1. It appeared during Priya Nair's assistant session; no editor was declared.",
+      "payload": {
+        "version_seq": 1,
+        "new_artifact": true,
+        "detected_type": "docx",
+        "extension_matches": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:1f601af3c057682a4828e0b481bb02a288429751e671d29495a95aa0cc86b193",
+      "classification": "meta",
+      "prev_hash": "sha256:6deec035134cd52993681f7247a983a5270c9364b8150a3058be1d6fa27d28db",
+      "hash": "sha256:ea549e3ccec530827a7cbfd713593bc54e3543ce8c3f576815927f21224581ae",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000078",
+      "seq": 78,
+      "type": "action.requested",
+      "occurred_at": "2026-11-12T02:02:38Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "human",
+        "id": "usr_PRIYA001",
+        "display_name": "Priya Nair"
+      },
+      "subject": {
+        "kind": "action",
+        "id": "act_MRPSEND1"
+      },
+      "refs": {
+        "action_id": "act_MRPSEND1",
+        "artifact_id": "art_MRP2026A",
+        "content_hash": "sha256:591950830e24e0d5129184832002b6838b92de55b70242bbea5deb4258240147",
+        "trace_id": "trc_MRP2026A1",
+        "adapter_id": "adp_EMAIL001"
+      },
+      "caused_by": [],
+      "policy_rev": 10,
+      "summary": "Priya Nair asked to send Meridian-Renewal-Proposal.docx version 1 to the customer.",
+      "payload": {
+        "type": "send_external",
+        "version_seq": 1,
+        "status": "awaiting_check"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:737d203a17d27d7e6021d43b76a191ea565282b293163df29bc1b297032497eb",
+      "classification": "meta",
+      "prev_hash": "sha256:ea549e3ccec530827a7cbfd713593bc54e3543ce8c3f576815927f21224581ae",
+      "hash": "sha256:212edebfca3eeca211a866fc210498c20d05289a5f87d4cf689ae54f61d0506a",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000079",
+      "seq": 79,
+      "type": "run.completed",
+      "occurred_at": "2026-11-12T02:02:41Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine",
+        "on_behalf_of": "usr_PRIYA001"
+      },
+      "subject": {
+        "kind": "run",
+        "id": "run_MRP00001"
+      },
+      "refs": {
+        "run_id": "run_MRP00001",
+        "trace_id": "trc_MRP2026A1",
+        "artifact_id": "art_MRP2026A",
+        "content_hash": "sha256:591950830e24e0d5129184832002b6838b92de55b70242bbea5deb4258240147",
+        "snapshot_id": "snap_PL2026Q4A",
+        "action_id": "act_MRPSEND1"
+      },
+      "caused_by": [
+        "evt_000078"
+      ],
+      "policy_rev": 10,
+      "summary": "Check 1: Needs changes. 7 rules in scope: 2 failed, 3 passed, 1 note, 1 did not apply.",
+      "payload": {
+        "trigger": {
+          "kind": "pre_action",
+          "reason": "Required before Send to customer"
+        },
+        "verdict": "needs_changes",
+        "counts": {
+          "in_scope": 7,
+          "pass": 3,
+          "fail": 2,
+          "unknown": 0,
+          "not_applicable": 1,
+          "error": 0,
+          "conflict": 0,
+          "waived": 0,
+          "skipped": 0,
+          "notes": 1,
+          "blocking_findings": 4
+        },
+        "failed_rules": [
+          "rul_PRICECUR",
+          "rul_SGDMERID"
+        ],
+        "note_rules": [
+          "rul_NOMARKUP"
+        ]
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:ffbd2a0238622d3de80a7d46e7c6687161679938f1739599e1f675a6cf5df04d",
+      "classification": "meta",
+      "prev_hash": "sha256:212edebfca3eeca211a866fc210498c20d05289a5f87d4cf689ae54f61d0506a",
+      "hash": "sha256:82dbeedc16ff378c616ba2d593da74e974afda3fb0e48ae1a23dc2914e95c5a0",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000080",
+      "seq": 80,
+      "type": "action.blocked",
+      "occurred_at": "2026-11-12T02:02:41Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "system",
+        "id": "sys_GATEWAY1",
+        "display_name": "Gateway"
+      },
+      "subject": {
+        "kind": "action",
+        "id": "act_MRPSEND1"
+      },
+      "refs": {
+        "action_id": "act_MRPSEND1",
+        "run_id": "run_MRP00001",
+        "trace_id": "trc_MRP2026A1",
+        "artifact_id": "art_MRP2026A",
+        "content_hash": "sha256:591950830e24e0d5129184832002b6838b92de55b70242bbea5deb4258240147"
+      },
+      "caused_by": [
+        "evt_000079"
+      ],
+      "policy_rev": 10,
+      "summary": "Sending was blocked: the check found 4 things that must be fixed. Nothing was sent.",
+      "payload": {
+        "reason": "verdict_needs_changes",
+        "failed_gate_step": 3,
+        "status": "blocked"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:55397cd5705745841377fa6b60d07e55eafb5cc6271f51bdc253a3225a95e1c3",
+      "classification": "meta",
+      "prev_hash": "sha256:82dbeedc16ff378c616ba2d593da74e974afda3fb0e48ae1a23dc2914e95c5a0",
+      "hash": "sha256:0e640b0298d6f59d841c6232b258badc3661acee07316cff78bdb9766a46a4b2",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000081",
+      "seq": 81,
+      "type": "fix.proposed",
+      "occurred_at": "2026-11-12T02:02:41Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine"
+      },
+      "subject": {
+        "kind": "fix",
+        "id": "fix_MRP00001"
+      },
+      "refs": {
+        "fix_id": "fix_MRP00001",
+        "run_id": "run_MRP00001",
+        "trace_id": "trc_MRP2026A1",
+        "artifact_id": "art_MRP2026A",
+        "snapshot_id": "snap_PL2026Q4A"
+      },
+      "caused_by": [
+        "evt_000079"
+      ],
+      "policy_rev": 10,
+      "summary": "Suggested fix (not applied): re-price in SGD from the price list. Addresses 4 findings.",
+      "payload": {
+        "origin": "engine_from_source",
+        "addresses": [
+          "fnd_MRP1P001",
+          "fnd_MRP1C001",
+          "fnd_MRP1C002",
+          "fnd_MRP1C003"
+        ],
+        "applied": false,
+        "edits": [
+          {
+            "op": "set_value",
+            "field_path": "quote.line_items[0].unit_price",
+            "to": {
+              "type": "money",
+              "amount": "1650.00",
+              "currency": "SGD"
+            },
+            "from_source_row": 15
+          },
+          {
+            "op": "set_value",
+            "field_path": "quote.line_items[0].amount",
+            "to": {
+              "type": "money",
+              "amount": "19800.00",
+              "currency": "SGD"
+            }
+          },
+          {
+            "op": "set_value",
+            "field_path": "quote.line_items[1].unit_price",
+            "to": {
+              "type": "money",
+              "amount": "400.00",
+              "currency": "SGD"
+            },
+            "from_source_row": 89
+          },
+          {
+            "op": "set_value",
+            "field_path": "quote.line_items[1].amount",
+            "to": {
+              "type": "money",
+              "amount": "4800.00",
+              "currency": "SGD"
+            }
+          },
+          {
+            "op": "set_value",
+            "field_path": "quote.total",
+            "to": {
+              "type": "money",
+              "amount": "24600.00",
+              "currency": "SGD"
+            }
+          }
+        ]
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:4e18e18096fe95296cb5ecfa2da26ad38c0410e122361ecca59b5d43f72605d4",
+      "classification": "evidence",
+      "prev_hash": "sha256:0e640b0298d6f59d841c6232b258badc3661acee07316cff78bdb9766a46a4b2",
+      "hash": "sha256:675b0a51a102ca51bd4188aa5486ec62b4dd30b06f93a6eab5bf8ae35decef8b",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000082",
+      "seq": 82,
+      "type": "artifact.observed",
+      "occurred_at": "2026-11-12T02:09:15Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "system",
+        "id": "sys_WATCHER1",
+        "display_name": "Folder watcher"
+      },
+      "subject": {
+        "kind": "artifact",
+        "id": "art_MRP2026A"
+      },
+      "refs": {
+        "artifact_id": "art_MRP2026A",
+        "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+        "session_id": "ses_PRIYA1112"
+      },
+      "caused_by": [],
+      "policy_rev": 10,
+      "summary": "New version seen: Meridian-Renewal-Proposal.docx, version 2.",
+      "payload": {
+        "version_seq": 2,
+        "new_artifact": false,
+        "detected_type": "docx",
+        "extension_matches": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:3d10a9eb9584845c93dc88755acfbdc34b68862f366b6707a79f6c14d31d987b",
+      "classification": "meta",
+      "prev_hash": "sha256:675b0a51a102ca51bd4188aa5486ec62b4dd30b06f93a6eab5bf8ae35decef8b",
+      "hash": "sha256:3476695b0e9e985cf6504368c10c3b67244aefa2e2191da72a3e572ab9761ab8",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000083",
+      "seq": 83,
+      "type": "change.recorded",
+      "occurred_at": "2026-11-12T02:09:15Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "agent",
+        "id": "agt_PRIYAASST",
+        "display_name": "Priya Nair's assistant",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1112"
+      },
+      "subject": {
+        "kind": "change",
+        "id": "chg_MRP00001"
+      },
+      "refs": {
+        "change_id": "chg_MRP00001",
+        "fix_id": "fix_MRP00001",
+        "trace_id": "trc_MRP2026A1",
+        "artifact_id": "art_MRP2026A",
+        "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+        "session_id": "ses_PRIYA1112"
+      },
+      "caused_by": [
+        "evt_000081",
+        "evt_000082"
+      ],
+      "policy_rev": 10,
+      "summary": "Version 1 became version 2: 5 table cells changed by Priya Nair's assistant at Priya Nair's request, applying the suggested fix.",
+      "payload": {
+        "from_version": 1,
+        "to_version": 2,
+        "from_hash": "sha256:591950830e24e0d5129184832002b6838b92de55b70242bbea5deb4258240147",
+        "to_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+        "cells_changed": 5,
+        "other_changes": 0,
+        "unread_parts_changed": false,
+        "attribution": "declared_by_session",
+        "applies_fix": "fix_MRP00001",
+        "diff_matches_fix": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:48608e89cc04bb434c81b909a3da294dc9f87fadcd59287e21aefc8bec787d82",
+      "classification": "meta",
+      "prev_hash": "sha256:3476695b0e9e985cf6504368c10c3b67244aefa2e2191da72a3e572ab9761ab8",
+      "hash": "sha256:9b1ff924d6aa751583cef4ac48b65f0712e14e68a3f7789a3b3e4f14ef293c5f",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000084",
+      "seq": 84,
+      "type": "run.completed",
+      "occurred_at": "2026-11-12T02:09:16Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine"
+      },
+      "subject": {
+        "kind": "run",
+        "id": "run_MRP00002"
+      },
+      "refs": {
+        "run_id": "run_MRP00002",
+        "trace_id": "trc_MRP2026A1",
+        "artifact_id": "art_MRP2026A",
+        "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+        "snapshot_id": "snap_PL2026Q4A",
+        "change_id": "chg_MRP00001"
+      },
+      "caused_by": [
+        "evt_000083"
+      ],
+      "policy_rev": 10,
+      "summary": "Check 2: Ready. 4 findings from Check 1 are no longer present. 1 note remains.",
+      "payload": {
+        "trigger": {
+          "kind": "auto_recheck",
+          "reason": "New version of an artifact with open findings"
+        },
+        "verdict": "ready",
+        "counts": {
+          "in_scope": 7,
+          "pass": 5,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 1,
+          "error": 0,
+          "conflict": 0,
+          "waived": 0,
+          "skipped": 0,
+          "notes": 1,
+          "blocking_findings": 0
+        },
+        "resolved_findings": [
+          "fnd_MRP1P001",
+          "fnd_MRP1C001",
+          "fnd_MRP1C002",
+          "fnd_MRP1C003"
+        ],
+        "new_findings": [],
+        "compared_with_run": "run_MRP00001"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:46228af49a993a851815211e1f61cb5dcebf0b3237373b772d786273b84abfaf",
+      "classification": "meta",
+      "prev_hash": "sha256:9b1ff924d6aa751583cef4ac48b65f0712e14e68a3f7789a3b3e4f14ef293c5f",
+      "hash": "sha256:f817b4647c2a4e236a2c63add9e045b2db2468befe156a43010fadd077d696f0",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000085",
+      "seq": 85,
+      "type": "receipt.issued",
+      "occurred_at": "2026-11-12T02:09:16Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine"
+      },
+      "subject": {
+        "kind": "receipt",
+        "id": "rcp_MRP00002"
+      },
+      "refs": {
+        "receipt_id": "rcp_MRP00002",
+        "run_id": "run_MRP00002",
+        "trace_id": "trc_MRP2026A1",
+        "artifact_id": "art_MRP2026A",
+        "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+        "snapshot_id": "snap_PL2026Q4A"
+      },
+      "caused_by": [
+        "evt_000084"
+      ],
+      "policy_rev": 10,
+      "summary": "Check 2 is valid for sending until 13 Nov 2026 10:09 unless something changes.",
+      "payload": {
+        "expires_at": "2026-11-13T02:09:16Z",
+        "grants_permission": false
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:22869e068253c366208b0ab7b94bab7ea9b8f6abd1a436426012701f96acbb92",
+      "classification": "meta",
+      "prev_hash": "sha256:f817b4647c2a4e236a2c63add9e045b2db2468befe156a43010fadd077d696f0",
+      "hash": "sha256:07bf50ba68646c2775c89bf092d667b7b054a3e507646ef2b49ca692dbab8d7c",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000086",
+      "seq": 86,
+      "type": "action.requested",
+      "occurred_at": "2026-11-12T02:12:03Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "human",
+        "id": "usr_PRIYA001",
+        "display_name": "Priya Nair"
+      },
+      "subject": {
+        "kind": "action",
+        "id": "act_MRPSEND2"
+      },
+      "refs": {
+        "action_id": "act_MRPSEND2",
+        "receipt_id": "rcp_MRP00002",
+        "artifact_id": "art_MRP2026A",
+        "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+        "trace_id": "trc_MRP2026A1",
+        "adapter_id": "adp_EMAIL001"
+      },
+      "caused_by": [],
+      "policy_rev": 10,
+      "summary": "Priya Nair asked to send Meridian-Renewal-Proposal.docx version 2 to the customer. Waiting for approval.",
+      "payload": {
+        "type": "send_external",
+        "version_seq": 2,
+        "params_digest": "sha256:2d20221ad545c4b684510f11119f31b64f7267f96aa8f5c223083f29c5db5a08",
+        "status": "awaiting_approval",
+        "approval_policy": "named_role"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:46b3ef485bdb3c23f19cbb1a71824b90cc63b8f942f1f0af13cb9f17b55078cd",
+      "classification": "meta",
+      "prev_hash": "sha256:07bf50ba68646c2775c89bf092d667b7b054a3e507646ef2b49ca692dbab8d7c",
+      "hash": "sha256:8491ab3cc9eb749c13b5556cc8c533c45c27e30cc262272159e13bf424e4e121",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000087",
+      "seq": 87,
+      "type": "source.snapshot_imported",
+      "occurred_at": "2026-11-12T02:41:22Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "human",
+        "id": "usr_DANA0001",
+        "display_name": "Dana Okafor"
+      },
+      "subject": {
+        "kind": "snapshot",
+        "id": "snap_PL2026Q4B"
+      },
+      "refs": {
+        "source_id": "src_PRICELST",
+        "snapshot_id": "snap_PL2026Q4B"
+      },
+      "caused_by": [],
+      "policy_rev": 10,
+      "summary": "Dana Okafor published a new version of Halden price list. It replaces the version of 3 Nov 2026.",
+      "payload": {
+        "supersedes": "snap_PL2026Q4A",
+        "row_count": 212,
+        "rows_changed": 1,
+        "rows_added": 0,
+        "rows_removed": 0
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:5d740d7bb2d4ecd598ce48218995af23f66efbe1ab78398bf37ee11230d4f8f0",
+      "classification": "meta",
+      "prev_hash": "sha256:8491ab3cc9eb749c13b5556cc8c533c45c27e30cc262272159e13bf424e4e121",
+      "hash": "sha256:4768d5fe2f096f2dc5cd8ca0004034a7c2e5a58bcfa0b4b2ae3a8529166a9837",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000088",
+      "seq": 88,
+      "type": "receipt.invalidated",
+      "occurred_at": "2026-11-12T02:41:22Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "system",
+        "id": "sys_GATEWAY1",
+        "display_name": "Gateway"
+      },
+      "subject": {
+        "kind": "receipt",
+        "id": "rcp_MRP00002"
+      },
+      "refs": {
+        "receipt_id": "rcp_MRP00002",
+        "snapshot_id": "snap_PL2026Q4B",
+        "trace_id": "trc_MRP2026A1",
+        "action_id": "act_MRPSEND2"
+      },
+      "caused_by": [
+        "evt_000087"
+      ],
+      "policy_rev": 10,
+      "summary": "Check 2 is no longer valid for sending: the price list it used has been replaced.",
+      "payload": {
+        "reason": "source_superseded",
+        "superseded_snapshot": "snap_PL2026Q4A"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:f3cfa2ad74279ac64b67cafffe6588b63344ae70fbc633ea742997166e84c85e",
+      "classification": "meta",
+      "prev_hash": "sha256:4768d5fe2f096f2dc5cd8ca0004034a7c2e5a58bcfa0b4b2ae3a8529166a9837",
+      "hash": "sha256:e123bdce95b7401855c52ca9ef0ad322ec95932c3e89d6d19f454d1b89926f8b",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000089",
+      "seq": 89,
+      "type": "run.completed",
+      "occurred_at": "2026-11-12T02:41:23Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine"
+      },
+      "subject": {
+        "kind": "run",
+        "id": "run_MRP00003"
+      },
+      "refs": {
+        "run_id": "run_MRP00003",
+        "trace_id": "trc_MRP2026A1",
+        "artifact_id": "art_MRP2026A",
+        "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+        "snapshot_id": "snap_PL2026Q4B",
+        "action_id": "act_MRPSEND2"
+      },
+      "caused_by": [
+        "evt_000088"
+      ],
+      "policy_rev": 10,
+      "summary": "Check 3: Ready. Same version 2 against the new price list: 2 of 2 prices still match. 1 note remains.",
+      "payload": {
+        "trigger": {
+          "kind": "auto_recheck",
+          "reason": "A trusted source changed while an action was pending"
+        },
+        "verdict": "ready",
+        "counts": {
+          "in_scope": 7,
+          "pass": 5,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 1,
+          "error": 0,
+          "conflict": 0,
+          "waived": 0,
+          "skipped": 0,
+          "notes": 1,
+          "blocking_findings": 0
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:c29e6ce5b318b2e1f65a27de23e90e429c58a4d6599059681ad3d0a31dc8f5ba",
+      "classification": "meta",
+      "prev_hash": "sha256:e123bdce95b7401855c52ca9ef0ad322ec95932c3e89d6d19f454d1b89926f8b",
+      "hash": "sha256:a2ebdd5d471cb714d80e12c3a248a233b6566ad3603ddb9090aa2a73ef26e558",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000090",
+      "seq": 90,
+      "type": "receipt.issued",
+      "occurred_at": "2026-11-12T02:41:23Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine"
+      },
+      "subject": {
+        "kind": "receipt",
+        "id": "rcp_MRP00003"
+      },
+      "refs": {
+        "receipt_id": "rcp_MRP00003",
+        "run_id": "run_MRP00003",
+        "trace_id": "trc_MRP2026A1",
+        "artifact_id": "art_MRP2026A",
+        "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+        "snapshot_id": "snap_PL2026Q4B",
+        "action_id": "act_MRPSEND2"
+      },
+      "caused_by": [
+        "evt_000089"
+      ],
+      "policy_rev": 10,
+      "summary": "Check 3 is valid for sending until 13 Nov 2026 10:41 unless something changes. The pending send now relies on it.",
+      "payload": {
+        "expires_at": "2026-11-13T02:41:23Z",
+        "grants_permission": false,
+        "rebinds_action": "act_MRPSEND2"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:2535eb56c88e5ccb8ae5abc4429e04309dd55202b826ec6c0b4310ebaa6f7e08",
+      "classification": "meta",
+      "prev_hash": "sha256:a2ebdd5d471cb714d80e12c3a248a233b6566ad3603ddb9090aa2a73ef26e558",
+      "hash": "sha256:3ef19cc1049ca1af1d0d1fc63562276cd578ed8d26d9a1be8456c119f228de3e",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000091",
+      "seq": 91,
+      "type": "action.approved",
+      "occurred_at": "2026-11-12T03:02:10Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "human",
+        "id": "usr_MARCUS01",
+        "display_name": "Marcus Lim"
+      },
+      "subject": {
+        "kind": "action",
+        "id": "act_MRPSEND2"
+      },
+      "refs": {
+        "action_id": "act_MRPSEND2",
+        "approval_id": "apr_MRPSEND2",
+        "receipt_id": "rcp_MRP00003",
+        "artifact_id": "art_MRP2026A",
+        "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+        "trace_id": "trc_MRP2026A1"
+      },
+      "caused_by": [
+        "evt_000086",
+        "evt_000090"
+      ],
+      "policy_rev": 10,
+      "summary": "Marcus Lim approved sending version 2 to the customer.",
+      "payload": {
+        "self_approval": false,
+        "bound_to": {
+          "receipt_id": "rcp_MRP00003",
+          "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+          "action_type": "send_external",
+          "params_digest": "sha256:2d20221ad545c4b684510f11119f31b64f7267f96aa8f5c223083f29c5db5a08"
+        },
+        "expires_at": "2026-11-13T02:41:23Z"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:e6724e8c3e4ed3a3b6cce715b1c08e602d9615a6bc575ceab5a99692d55797b6",
+      "classification": "meta",
+      "prev_hash": "sha256:3ef19cc1049ca1af1d0d1fc63562276cd578ed8d26d9a1be8456c119f228de3e",
+      "hash": "sha256:82f91ae99649025f70a8c081cfda2b716cd90375943f006a3d137f00f62bf7d7",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000092",
+      "seq": 92,
+      "type": "action.revalidated",
+      "occurred_at": "2026-11-12T03:02:11Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "system",
+        "id": "sys_GATEWAY1",
+        "display_name": "Gateway"
+      },
+      "subject": {
+        "kind": "action",
+        "id": "act_MRPSEND2"
+      },
+      "refs": {
+        "action_id": "act_MRPSEND2",
+        "receipt_id": "rcp_MRP00003",
+        "approval_id": "apr_MRPSEND2",
+        "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+        "trace_id": "trc_MRP2026A1"
+      },
+      "caused_by": [
+        "evt_000091"
+      ],
+      "policy_rev": 10,
+      "summary": "Gateway confirmed: same version, rules unchanged, price list current, approval valid.",
+      "payload": {
+        "gate_checks_passed": 9,
+        "gate_checks_total": 9
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:84c244967e969c623ac0f20b23ea313bcb019c5bb3946d000ecb9117a4adcf94",
+      "classification": "meta",
+      "prev_hash": "sha256:82f91ae99649025f70a8c081cfda2b716cd90375943f006a3d137f00f62bf7d7",
+      "hash": "sha256:9500abc361fe2ab70a3a6b18eb50047f52ecbf933f31dc7e99809256743773f1",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000093",
+      "seq": 93,
+      "type": "action.executed",
+      "occurred_at": "2026-11-12T03:02:13Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "adapter",
+        "id": "adp_EMAIL001",
+        "display_name": "Email adapter"
+      },
+      "subject": {
+        "kind": "action",
+        "id": "act_MRPSEND2"
+      },
+      "refs": {
+        "action_id": "act_MRPSEND2",
+        "adapter_id": "adp_EMAIL001",
+        "receipt_id": "rcp_MRP00003",
+        "artifact_id": "art_MRP2026A",
+        "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+        "trace_id": "trc_MRP2026A1"
+      },
+      "caused_by": [
+        "evt_000092"
+      ],
+      "policy_rev": 10,
+      "summary": "Email adapter sent version 2. The mail server accepted it.",
+      "payload": {
+        "outcome": "accepted_by_mail_server",
+        "executed_content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+        "status": "executed"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:1ae5038fbeb10fd582252345a49853f9bf07aadedef35d7eb34028eb56bc1f8e",
+      "classification": "meta",
+      "prev_hash": "sha256:9500abc361fe2ab70a3a6b18eb50047f52ecbf933f31dc7e99809256743773f1",
+      "hash": "sha256:55a7ea2fafd6b4d8fcd0ce7040098e555be62a3c62c24daca22144d4d64f30f3",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000094",
+      "seq": 94,
+      "type": "receipt.consumed",
+      "occurred_at": "2026-11-12T03:02:13Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_MERID26R",
+      "actor": {
+        "kind": "system",
+        "id": "sys_GATEWAY1",
+        "display_name": "Gateway"
+      },
+      "subject": {
+        "kind": "receipt",
+        "id": "rcp_MRP00003"
+      },
+      "refs": {
+        "receipt_id": "rcp_MRP00003",
+        "action_id": "act_MRPSEND2",
+        "trace_id": "trc_MRP2026A1"
+      },
+      "caused_by": [
+        "evt_000093"
+      ],
+      "policy_rev": 10,
+      "summary": "Check 3 has been used for this send and cannot be used again.",
+      "payload": {
+        "consumed_by": "act_MRPSEND2"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:8f565c7d65ef2049c1802ef152ae90b0b01c06f608948d3466a05d179f8d2fc6",
+      "classification": "meta",
+      "prev_hash": "sha256:55a7ea2fafd6b4d8fcd0ce7040098e555be62a3c62c24daca22144d4d64f30f3",
+      "hash": "sha256:d84df8e45734780465936efa230afb931766cfbecbde66a1be7025b7c251859c",
+      "schema_version": "cl.event/1"
+    }
+  ]
+}

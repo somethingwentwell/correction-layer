@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "folder-marker.schema.json",
+  "title": "Folder marker",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. The small pointer file written into a registered folder. Identifier only; carries no rules and grants nothing.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Relative path to this schema, used by tools/check_repo.py."
+    },
+    "_note": {
+      "type": "string",
+      "description": "Marks an example file as proposed/illustrative."
+    },
+    "schema_version": {
+      "const": "cl.marker/1"
+    },
+    "workspace_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "binding_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "area_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "kind": {
+      "enum": [
+        "project_root",
+        "area"
+      ]
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "note": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "workspace_id",
+    "project_id",
+    "binding_id",
+    "kind",
+    "created_at"
+  ],
+  "additionalProperties": false
+}

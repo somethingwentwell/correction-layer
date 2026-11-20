@@ -1,0 +1,56 @@
+{
+  "$schema": "../../schemas/receipt.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies, prices and addresses are fictional. Content hashes are digests of descriptive labels, not of real files.",
+  "schema_version": "cl.receipt/1",
+  "receipt_id": "rcp_MRP00003",
+  "run_id": "run_MRP00003",
+  "trace_id": "trc_MRP2026A1",
+  "workspace_id": "ws_HALDEN01",
+  "project_id": "prj_MERID26R",
+  "area_ids": [],
+  "work_type": "sales_proposal",
+  "artifact": {
+    "artifact_id": "art_MRP2026A",
+    "version_seq": 2,
+    "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00"
+  },
+  "action": {
+    "type": "send_external",
+    "params_digest": null
+  },
+  "policy": {
+    "policy_rev": 10,
+    "ruleset_digest": "sha256:87a5299514f220bf8c4c3e0d3daead406d37b38edc53faa8be3d6078a0430d42"
+  },
+  "sources": [
+    {
+      "source_id": "src_PRICELST",
+      "snapshot_id": "snap_PL2026Q4B",
+      "imported_at": "2026-11-12T02:41:22Z",
+      "confirmed_at": "2026-11-12T02:41:22Z",
+      "age_days": 0,
+      "fresh": true,
+      "fresh_until": "2026-12-27T02:41:22Z"
+    }
+  ],
+  "parser": {
+    "id": "docx-core",
+    "version": "0.1.0"
+  },
+  "engine_version": "0.1.0",
+  "exceptions_applied": [],
+  "attestations": [],
+  "verdict": "ready",
+  "issued_at": "2026-11-12T02:41:23Z",
+  "expires_at": "2026-11-13T02:41:23Z",
+  "single_use": true,
+  "status": "consumed",
+  "status_reason": "Shown in its final state: used by the send at 2026-11-12T03:02:13Z",
+  "consumed_by": "act_MRPSEND2",
+  "grants_permission": false,
+  "signature": {
+    "alg": "ed25519",
+    "key_id": "ws_HALDEN01/signing/1",
+    "value": "ILLUSTRATIVE-PLACEHOLDER-NOT-A-REAL-SIGNATURE"
+  }
+}

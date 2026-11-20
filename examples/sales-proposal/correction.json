@@ -1,0 +1,30 @@
+{
+  "$schema": "../../schemas/correction.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies, prices and addresses are fictional. Content hashes are digests of descriptive labels, not of real files.",
+  "schema_version": "cl.correction/1",
+  "correction_id": "cor_PRICE001",
+  "workspace_id": "ws_HALDEN01",
+  "project_id": "prj_MERID26R",
+  "text": "The HX-200 price here is last year's. Quotes must use the current price list.",
+  "author": {
+    "kind": "human",
+    "id": "usr_MARCUS01",
+    "display_name": "Marcus Lim"
+  },
+  "channel": "app",
+  "recorded_at": "2026-11-10T06:05:12Z",
+  "display_tz": "Asia/Singapore",
+  "about": {
+    "artifact_id": "art_PILOTQ01",
+    "artifact_name": "Meridian-Pilot-Quote.docx",
+    "content_hash": "sha256:de47ca6e8864e3eec50245f631d2f7445b28eab8caee4a18b9b58ebcbd40402c",
+    "location": {
+      "locator": "docx:/body/tbl[2]/row[2]/cell[3]",
+      "label": "Pricing table, row 1, Unit price (page 3)"
+    }
+  },
+  "resolution": "rule",
+  "rule_ids": [
+    "rul_PRICECUR"
+  ]
+}

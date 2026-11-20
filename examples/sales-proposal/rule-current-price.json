@@ -1,0 +1,111 @@
+{
+  "$schema": "../../schemas/rule.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies, prices and addresses are fictional. Content hashes are digests of descriptive labels, not of real files.",
+  "schema_version": "cl.rule/1",
+  "rule_id": "rul_PRICECUR",
+  "revision": 1,
+  "status": "active",
+  "supersedes": null,
+  "title": "Quoted prices match the current price list",
+  "statement": "For every line in the pricing table, the unit price must equal the price for that item and currency in Halden price list, using the latest list, confirmed within the last 45 days.",
+  "origin": {
+    "kind": "human_correction",
+    "correction_id": "cor_PRICE001"
+  },
+  "owner": "usr_MARCUS01",
+  "review_by": "2027-05-10",
+  "scope": {
+    "level": "workspace",
+    "workspace_id": "ws_HALDEN01",
+    "project_selector": null,
+    "project_id": null,
+    "area_id": null,
+    "artifact_id": null,
+    "work_types": [
+      "sales_proposal"
+    ],
+    "artifact_types": [
+      "document"
+    ],
+    "actions": [
+      "send_external",
+      "release"
+    ]
+  },
+  "applies_when": null,
+  "method": "source_backed",
+  "enforcement": "block",
+  "locked": true,
+  "check": {
+    "kind": "field_matches_source",
+    "targets": [
+      "quote.line_items[*].unit_price"
+    ],
+    "params": {
+      "lookup_key": {
+        "item_code": "quote.line_items[*].item_code",
+        "currency": "quote.line_items[*].currency"
+      },
+      "source_value": "unit_price",
+      "compare": "money_equal",
+      "tolerance": "0.00"
+    }
+  },
+  "requires": {
+    "fields": [
+      "quote.line_items[*].item_code",
+      "quote.line_items[*].unit_price",
+      "quote.line_items[*].currency"
+    ],
+    "components": [
+      "body.tables"
+    ]
+  },
+  "source": {
+    "source_id": "src_PRICELST",
+    "max_age_days": 45,
+    "require_latest": true,
+    "missing_key": "unknown"
+  },
+  "message": {
+    "problem": "Price is not the current list price",
+    "fix_hint": "Use the unit price from the current Halden price list for this item and currency."
+  },
+  "cases": [
+    {
+      "case_id": "case_PRICE0N1",
+      "kind": "negative",
+      "description": "Pilot quote as sent: HX-200 at USD 1,180.00 (list: USD 1,240.00)",
+      "artifact_hash": "sha256:de47ca6e8864e3eec50245f631d2f7445b28eab8caee4a18b9b58ebcbd40402c",
+      "source_snapshot_id": "snap_PL2026Q4A",
+      "expect": "fail",
+      "last_result": "fail",
+      "last_run_at": "2026-11-10T06:16:48Z"
+    },
+    {
+      "case_id": "case_PRICE0P1",
+      "kind": "positive",
+      "description": "Pilot quote corrected: HX-200 at USD 1,240.00",
+      "artifact_hash": "sha256:ce5b62bb9180b60e682017ed9cbb0a22d1c25c348393fb8a75e8317988abf63a",
+      "source_snapshot_id": "snap_PL2026Q4A",
+      "expect": "pass",
+      "last_result": "pass",
+      "last_run_at": "2026-11-10T06:16:48Z"
+    }
+  ],
+  "exception_policy": {
+    "grantable_by": [
+      "rule_owner",
+      "workspace_steward"
+    ],
+    "max_days": 30
+  },
+  "approval": {
+    "proposed_by": "usr_MARCUS01",
+    "approved_by": "usr_MARCUS01",
+    "approved_at": "2026-11-10T06:30:44Z",
+    "activated_at": "2026-11-10T06:30:44Z",
+    "self_approval": true,
+    "policy_rev": 8
+  }
+}

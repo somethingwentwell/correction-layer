@@ -1,0 +1,104 @@
+{
+  "$schema": "../../schemas/rule.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies, prices and addresses are fictional. Content hashes are digests of descriptive labels, not of real files.",
+  "schema_version": "cl.rule/1",
+  "rule_id": "rul_SGDMERID",
+  "revision": 1,
+  "status": "active",
+  "supersedes": null,
+  "title": "Meridian Clinics quotes are in SGD",
+  "statement": "Every line in the pricing table, and the total, must be in SGD.",
+  "origin": {
+    "kind": "human_correction",
+    "correction_id": "cor_SGD00001"
+  },
+  "owner": "usr_MARCUS01",
+  "review_by": "2027-05-10",
+  "scope": {
+    "level": "project_group",
+    "workspace_id": "ws_HALDEN01",
+    "project_selector": {
+      "fact": "customer_id",
+      "equals": "cust_meridian"
+    },
+    "project_id": null,
+    "area_id": null,
+    "artifact_id": null,
+    "work_types": [
+      "sales_proposal"
+    ],
+    "artifact_types": [
+      "document"
+    ],
+    "actions": [
+      "send_external",
+      "release"
+    ]
+  },
+  "applies_when": null,
+  "method": "deterministic",
+  "enforcement": "block",
+  "locked": false,
+  "check": {
+    "kind": "field_in_set",
+    "targets": [
+      "quote.line_items[*].currency",
+      "quote.total.currency"
+    ],
+    "params": {
+      "allowed": [
+        "SGD"
+      ]
+    }
+  },
+  "requires": {
+    "fields": [
+      "quote.line_items[*].currency",
+      "quote.total"
+    ],
+    "components": [
+      "body.tables"
+    ]
+  },
+  "source": null,
+  "message": {
+    "problem": "Currency is not SGD",
+    "fix_hint": "Quote this customer in SGD, using SGD prices from the price list."
+  },
+  "cases": [
+    {
+      "case_id": "case_SGD000N1",
+      "kind": "negative",
+      "description": "Pilot quote as sent: amounts in USD",
+      "artifact_hash": "sha256:de47ca6e8864e3eec50245f631d2f7445b28eab8caee4a18b9b58ebcbd40402c",
+      "expect": "fail",
+      "last_result": "fail",
+      "last_run_at": "2026-11-10T06:18:30Z"
+    },
+    {
+      "case_id": "case_SGD000P1",
+      "kind": "positive",
+      "description": "Pilot quote re-priced in SGD",
+      "artifact_hash": "sha256:5ba7cc4cd1ebcfdbce2d9997c4b32f68362c79dbdaa9171cc4fa6e9ba758dec2",
+      "expect": "pass",
+      "last_result": "pass",
+      "last_run_at": "2026-11-10T06:18:30Z"
+    }
+  ],
+  "exception_policy": {
+    "grantable_by": [
+      "rule_owner",
+      "workspace_steward",
+      "project_steward"
+    ],
+    "max_days": 30
+  },
+  "approval": {
+    "proposed_by": "usr_MARCUS01",
+    "approved_by": "usr_MARCUS01",
+    "approved_at": "2026-11-10T06:31:02Z",
+    "activated_at": "2026-11-10T06:31:02Z",
+    "self_approval": true,
+    "policy_rev": 9
+  }
+}

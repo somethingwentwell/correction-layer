@@ -1,0 +1,164 @@
+{
+  "$schema": "../../schemas/run.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies, prices and addresses are fictional. Content hashes are digests of descriptive labels, not of real files.",
+  "schema_version": "cl.run/1",
+  "run_id": "run_PAYNOV02",
+  "trace_id": "trc_PAYNOV261",
+  "trigger": {
+    "kind": "auto_recheck",
+    "reason": "New version of an artifact with open findings"
+  },
+  "started_at": "2026-11-17T10:42:09Z",
+  "completed_at": "2026-11-17T10:42:10Z",
+  "as_of": "2026-11-17T10:42:09Z",
+  "display_tz": "Europe/London",
+  "actor": {
+    "kind": "system",
+    "id": "sys_ENGINE01",
+    "display_name": "Check engine"
+  },
+  "context": {
+    "workspace_id": "ws_CASTLEBK1",
+    "project_id": "prj_APRUNS26",
+    "area_ids": [
+      "area_PAYBATCH"
+    ],
+    "work_type": "vendor_payment_batch",
+    "status": "resolved",
+    "basis": [
+      "binding",
+      "marker",
+      "area_marker",
+      "default_work_type",
+      "mapping_match"
+    ]
+  },
+  "artifact": {
+    "artifact_id": "art_PAYNOV26",
+    "name": "Payments-2026-11.xlsx",
+    "version_seq": 2,
+    "content_hash": "sha256:3bc4f169a45f7ff69f1b476e90fd5be13672e6ea3033a8e7d5e704078616beda",
+    "artifact_type": "spreadsheet",
+    "parser": {
+      "id": "xlsx-core",
+      "version": "0.1.0"
+    }
+  },
+  "action": {
+    "type": "export_bank_file",
+    "params_digest": null
+  },
+  "policy": {
+    "policy_rev": 6,
+    "policy_as_of": "2026-11-09T09:00:00Z",
+    "ruleset_digest": "sha256:5bf0c6930ac0a00b8b8bd1c89b8442e4eb606cd3fd54f73637e9f75d14abd33a",
+    "engine_version": "0.1.0"
+  },
+  "sources": [
+    {
+      "source_id": "src_VENDRREG",
+      "snapshot_id": "snap_VR202611A",
+      "imported_at": "2026-11-05T09:20:00Z",
+      "confirmed_at": "2026-11-05T09:20:00Z",
+      "age_days": 12,
+      "fresh": false,
+      "fresh_until": "2026-11-12T09:20:00Z"
+    }
+  ],
+  "inventory": {
+    "workspace_active_rules": 14,
+    "in_scope": 5,
+    "out_of_scope": 9,
+    "out_of_scope_recomputable": true
+  },
+  "coverage_gaps": [],
+  "results": [
+    {
+      "rule_id": "rul_BANKREGR",
+      "revision": 1,
+      "title": "Payee bank details match the vendor register",
+      "rule_status": "active",
+      "method": "source_backed",
+      "enforcement": "block",
+      "effective_enforcement": "block",
+      "outcome": "unknown",
+      "reason": "Vendor register was last confirmed 12 days ago; this rule needs it confirmed within 7 days",
+      "unknown_reason": "source_stale",
+      "source_snapshot_id": "snap_VR202611A",
+      "findings": []
+    },
+    {
+      "rule_id": "rul_NOHIDDEN",
+      "revision": 1,
+      "title": "The payment sheet has no hidden rows or columns",
+      "rule_status": "active",
+      "method": "deterministic",
+      "enforcement": "block",
+      "effective_enforcement": "block",
+      "outcome": "pass",
+      "reason": "No hidden rows or columns in the Payments sheet (39 rows read)",
+      "compared": 39,
+      "findings": []
+    },
+    {
+      "rule_id": "rul_SUMFORMU",
+      "revision": 1,
+      "title": "The batch total is a formula over all payment rows",
+      "rule_status": "active",
+      "method": "deterministic",
+      "enforcement": "block",
+      "effective_enforcement": "block",
+      "outcome": "pass",
+      "reason": "Cell F41 is a SUM formula over F2:F40 and its stored result equals the sum of the payment rows, 187,290.00",
+      "compared": 1,
+      "findings": []
+    },
+    {
+      "rule_id": "rul_SECONDPR",
+      "revision": 1,
+      "title": "Payments of 10,000.00 or more are confirmed by a second person",
+      "rule_status": "active",
+      "method": "attested",
+      "enforcement": "block",
+      "effective_enforcement": "block",
+      "outcome": "unknown",
+      "reason": "2 payments are 10,000.00 or more; waiting for confirmation by someone other than the preparer",
+      "unknown_reason": "awaiting_attestation",
+      "findings": []
+    },
+    {
+      "rule_id": "rul_NODUPPAY",
+      "revision": 1,
+      "title": "No payee appears twice in a batch",
+      "rule_status": "active",
+      "method": "deterministic",
+      "enforcement": "block",
+      "effective_enforcement": "block",
+      "outcome": "pass",
+      "reason": "39 rows, 39 distinct payees",
+      "compared": 39,
+      "findings": []
+    }
+  ],
+  "verdict": "could_not_verify",
+  "counts": {
+    "in_scope": 5,
+    "pass": 3,
+    "fail": 0,
+    "unknown": 2,
+    "not_applicable": 0,
+    "error": 0,
+    "conflict": 0,
+    "waived": 0,
+    "skipped": 0,
+    "notes": 0,
+    "blocking_findings": 0
+  },
+  "fix_proposal_ids": [],
+  "receipt_id": null,
+  "reproducibility": {
+    "deterministic": true,
+    "inputs_digest": "sha256:6ecb67cfff86687d0d036fab1fa7084f76251e8c8c5dc469259c64985306d7e3",
+    "non_reproducible_rules": []
+  }
+}

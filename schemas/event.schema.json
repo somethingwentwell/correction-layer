@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "event.schema.json",
+  "title": "Ledger event",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. One append-only event. Screens are projections of events and the records they reference.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "cl.event/1"
+    },
+    "event_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "type": {
+      "enum": [
+        "workspace.created",
+        "project.created",
+        "project.facts_changed",
+        "folder.registered",
+        "folder.rebound",
+        "area.created",
+        "mapping.confirmed",
+        "source.registered",
+        "source.snapshot_imported",
+        "source.snapshot_confirmed",
+        "source.snapshot_superseded",
+        "source.became_stale",
+        "correction.recorded",
+        "rule.candidate_created",
+        "rule.cases_tested",
+        "rule.backtested",
+        "rule.approved",
+        "rule.rejected",
+        "rule.activated",
+        "rule.revised",
+        "rule.suspended",
+        "rule.resumed",
+        "rule.retired",
+        "rule.owner_changed",
+        "rule.conflict_detected",
+        "rule.review_due",
+        "exception.requested",
+        "exception.granted",
+        "exception.revoked",
+        "exception.expired",
+        "attestation.recorded",
+        "session.opened",
+        "context.resolved",
+        "context.ambiguity_raised",
+        "context.ambiguity_answered",
+        "artifact.observed",
+        "artifact.moved",
+        "artifact.copied",
+        "run.completed",
+        "fix.proposed",
+        "fix.dismissed",
+        "change.recorded",
+        "feedback.recorded",
+        "receipt.issued",
+        "receipt.invalidated",
+        "receipt.expired",
+        "receipt.consumed",
+        "action.requested",
+        "action.approved",
+        "action.rejected",
+        "action.revalidated",
+        "action.paused",
+        "action.blocked",
+        "action.executed",
+        "action.failed",
+        "action.outcome_unknown",
+        "ledger.anchored",
+        "ledger.exported",
+        "retention.purged",
+        "redaction.applied",
+        "policy.imported"
+      ]
+    },
+    "occurred_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "display_tz": {
+      "type": "string",
+      "description": "IANA timezone used for display"
+    },
+    "workspace_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "project_id": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "actor": {
+      "$ref": "common.schema.json#/$defs/actor"
+    },
+    "subject": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ]
+    },
+    "refs": {
+      "type": "object",
+      "properties": {
+        "correction_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "rule_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "rule_revision": {
+          "type": "integer"
+        },
+        "run_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "trace_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "artifact_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "content_hash": {
+          "$ref": "common.schema.json#/$defs/hash"
+        },
+        "source_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "snapshot_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "receipt_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "action_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "approval_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "fix_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "change_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "adapter_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        }
+      },
+      "additionalProperties": false
+    },
+    "caused_by": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/id"
+      },
+      "description": "Earlier events that directly led to this one."
+    },
+    "policy_rev": {
+      "type": "integer"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Rendered plain-language line. Contains no artifact content."
+    },
+    "payload": {
+      "anyOf": [
+        {
+          "type": "object",
+          "description": "Type-specific details. Null once erased under retention; the envelope remains."
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "payload_state": {
+      "enum": [
+        "present",
+        "erased"
+      ],
+      "description": "When erased, payload is null and payload_digest still records what was there."
+    },
+    "payload_digest": {
+      "$ref": "common.schema.json#/$defs/hash"
+    },
+    "classification": {
+      "enum": [
+        "meta",
+        "rule_text",
+        "evidence",
+        "content"
+      ]
+    },
+    "prev_hash": {
+      "$ref": "common.schema.json#/$defs/hash"
+    },
+    "hash": {
+      "$ref": "common.schema.json#/$defs/hash"
+    }
+  },
+  "required": [
+    "schema_version",
+    "event_id",
+    "seq",
+    "type",
+    "occurred_at",
+    "display_tz",
+    "workspace_id",
+    "project_id",
+    "actor",
+    "subject",
+    "refs",
+    "caused_by",
+    "policy_rev",
+    "summary",
+    "payload",
+    "payload_state",
+    "payload_digest",
+    "classification",
+    "prev_hash",
+    "hash"
+  ],
+  "additionalProperties": false
+}

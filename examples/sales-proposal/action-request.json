@@ -1,0 +1,109 @@
+{
+  "$schema": "../../schemas/action-request.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies, prices and addresses are fictional. Content hashes are digests of descriptive labels, not of real files.",
+  "schema_version": "cl.action/1",
+  "action_id": "act_MRPSEND2",
+  "trace_id": "trc_MRP2026A1",
+  "workspace_id": "ws_HALDEN01",
+  "project_id": "prj_MERID26R",
+  "type": "send_external",
+  "adapter_id": "adp_EMAIL001",
+  "requested_by": {
+    "kind": "human",
+    "id": "usr_PRIYA001",
+    "display_name": "Priya Nair"
+  },
+  "requested_at": "2026-11-12T02:12:03Z",
+  "artifact": {
+    "artifact_id": "art_MRP2026A",
+    "version_seq": 2,
+    "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00"
+  },
+  "params": {
+    "to": [
+      "procurement@meridianclinics.example"
+    ],
+    "subject": "Meridian Clinics - 2026 renewal proposal",
+    "attach_as": "original"
+  },
+  "params_digest": "sha256:2d20221ad545c4b684510f11119f31b64f7267f96aa8f5c223083f29c5db5a08",
+  "idempotency_key": "sha256:29cc131e3c732c76f0d17d51efc90d5d3690c92f73f50dbb8ebb15a5fa66146e",
+  "receipt_id": "rcp_MRP00003",
+  "previous_receipt_ids": [
+    "rcp_MRP00002"
+  ],
+  "approval_policy": "named_role",
+  "approval": {
+    "approval_id": "apr_MRPSEND2",
+    "approved_by": {
+      "kind": "human",
+      "id": "usr_MARCUS01",
+      "display_name": "Marcus Lim"
+    },
+    "approved_at": "2026-11-12T03:02:10Z",
+    "expires_at": "2026-11-13T02:41:23Z",
+    "self_approval": false,
+    "bound_to": {
+      "receipt_id": "rcp_MRP00003",
+      "content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+      "action_type": "send_external",
+      "params_digest": "sha256:2d20221ad545c4b684510f11119f31b64f7267f96aa8f5c223083f29c5db5a08"
+    }
+  },
+  "status": "executed",
+  "gate_checks": [
+    {
+      "step": 1,
+      "check": "Request well formed; adapter enabled for this project",
+      "ok": true
+    },
+    {
+      "step": 2,
+      "check": "Context resolves to the receipt's project",
+      "ok": true
+    },
+    {
+      "step": 3,
+      "check": "Receipt exists, signature verifies, valid, not expired",
+      "ok": true
+    },
+    {
+      "step": 4,
+      "check": "Checked bytes hash to the receipt's content hash",
+      "ok": true
+    },
+    {
+      "step": 5,
+      "check": "No newer version of the artifact exists",
+      "ok": true
+    },
+    {
+      "step": 6,
+      "check": "In-scope rule set digest unchanged",
+      "ok": true
+    },
+    {
+      "step": 7,
+      "check": "Sources still latest and fresh",
+      "ok": true
+    },
+    {
+      "step": 8,
+      "check": "Parser and engine versions unchanged",
+      "ok": true
+    },
+    {
+      "step": 9,
+      "check": "Approval present, permitted, bound to this receipt and parameters, unexpired",
+      "ok": true
+    }
+  ],
+  "execution": {
+    "adapter_id": "adp_EMAIL001",
+    "started_at": "2026-11-12T03:02:11Z",
+    "completed_at": "2026-11-12T03:02:13Z",
+    "outcome": "accepted_by_mail_server",
+    "executed_content_hash": "sha256:ce9481c5e6a28eaf48eaec557470feb09110dbfe3a225cd956e9fe828b548b00",
+    "provider_reference": "illustrative-message-reference"
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "$schema": "../../schemas/context.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies, prices and addresses are fictional. Content hashes are digests of descriptive labels, not of real files.",
+  "schema_version": "cl.context/1",
+  "session_id": "ses_PRIYA1112",
+  "resolved_at": "2026-11-12T01:31:07Z",
+  "enforcement_tier": "advisory",
+  "workspace": {
+    "workspace_id": "ws_HALDEN01",
+    "name": "Halden Instruments - Sales",
+    "display_tz": "Asia/Singapore"
+  },
+  "resolution": {
+    "status": "resolved",
+    "basis": [
+      "binding",
+      "marker",
+      "default_work_type"
+    ],
+    "project": {
+      "project_id": "prj_MERID26R",
+      "name": "Meridian Clinics - 2026 renewal",
+      "facts": {
+        "customer_id": "cust_meridian",
+        "customer_name": "Meridian Clinics Pte Ltd",
+        "sector": "private"
+      }
+    },
+    "area_ids": [],
+    "work_type": "sales_proposal",
+    "candidates": [],
+    "context_changed": false,
+    "question": null
+  },
+  "policy_rev": 10,
+  "brief": {
+    "in_scope_rule_count": 7,
+    "must_pass_count": 6,
+    "truncated": false,
+    "rules": [
+      {
+        "rule_id": "rul_SGDMERID",
+        "revision": 1,
+        "statement": "Every line in the pricing table, and the total, must be in SGD.",
+        "enforcement": "block",
+        "status": "active",
+        "method": "deterministic"
+      },
+      {
+        "rule_id": "rul_CUSTMTCH",
+        "revision": 1,
+        "statement": "The customer named in the document must be the customer of the project the document is in.",
+        "enforcement": "block",
+        "status": "active",
+        "method": "deterministic"
+      },
+      {
+        "rule_id": "rul_BIGDEAL1",
+        "revision": 1,
+        "statement": "When the total is 100,000 or more, the document must contain a section headed Credit terms.",
+        "enforcement": "block",
+        "status": "active",
+        "method": "deterministic"
+      },
+      {
+        "rule_id": "rul_TOTALSOK",
+        "revision": 1,
+        "statement": "Each line amount must equal quantity times unit price, and the total must equal the sum of the line amounts.",
+        "enforcement": "block",
+        "status": "active",
+        "method": "deterministic"
+      },
+      {
+        "rule_id": "rul_NOMARKUP",
+        "revision": 1,
+        "statement": "The document must contain no unresolved comments, tracked changes or placeholder text.",
+        "enforcement": "block",
+        "status": "trial",
+        "method": "deterministic"
+      },
+      {
+        "rule_id": "rul_VALIDDAT",
+        "revision": 1,
+        "statement": "The quote must state a validity date at least 30 days after the day it is checked.",
+        "enforcement": "block",
+        "status": "active",
+        "method": "deterministic"
+      },
+      {
+        "rule_id": "rul_PRICECUR",
+        "revision": 1,
+        "statement": "For every line in the pricing table, the unit price must equal the price for that item and currency in Halden price list, using the latest list, confirmed within the last 45 days.",
+        "enforcement": "block",
+        "status": "active",
+        "method": "source_backed"
+      }
+    ],
+    "sources": [
+      {
+        "source_id": "src_PRICELST",
+        "name": "Halden price list",
+        "snapshot_id": "snap_PL2026Q4A",
+        "imported_at": "2026-11-03T01:12:05Z",
+        "fresh": true
+      }
+    ],
+    "guidance": [],
+    "instructions": [
+      "Ask for a check before telling the user a proposal is finished.",
+      "Show human_summary to the user exactly as returned.",
+      "If the user corrects you, pass the correction on with propose_correction; it becomes a rule only if a person approves it in the app.",
+      "You cannot approve rules or actions. Sending goes through request_action and a person's approval."
+    ]
+  },
+  "coverage": [
+    {
+      "action": "send_external",
+      "label": "GATED",
+      "qualifier": "exclusive",
+      "adapter_id": "adp_EMAIL001",
+      "needs": [
+        "ready_check",
+        "approval"
+      ]
+    },
+    {
+      "action": "release",
+      "label": "GATED",
+      "qualifier": "by_convention",
+      "adapter_id": "adp_RELEASE1",
+      "needs": [
+        "ready_check",
+        "approval"
+      ]
+    },
+    {
+      "action": "assistant_editing",
+      "label": "ADVISORY",
+      "needs": []
+    },
+    {
+      "action": "save_in_folder",
+      "label": "OBSERVED",
+      "needs": []
+    },
+    {
+      "action": "manual_email_attachment",
+      "label": "NOT_COVERED",
+      "needs": []
+    }
+  ]
+}

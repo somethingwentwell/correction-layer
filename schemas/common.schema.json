@@ -1,0 +1,292 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "common.schema.json",
+  "title": "Common definitions",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. Shared definitions referenced by the other schemas.",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z]{2,4}_[0-9A-Za-z]{6,26}$",
+      "description": "Prefixed identifier, e.g. rul_PRICECUR. Real identifiers would be random; examples use readable ones."
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "description": "UTC, RFC 3339, second precision."
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "method": {
+      "enum": [
+        "deterministic",
+        "source_backed",
+        "attested",
+        "model_review"
+      ],
+      "description": "How a rule's answer is known."
+    },
+    "enforcement": {
+      "enum": [
+        "block",
+        "warn"
+      ],
+      "description": "What a failure does. 'warn' is shown to users as a note."
+    },
+    "outcome": {
+      "enum": [
+        "pass",
+        "fail",
+        "unknown",
+        "error",
+        "not_applicable",
+        "waived",
+        "conflict",
+        "skipped"
+      ]
+    },
+    "verdict": {
+      "enum": [
+        "ready",
+        "needs_changes",
+        "could_not_verify"
+      ]
+    },
+    "rule_status": {
+      "enum": [
+        "candidate",
+        "trial",
+        "active",
+        "suspended",
+        "retired",
+        "rejected"
+      ]
+    },
+    "actor": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "human",
+            "agent",
+            "system",
+            "adapter"
+          ]
+        },
+        "id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "on_behalf_of": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "description": "Who or what performed an act. Agents and system components acting for a person name that person in on_behalf_of."
+    },
+    "location": {
+      "type": "object",
+      "properties": {
+        "locator": {
+          "type": "string",
+          "description": "Machine address, e.g. docx:/body/tbl[2]/row[2]/cell[3]"
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable place"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "locator",
+        "label"
+      ]
+    },
+    "typed_value": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "text",
+            "number",
+            "money",
+            "percent",
+            "date",
+            "boolean",
+            "list",
+            "unknown"
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "description": "Decimal string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "date": {
+          "$ref": "common.schema.json#/$defs/date"
+        },
+        "boolean": {
+          "type": "boolean"
+        },
+        "items": {
+          "type": "array",
+          "items": {}
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why the value is unknown, when type is unknown"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ]
+    },
+    "predicate": {
+      "description": "Closed predicate grammar for applies_when.",
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "all": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/predicate"
+              },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "all"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "any": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/predicate"
+              },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "any"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "not": {
+              "$ref": "#/$defs/predicate"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "not"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "field": {
+              "type": "string"
+            },
+            "op": {
+              "enum": [
+                "eq",
+                "ne",
+                "in",
+                "not_in",
+                "lt",
+                "le",
+                "gt",
+                "ge",
+                "exists"
+              ]
+            },
+            "value": {}
+          },
+          "additionalProperties": false,
+          "required": [
+            "field",
+            "op"
+          ]
+        }
+      ]
+    },
+    "source_use": {
+      "type": "object",
+      "properties": {
+        "source_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "snapshot_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "imported_at": {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        "confirmed_at": {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        "age_days": {
+          "type": "integer"
+        },
+        "fresh": {
+          "type": "boolean"
+        },
+        "fresh_until": {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "snapshot_id",
+        "fresh"
+      ]
+    },
+    "parser": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version"
+      ]
+    }
+  }
+}

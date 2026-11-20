@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "correction.schema.json",
+  "title": "Correction",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. A person's correction, kept verbatim, with what it was about and what became of it.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Relative path to this schema, used by tools/check_repo.py."
+    },
+    "_note": {
+      "type": "string",
+      "description": "Marks an example file as proposed/illustrative."
+    },
+    "schema_version": {
+      "const": "cl.correction/1"
+    },
+    "correction_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "workspace_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "project_id": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "text": {
+      "type": "string",
+      "description": "The person's own words, unchanged."
+    },
+    "author": {
+      "$ref": "common.schema.json#/$defs/actor"
+    },
+    "channel": {
+      "enum": [
+        "app",
+        "assistant"
+      ],
+      "description": "Where it was entered. Assistant-relayed corrections stay candidates until confirmed in the app."
+    },
+    "recorded_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "display_tz": {
+      "type": "string"
+    },
+    "about": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "artifact_id": {
+              "$ref": "common.schema.json#/$defs/id"
+            },
+            "artifact_name": {
+              "type": "string"
+            },
+            "content_hash": {
+              "$ref": "common.schema.json#/$defs/hash"
+            },
+            "location": {
+              "$ref": "common.schema.json#/$defs/location"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "artifact_id",
+            "content_hash"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "resolution": {
+      "enum": [
+        "rule",
+        "guidance",
+        "upstream_fix",
+        "pending",
+        "dismissed"
+      ]
+    },
+    "rule_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/id"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "correction_id",
+    "workspace_id",
+    "text",
+    "author",
+    "channel",
+    "recorded_at",
+    "resolution",
+    "rule_ids"
+  ],
+  "additionalProperties": false
+}

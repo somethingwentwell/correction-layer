@@ -1,0 +1,253 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "action-request.schema.json",
+  "title": "Action request",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. A request to perform a gated action, its separate approval, and its execution.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Relative path to this schema, used by tools/check_repo.py."
+    },
+    "_note": {
+      "type": "string",
+      "description": "Marks an example file as proposed/illustrative."
+    },
+    "schema_version": {
+      "const": "cl.action/1"
+    },
+    "action_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "trace_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "workspace_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "type": {
+      "type": "string"
+    },
+    "adapter_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "requested_by": {
+      "$ref": "common.schema.json#/$defs/actor"
+    },
+    "requested_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "artifact": {
+      "type": "object",
+      "properties": {
+        "artifact_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "version_seq": {
+          "type": "integer"
+        },
+        "content_hash": {
+          "$ref": "common.schema.json#/$defs/hash"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "content_hash"
+      ]
+    },
+    "params": {
+      "type": "object"
+    },
+    "params_digest": {
+      "$ref": "common.schema.json#/$defs/hash"
+    },
+    "idempotency_key": {
+      "$ref": "common.schema.json#/$defs/hash"
+    },
+    "receipt_id": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "previous_receipt_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/id"
+      }
+    },
+    "approval_policy": {
+      "enum": [
+        "named_role",
+        "self",
+        "not_required"
+      ]
+    },
+    "approval": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "approval_id": {
+              "$ref": "common.schema.json#/$defs/id"
+            },
+            "approved_by": {
+              "$ref": "common.schema.json#/$defs/actor"
+            },
+            "approved_at": {
+              "$ref": "common.schema.json#/$defs/timestamp"
+            },
+            "expires_at": {
+              "$ref": "common.schema.json#/$defs/timestamp"
+            },
+            "self_approval": {
+              "type": "boolean"
+            },
+            "bound_to": {
+              "type": "object",
+              "properties": {
+                "receipt_id": {
+                  "$ref": "common.schema.json#/$defs/id"
+                },
+                "content_hash": {
+                  "$ref": "common.schema.json#/$defs/hash"
+                },
+                "action_type": {
+                  "type": "string"
+                },
+                "params_digest": {
+                  "$ref": "common.schema.json#/$defs/hash"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "receipt_id",
+                "content_hash",
+                "action_type",
+                "params_digest"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "approval_id",
+            "approved_by",
+            "approved_at",
+            "expires_at",
+            "self_approval",
+            "bound_to"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "status": {
+      "enum": [
+        "awaiting_check",
+        "awaiting_approval",
+        "approved",
+        "paused_newer_version",
+        "executing",
+        "executed",
+        "blocked",
+        "rejected",
+        "cancelled",
+        "failed",
+        "outcome_unknown"
+      ]
+    },
+    "blocked_reason": {
+      "type": "string"
+    },
+    "gate_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "step": {
+            "type": "integer"
+          },
+          "check": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "step",
+          "check",
+          "ok"
+        ]
+      }
+    },
+    "execution": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "adapter_id": {
+              "$ref": "common.schema.json#/$defs/id"
+            },
+            "started_at": {
+              "$ref": "common.schema.json#/$defs/timestamp"
+            },
+            "completed_at": {
+              "$ref": "common.schema.json#/$defs/timestamp"
+            },
+            "outcome": {
+              "type": "string"
+            },
+            "executed_content_hash": {
+              "$ref": "common.schema.json#/$defs/hash"
+            },
+            "provider_reference": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "adapter_id",
+            "started_at",
+            "outcome",
+            "executed_content_hash"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "action_id",
+    "workspace_id",
+    "project_id",
+    "type",
+    "adapter_id",
+    "requested_by",
+    "requested_at",
+    "artifact",
+    "params",
+    "params_digest",
+    "idempotency_key",
+    "receipt_id",
+    "approval_policy",
+    "approval",
+    "status",
+    "execution"
+  ],
+  "additionalProperties": false
+}

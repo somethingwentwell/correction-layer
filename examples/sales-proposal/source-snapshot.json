@@ -1,0 +1,84 @@
+{
+  "$schema": "../../schemas/source-snapshot.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies, prices and addresses are fictional. Content hashes are digests of descriptive labels, not of real files.",
+  "schema_version": "cl.source_snapshot/1",
+  "source": {
+    "source_id": "src_PRICELST",
+    "workspace_id": "ws_HALDEN01",
+    "name": "Halden price list",
+    "owner": "usr_DANA0001",
+    "authority_statement": "The pricing desk's current list prices per item and currency. Dana Okafor vouches for each imported version.",
+    "kind": "file_import",
+    "key_columns": [
+      "item_code",
+      "currency"
+    ],
+    "value_columns": [
+      "unit_price"
+    ],
+    "freshness": {
+      "max_age_days": 45,
+      "require_latest": true
+    },
+    "available_to_projects": [
+      "*"
+    ]
+  },
+  "snapshot": {
+    "snapshot_id": "snap_PL2026Q4A",
+    "content_hash": "sha256:12d3299490377932f585832f8ef191af6291b433700d24bc974663033930d0ca",
+    "imported_by": "usr_DANA0001",
+    "imported_at": "2026-11-03T01:12:05Z",
+    "confirmed_at": "2026-11-03T01:12:05Z",
+    "effective_from": "2026-10-01",
+    "row_count": 212,
+    "rows_unusable": 0,
+    "supersedes": null,
+    "origin_file": {
+      "name": "PriceList-2026-Q4.xlsx",
+      "detected_type": "xlsx"
+    }
+  },
+  "rows_excerpt": [
+    {
+      "row": 14,
+      "key": {
+        "item_code": "HX-200",
+        "currency": "USD"
+      },
+      "values": {
+        "unit_price": "1240.00"
+      }
+    },
+    {
+      "row": 15,
+      "key": {
+        "item_code": "HX-200",
+        "currency": "SGD"
+      },
+      "values": {
+        "unit_price": "1650.00"
+      }
+    },
+    {
+      "row": 88,
+      "key": {
+        "item_code": "CAL-1Y",
+        "currency": "USD"
+      },
+      "values": {
+        "unit_price": "300.00"
+      }
+    },
+    {
+      "row": 89,
+      "key": {
+        "item_code": "CAL-1Y",
+        "currency": "SGD"
+      },
+      "values": {
+        "unit_price": "400.00"
+      }
+    }
+  ]
+}
