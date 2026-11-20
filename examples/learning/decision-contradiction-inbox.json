@@ -1,0 +1,98 @@
+{
+  "$schema": "../../schemas/learning-decision.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies and amounts are fictional. Content hashes are digests of descriptive labels, not of real files. All thresholds are proposed, uncalibrated defaults.",
+  "schema_version": "cl.learning_decision/1",
+  "decision_id": "dec_KUSD0001",
+  "workspace_id": "ws_HALDEN01",
+  "project_id": "prj_KESTREL1",
+  "decided_at": "2026-11-20T01:40:13Z",
+  "display_tz": "Asia/Singapore",
+  "learning_policy": {
+    "learning_policy_id": "lrn_KESTREL1",
+    "revision": 1,
+    "mode": "auto_low_risk"
+  },
+  "signals": [
+    {
+      "signal_id": "sig_KUSD0001",
+      "type": "standing_instruction",
+      "surface": "attested_user_turn",
+      "trust": "user_direct",
+      "author_id": "usr_PRIYA001",
+      "episode_id": "epi_KUSD0001",
+      "text_matches_artifact_content": false,
+      "delivery": "live",
+      "late": false,
+      "episode_capture_complete": true
+    }
+  ],
+  "independent_episodes": 1,
+  "suppressed": false,
+  "candidate": {
+    "rule_id": "rul_KUSDCAND",
+    "revision": 1,
+    "statement": "Every line in the pricing table, and the total, must be in USD.",
+    "operation": "add_requirement",
+    "check_kind": "field_in_set",
+    "method": "deterministic",
+    "scope_level": "project",
+    "scope_project_id": "prj_KESTREL1",
+    "widening_requested": null,
+    "touches_protected_targets": false,
+    "pins_fact_without_source": false,
+    "reusability": "explicit_standing",
+    "referent_resolved": true,
+    "parameters_grounded": true,
+    "hedged": false,
+    "language_supported": true,
+    "model_flags": [],
+    "targets_rule_id": null
+  },
+  "evaluation": {
+    "evaluation_id": "evl_KUSD0001",
+    "trigger_case": null,
+    "real_passing_cases": [],
+    "heldout": {
+      "artifacts": 5,
+      "pass": 0,
+      "fail": 5,
+      "unknown": 0,
+      "error": 0,
+      "not_applicable": 0
+    },
+    "generated": {
+      "run": 4,
+      "unexpected": 0,
+      "counted_as_support": false
+    },
+    "conflicts": [],
+    "duplicates": [],
+    "contradicts_learned": [
+      "rul_KSGDAUTO"
+    ],
+    "auto_activations_today": 0
+  },
+  "outcome": "inbox",
+  "reasons": [
+    "no_trigger_case",
+    "no_real_pass",
+    "flags_existing_work",
+    "contradicts_learned_rule"
+  ],
+  "resulting_rule_status": "candidate",
+  "authority": null,
+  "side_effects": [
+    {
+      "effect": "auto_pause_learned_rule",
+      "rule_id": "rul_KSGDAUTO",
+      "detail": "Moved to shadow (note only) until a person decides. Reversible."
+    },
+    {
+      "effect": "open_inbox_item",
+      "inbox_id": "inb_KCURRENC",
+      "detail": "Two statements about Kestrel's currency disagree."
+    }
+  ],
+  "model_confidence_used": false,
+  "rationale": "Not turned on by itself. Priya Nair said Kestrel wants USD from now on, which contradicts the learned rule that Kestrel quotes are in SGD (17 Nov), and all 5 existing quotes in this project would fail it. The SGD rule has been moved to shadow so that it cannot block, and the question is in the inbox."
+}

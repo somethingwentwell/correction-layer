@@ -1,0 +1,107 @@
+{
+  "$schema": "../../schemas/rule.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies and amounts are fictional. Content hashes are digests of descriptive labels, not of real files. All thresholds are proposed, uncalibrated defaults.",
+  "schema_version": "cl.rule/1",
+  "rule_id": "rul_KSGDAUTO",
+  "revision": 1,
+  "status": "active",
+  "supersedes": null,
+  "title": "Kestrel Dental Group quotes are in SGD",
+  "statement": "Every line in the pricing table, and the total, must be in SGD.",
+  "origin": {
+    "kind": "human_correction",
+    "correction_id": "cor_KSGD0001",
+    "signal_ids": [
+      "sig_KSGD0001"
+    ]
+  },
+  "owner": "usr_PRIYA001",
+  "review_by": "2027-02-15",
+  "scope": {
+    "level": "project",
+    "workspace_id": "ws_HALDEN01",
+    "project_selector": null,
+    "project_id": "prj_KESTREL1",
+    "area_id": null,
+    "artifact_id": null,
+    "work_types": [
+      "sales_proposal"
+    ],
+    "artifact_types": [
+      "document"
+    ],
+    "actions": [
+      "send_external",
+      "release"
+    ]
+  },
+  "applies_when": null,
+  "method": "deterministic",
+  "enforcement": "block",
+  "locked": false,
+  "check": {
+    "kind": "field_in_set",
+    "targets": [
+      "quote.line_items[*].currency",
+      "quote.total.currency"
+    ],
+    "params": {
+      "allowed": [
+        "SGD"
+      ]
+    }
+  },
+  "requires": {
+    "fields": [
+      "quote.line_items[*].currency",
+      "quote.total"
+    ],
+    "components": [
+      "body.tables"
+    ]
+  },
+  "source": null,
+  "message": {
+    "problem": "Currency is not SGD",
+    "fix_hint": "Quote this project in SGD."
+  },
+  "cases": [
+    {
+      "case_id": "case_KSGD00N1",
+      "kind": "negative",
+      "description": "The draft Priya was correcting: amounts in USD (real, from the signal)",
+      "artifact_hash": "sha256:d76ef719d82ebb16db6517f24f69d0154952d257c0e5eee5d13eeaf4d543f80f",
+      "expect": "fail",
+      "last_result": "fail",
+      "last_run_at": "2026-11-17T06:12:41Z"
+    },
+    {
+      "case_id": "case_KSGD00P1",
+      "kind": "positive",
+      "description": "The same quote after correction: amounts in SGD (real, from the same episode)",
+      "artifact_hash": "sha256:597a59d0e21e05137a17e72285f57e923593a1996ed9aeb7a49240a1f64b022a",
+      "expect": "pass",
+      "last_result": "pass",
+      "last_run_at": "2026-11-17T06:12:41Z"
+    }
+  ],
+  "exception_policy": {
+    "grantable_by": [
+      "rule_owner",
+      "project_steward",
+      "workspace_steward"
+    ],
+    "max_days": 30
+  },
+  "authority": {
+    "kind": "delegated_learning",
+    "zero_click": true,
+    "learning_policy_id": "lrn_KESTREL1",
+    "learning_policy_revision": 1,
+    "decision_id": "dec_KSGD0001",
+    "delegated_by": "usr_MARCUS01",
+    "confirmed": null,
+    "auto_paused": null
+  },
+  "approval": null
+}

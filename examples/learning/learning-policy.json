@@ -1,0 +1,113 @@
+{
+  "$schema": "../../schemas/learning-policy.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies and amounts are fictional. Content hashes are digests of descriptive labels, not of real files. All thresholds are proposed, uncalibrated defaults.",
+  "schema_version": "cl.learning_policy/1",
+  "learning_policy_id": "lrn_KESTREL1",
+  "revision": 1,
+  "workspace_id": "ws_HALDEN01",
+  "scope": {
+    "level": "project",
+    "project_id": "prj_KESTREL1",
+    "area_id": null
+  },
+  "mode": "auto_low_risk",
+  "set_by": {
+    "kind": "human",
+    "id": "usr_MARCUS01",
+    "display_name": "Marcus Lim"
+  },
+  "set_at": "2026-11-16T01:20:11Z",
+  "display_tz": "Asia/Singapore",
+  "surfaces": [
+    {
+      "surface": "app",
+      "enabled": true,
+      "max_outcome": "auto"
+    },
+    {
+      "surface": "attested_user_turn",
+      "enabled": true,
+      "adapter_id": "adp_TURNHOOK",
+      "max_outcome": "auto"
+    },
+    {
+      "surface": "review_action",
+      "enabled": true,
+      "max_outcome": "auto"
+    },
+    {
+      "surface": "assistant_relay",
+      "enabled": true,
+      "max_outcome": "inbox"
+    },
+    {
+      "surface": "folder_watch",
+      "enabled": true,
+      "max_outcome": "shadow"
+    }
+  ],
+  "learn_from": [
+    "usr_PRIYA001",
+    "usr_MARCUS01"
+  ],
+  "inbox_resolvers": [
+    "usr_PRIYA001",
+    "usr_MARCUS01"
+  ],
+  "auto": {
+    "max_scope_level": "project",
+    "check_kinds": [
+      "field_present",
+      "field_in_set",
+      "fields_agree",
+      "number_compare",
+      "date_window",
+      "section_present",
+      "no_unresolved_markup",
+      "text_contains"
+    ],
+    "methods": [
+      "deterministic"
+    ],
+    "enforcement_max": "block"
+  },
+  "limits": {
+    "calibration": "proposed_uncalibrated",
+    "recurrence_min_episodes": 3,
+    "min_real_pass": 1,
+    "max_heldout_failures": 0,
+    "max_auto_activations_per_day": 3,
+    "candidate_expiry_days": 30,
+    "learned_rule_review_days": 90
+  },
+  "auto_pause": {
+    "enabled": true,
+    "on_direct_contradiction": true,
+    "disputes_distinct_artifacts": 2,
+    "on_example_regression": true,
+    "on_conflict_with_approved_rule": true
+  },
+  "capture": {
+    "calibration": "proposed_uncalibrated",
+    "late_after_hours": 24,
+    "gap_timeout_seconds": 60,
+    "non_signal_review_days": 14,
+    "dead_letter_days": 7,
+    "backfill_max_outcome": "inbox"
+  },
+  "never_learned": [
+    "pausing, retiring or narrowing any rule",
+    "exceptions",
+    "approval policies and who may approve",
+    "roles and permissions",
+    "action adapters, recipients and coverage",
+    "trusted-source designation and freshness windows",
+    "anything wider than this policy's scope",
+    "rules whose only support is an AI model's judgment"
+  ],
+  "retention": {
+    "signal_text_days": 400,
+    "one_off_episode_days": 90
+  },
+  "revoked": null
+}

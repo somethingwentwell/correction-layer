@@ -1,0 +1,65 @@
+{
+  "$schema": "../../schemas/learning-signal.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies and amounts are fictional. Content hashes are digests of descriptive labels, not of real files. All thresholds are proposed, uncalibrated defaults.",
+  "schema_version": "cl.learning_signal/1",
+  "signal_id": "sig_KLEAD001",
+  "workspace_id": "ws_HALDEN01",
+  "project_id": "prj_KESTREL1",
+  "type": "standing_instruction",
+  "surface": "attested_user_turn",
+  "adapter_id": "adp_TURNHOOK",
+  "trust": "user_direct",
+  "author": {
+    "kind": "human",
+    "id": "usr_PRIYA001",
+    "display_name": "Priya Nair"
+  },
+  "occurred_at": "2026-11-19T02:06:10Z",
+  "display_tz": "Asia/Singapore",
+  "session_id": "ses_PRIYA1119",
+  "episode_id": "epi_KAQ00001",
+  "anchor": {
+    "artifact_id": "art_KAQ2026A",
+    "content_hash": "sha256:be0080bb9990149277d470328307f37553bbe31902c0dbc63c38cb544734a7a4",
+    "basis": "last_agent_output"
+  },
+  "content": {
+    "text": "Always state the delivery lead time on addenda.",
+    "language": "en",
+    "markers": {
+      "standing": [
+        "always"
+      ],
+      "obligation": [],
+      "one_off": [],
+      "hedge": []
+    },
+    "diff": null
+  },
+  "capture": {
+    "stream_id": "str_PRIYA1119",
+    "capture_ids": [
+      "cap_P1119S005"
+    ],
+    "source_seqs": [
+      5
+    ],
+    "delivery": "replay",
+    "late": false,
+    "episode_capture_complete": true
+  },
+  "checks": {
+    "attested_by_runtime": true,
+    "text_matches_artifact_content": false,
+    "author_in_learn_from": true
+  },
+  "consent": {
+    "learning_policy_id": "lrn_KESTREL1",
+    "learning_policy_revision": 1,
+    "surface_opted_in": true
+  },
+  "retention": {
+    "class": "evidence",
+    "delete_after_days": 400
+  }
+}

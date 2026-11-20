@@ -1,0 +1,3374 @@
+{
+  "$schema": "../../schemas/event-log.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies and amounts are fictional. Content hashes are digests of descriptive labels, not of real files. All thresholds are proposed, uncalibrated defaults.",
+  "schema_version": "cl.event_log/1",
+  "workspace_id": "ws_HALDEN01",
+  "display_tz": "Asia/Singapore",
+  "chain": {
+    "algorithm": "sha256(prev_hash + newline + canonical JSON of the event without 'hash' and 'payload')",
+    "first_seq": 131,
+    "last_seq": 203,
+    "first_prev_hash": "sha256:8508ea5bad50b73643997f316c6f38fe7611cbde99dc360fa14879c9d3107e26",
+    "head_hash": "sha256:31b4c7ab97cae8e9489de4a1cb6802c1eb45ff14d952b1b7c560521503917548",
+    "note": "A contiguous segment of the workspace ledger, 16 to 20 Nov 2026. In this illustration nothing else happened in the workspace in that period."
+  },
+  "events": [
+    {
+      "event_id": "evt_000131",
+      "seq": 131,
+      "type": "learning.policy_set",
+      "occurred_at": "2026-11-16T01:20:11Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "human",
+        "id": "usr_MARCUS01",
+        "display_name": "Marcus Lim"
+      },
+      "subject": {
+        "kind": "learning_policy",
+        "id": "lrn_KESTREL1"
+      },
+      "refs": {
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [],
+      "policy_rev": 11,
+      "summary": "Marcus Lim turned on learning for Kestrel Dental Group - 2026 supply: low-risk rules may turn themselves on in this project.",
+      "payload": {
+        "revision": 1,
+        "mode": "auto_low_risk",
+        "scope_level": "project",
+        "learn_from": [
+          "usr_PRIYA001",
+          "usr_MARCUS01"
+        ],
+        "max_auto_activations_per_day": 3,
+        "surfaces": [
+          "app",
+          "attested_user_turn",
+          "review_action",
+          "assistant_relay",
+          "folder_watch"
+        ]
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:c8a04e0393eefa712ab7368c72ce0d6e4ab107c56af95e54f5be53beea5458cd",
+      "classification": "meta",
+      "prev_hash": "sha256:8508ea5bad50b73643997f316c6f38fe7611cbde99dc360fa14879c9d3107e26",
+      "hash": "sha256:14a0c5a1fe7cf23c4b1e174abd6d18f6fd6e7312b7d186b6545a4238c5604668",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000132",
+      "seq": 132,
+      "type": "session.opened",
+      "occurred_at": "2026-11-17T06:03:22Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "agent",
+        "id": "agt_PRIYAASST",
+        "display_name": "Priya Nair's assistant",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1117"
+      },
+      "subject": {
+        "kind": "session",
+        "id": "ses_PRIYA1117"
+      },
+      "refs": {
+        "session_id": "ses_PRIYA1117"
+      },
+      "caused_by": [],
+      "policy_rev": 11,
+      "summary": "Priya Nair's assistant started a session in a folder of Kestrel Dental Group - 2026 supply.",
+      "payload": {
+        "client": {
+          "name": "example-assistant",
+          "version": "3.2"
+        },
+        "binding_id": "fld_KESTREL01"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:0c3f6124e95a5625a7123982aeb76941670e4f379977bbd0cf5a3c5e8febaf90",
+      "classification": "meta",
+      "prev_hash": "sha256:14a0c5a1fe7cf23c4b1e174abd6d18f6fd6e7312b7d186b6545a4238c5604668",
+      "hash": "sha256:6caccacc4072bd331b774f5f6a11f5250e1ed870824f49fdbaa9ef417ff77480",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000133",
+      "seq": 133,
+      "type": "context.resolved",
+      "occurred_at": "2026-11-17T06:03:22Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_RESOLVER",
+        "display_name": "Context resolver"
+      },
+      "subject": {
+        "kind": "session",
+        "id": "ses_PRIYA1117"
+      },
+      "refs": {
+        "session_id": "ses_PRIYA1117",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000132"
+      ],
+      "policy_rev": 11,
+      "summary": "Context resolved to Kestrel Dental Group - 2026 supply, Sales proposal. 6 rules in scope. Learning is on for this project.",
+      "payload": {
+        "status": "resolved",
+        "basis": [
+          "binding",
+          "marker",
+          "default_work_type"
+        ],
+        "in_scope_rule_count": 6,
+        "learning_mode": "auto_low_risk"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:2451503568745fc9c5c298833eed962189238e0da607bff3cddaf3c3a4a1db29",
+      "classification": "meta",
+      "prev_hash": "sha256:6caccacc4072bd331b774f5f6a11f5250e1ed870824f49fdbaa9ef417ff77480",
+      "hash": "sha256:9a5c3df0b88d1e120ee68c24f6143e795e94d98a09300658cc4dac59b9478b13",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000134",
+      "seq": 134,
+      "type": "capture.stream_opened",
+      "occurred_at": "2026-11-17T06:03:22Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_CAPTURE1",
+        "display_name": "Capture intake"
+      },
+      "subject": {
+        "kind": "stream",
+        "id": "str_PRIYA1117"
+      },
+      "refs": {
+        "stream_id": "str_PRIYA1117",
+        "session_id": "ses_PRIYA1117",
+        "adapter_id": "adp_TURNHOOK",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000133"
+      ],
+      "policy_rev": 11,
+      "summary": "Capture started for this session: the user-turn adapter is connected, with a durable outbox. What Priya Nair types here is captured for this project.",
+      "payload": {
+        "adapter_kind": "runtime_hook",
+        "attests_user_turns": true,
+        "durable_outbox": true,
+        "supports_replay": true,
+        "cursor": 0,
+        "label": "CAPTURED",
+        "bound_project": "prj_KESTREL1",
+        "binding_id": "fld_KESTREL01"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:a11382a72f42ff32c9b825e69df184a8a6332af5718fc50e3ab909113f0148b8",
+      "classification": "meta",
+      "prev_hash": "sha256:9a5c3df0b88d1e120ee68c24f6143e795e94d98a09300658cc4dac59b9478b13",
+      "hash": "sha256:368a9020de401a6e5e140020fdf7c616386b0580e36a4622bfccd8ea27ac1f1f",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000135",
+      "seq": 135,
+      "type": "artifact.observed",
+      "occurred_at": "2026-11-17T06:10:48Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_WATCHER1",
+        "display_name": "Folder watcher"
+      },
+      "subject": {
+        "kind": "artifact",
+        "id": "art_KSQ2026A"
+      },
+      "refs": {
+        "artifact_id": "art_KSQ2026A",
+        "content_hash": "sha256:d76ef719d82ebb16db6517f24f69d0154952d257c0e5eee5d13eeaf4d543f80f",
+        "session_id": "ses_PRIYA1117"
+      },
+      "caused_by": [],
+      "policy_rev": 11,
+      "summary": "New file seen: Kestrel-Supply-Quote.docx, version 1. It appeared during Priya Nair's assistant session; no editor was declared.",
+      "payload": {
+        "version_seq": 1,
+        "new_artifact": true,
+        "detected_type": "docx",
+        "extension_matches": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:1f601af3c057682a4828e0b481bb02a288429751e671d29495a95aa0cc86b193",
+      "classification": "meta",
+      "prev_hash": "sha256:368a9020de401a6e5e140020fdf7c616386b0580e36a4622bfccd8ea27ac1f1f",
+      "hash": "sha256:febec4dbc4d5bac2267e4c945201dfe215277f82a215036ef1798a336c0628ec",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000136",
+      "seq": 136,
+      "type": "learning.signal_detected",
+      "occurred_at": "2026-11-17T06:12:05Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "adapter",
+        "id": "adp_TURNHOOK",
+        "display_name": "User-turn event adapter",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1117"
+      },
+      "subject": {
+        "kind": "signal",
+        "id": "sig_KSGD0001"
+      },
+      "refs": {
+        "signal_id": "sig_KSGD0001",
+        "stream_id": "str_PRIYA1117",
+        "capture_id": "cap_P1117S004",
+        "session_id": "ses_PRIYA1117",
+        "artifact_id": "art_KSQ2026A",
+        "content_hash": "sha256:d76ef719d82ebb16db6517f24f69d0154952d257c0e5eee5d13eeaf4d543f80f",
+        "learning_policy_id": "lrn_KESTREL1",
+        "adapter_id": "adp_TURNHOOK"
+      },
+      "caused_by": [],
+      "policy_rev": 11,
+      "summary": "Priya Nair typed a standing instruction in an assistant session about Kestrel-Supply-Quote.docx.",
+      "payload": {
+        "type": "standing_instruction",
+        "surface": "attested_user_turn",
+        "trust": "user_direct",
+        "text": "No, Kestrel's quotes must always be in SGD.",
+        "language": "en",
+        "markers": {
+          "standing": [
+            "always"
+          ],
+          "obligation": [
+            "must"
+          ],
+          "one_off": [],
+          "hedge": []
+        },
+        "attested_by_runtime": true,
+        "text_matches_artifact_content": false,
+        "episode_id": "epi_KSQ00001",
+        "anchor_basis": "last_agent_output",
+        "capture": {
+          "stream_id": "str_PRIYA1117",
+          "source_seq": 4,
+          "delivery": "live"
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:c490730f2d7cdc5a82bc83241263ee197daa33ce411c932c4f909f212b45492b",
+      "classification": "rule_text",
+      "prev_hash": "sha256:febec4dbc4d5bac2267e4c945201dfe215277f82a215036ef1798a336c0628ec",
+      "hash": "sha256:9031326b035392ef78410f14954a31b0ecc8e8b3ea7758c8818f05dce2227f57",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000137",
+      "seq": 137,
+      "type": "learning.correction_extracted",
+      "occurred_at": "2026-11-17T06:12:06Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_TRANSLTR",
+        "display_name": "Correction translator",
+        "on_behalf_of": "usr_PRIYA001"
+      },
+      "subject": {
+        "kind": "correction",
+        "id": "cor_KSGD0001"
+      },
+      "refs": {
+        "correction_id": "cor_KSGD0001",
+        "signal_id": "sig_KSGD0001"
+      },
+      "caused_by": [
+        "evt_000136"
+      ],
+      "policy_rev": 11,
+      "summary": "Structured correction extracted: currency of every line and the total must be SGD. Every value comes from Priya Nair's own words.",
+      "payload": {
+        "channel": "observed_chat",
+        "field": "currency",
+        "value": "SGD",
+        "ai_model_used": true,
+        "parameters_grounded": true,
+        "referent_resolved": true,
+        "reusability": "explicit_standing",
+        "requested_scope": "customer",
+        "narrowest_scope": "project"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:09c7fbab3a912dae6d7f83d38e897ebfc5256592b60a66f3f8efb91445b7c979",
+      "classification": "rule_text",
+      "prev_hash": "sha256:9031326b035392ef78410f14954a31b0ecc8e8b3ea7758c8818f05dce2227f57",
+      "hash": "sha256:48ffd1e55497f2cfb228595748e78053a96892213680c0b85483d200d11fdaca",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000138",
+      "seq": 138,
+      "type": "rule.candidate_created",
+      "occurred_at": "2026-11-17T06:12:06Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_TRANSLTR",
+        "display_name": "Correction translator",
+        "on_behalf_of": "usr_PRIYA001"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_KSGDAUTO"
+      },
+      "refs": {
+        "correction_id": "cor_KSGD0001",
+        "rule_id": "rul_KSGDAUTO",
+        "rule_revision": 1,
+        "signal_id": "sig_KSGD0001"
+      },
+      "caused_by": [
+        "evt_000137"
+      ],
+      "policy_rev": 11,
+      "summary": "Candidate rule saved (inactive): Kestrel Dental Group quotes are in SGD.",
+      "payload": {
+        "proposed_by": "translator",
+        "ai_model_used": true,
+        "check_kind": "field_in_set",
+        "suggested_scope_level": "project",
+        "status": "candidate"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:82f412ad45d60b1ffa9a809aef5a4e0ab36cdd352ad9fe0e4d692c9f7029c51e",
+      "classification": "rule_text",
+      "prev_hash": "sha256:48ffd1e55497f2cfb228595748e78053a96892213680c0b85483d200d11fdaca",
+      "hash": "sha256:113e0381e007f50dd40d0802bb404ec59840e694bb6d9588eec647c3bd0bd212",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000139",
+      "seq": 139,
+      "type": "artifact.observed",
+      "occurred_at": "2026-11-17T06:12:40Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_WATCHER1",
+        "display_name": "Folder watcher"
+      },
+      "subject": {
+        "kind": "artifact",
+        "id": "art_KSQ2026A"
+      },
+      "refs": {
+        "artifact_id": "art_KSQ2026A",
+        "content_hash": "sha256:597a59d0e21e05137a17e72285f57e923593a1996ed9aeb7a49240a1f64b022a",
+        "session_id": "ses_PRIYA1117"
+      },
+      "caused_by": [],
+      "policy_rev": 11,
+      "summary": "New version seen: Kestrel-Supply-Quote.docx, version 2.",
+      "payload": {
+        "version_seq": 2,
+        "new_artifact": false,
+        "detected_type": "docx",
+        "extension_matches": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:3d10a9eb9584845c93dc88755acfbdc34b68862f366b6707a79f6c14d31d987b",
+      "classification": "meta",
+      "prev_hash": "sha256:113e0381e007f50dd40d0802bb404ec59840e694bb6d9588eec647c3bd0bd212",
+      "hash": "sha256:178253c7b7a7059fb7da74a2708a8b557b8413b820ce87fa6c95197127ae4ce5",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000140",
+      "seq": 140,
+      "type": "change.recorded",
+      "occurred_at": "2026-11-17T06:12:40Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "agent",
+        "id": "agt_PRIYAASST",
+        "display_name": "Priya Nair's assistant",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1117"
+      },
+      "subject": {
+        "kind": "change",
+        "id": "chg_KSQ00001"
+      },
+      "refs": {
+        "change_id": "chg_KSQ00001",
+        "artifact_id": "art_KSQ2026A",
+        "content_hash": "sha256:597a59d0e21e05137a17e72285f57e923593a1996ed9aeb7a49240a1f64b022a",
+        "session_id": "ses_PRIYA1117"
+      },
+      "caused_by": [
+        "evt_000136",
+        "evt_000139"
+      ],
+      "policy_rev": 11,
+      "summary": "Version 1 became version 2: 5 table cells changed by Priya Nair's assistant at Priya Nair's request.",
+      "payload": {
+        "from_version": 1,
+        "to_version": 2,
+        "from_hash": "sha256:d76ef719d82ebb16db6517f24f69d0154952d257c0e5eee5d13eeaf4d543f80f",
+        "to_hash": "sha256:597a59d0e21e05137a17e72285f57e923593a1996ed9aeb7a49240a1f64b022a",
+        "cells_changed": 5,
+        "other_changes": 0,
+        "unread_parts_changed": false,
+        "attribution": "declared_by_session"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:b6ce8b8edf7e5696025e6869381f7ac88c5b5ab972af3c4025ab3373dfe8b177",
+      "classification": "meta",
+      "prev_hash": "sha256:178253c7b7a7059fb7da74a2708a8b557b8413b820ce87fa6c95197127ae4ce5",
+      "hash": "sha256:4f68749f17e342543ba4d1eeb9ae690103db907932530de3f963c8469926b4f3",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000141",
+      "seq": 141,
+      "type": "learning.candidate_evaluated",
+      "occurred_at": "2026-11-17T06:12:41Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine"
+      },
+      "subject": {
+        "kind": "evaluation",
+        "id": "evl_KSGD0001"
+      },
+      "refs": {
+        "evaluation_id": "evl_KSGD0001",
+        "rule_id": "rul_KSGDAUTO",
+        "rule_revision": 1,
+        "signal_id": "sig_KSGD0001"
+      },
+      "caused_by": [
+        "evt_000138",
+        "evt_000140"
+      ],
+      "policy_rev": 11,
+      "summary": "Candidate tested on 5 documents: catches the corrected draft, passes the corrected version, passes 3 other quotes in this project. No conflicts.",
+      "payload": {
+        "trigger_case": "fail_as_expected",
+        "real_passing_cases": 1,
+        "heldout": {
+          "artifacts": 3,
+          "pass": 3,
+          "fail": 0,
+          "unknown": 0,
+          "error": 0,
+          "not_applicable": 0
+        },
+        "generated": {
+          "run": 4,
+          "unexpected": 0,
+          "counted_as_support": false
+        },
+        "conflicts": [],
+        "duplicates": [],
+        "contradicts_learned": []
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:937afd01b1a486658fbbb8a7e7dbe8a6ce8c8b08fab5865aa9ab4407c2dd5de6",
+      "classification": "meta",
+      "prev_hash": "sha256:4f68749f17e342543ba4d1eeb9ae690103db907932530de3f963c8469926b4f3",
+      "hash": "sha256:4cfc24e20b8df494fc491131ba2d42b68c94cc503f6c9e08473f772d91760e82",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000142",
+      "seq": 142,
+      "type": "learning.decision_made",
+      "occurred_at": "2026-11-17T06:12:41Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_LEARNING",
+        "display_name": "Learning decision"
+      },
+      "subject": {
+        "kind": "decision",
+        "id": "dec_KSGD0001"
+      },
+      "refs": {
+        "decision_id": "dec_KSGD0001",
+        "evaluation_id": "evl_KSGD0001",
+        "rule_id": "rul_KSGDAUTO",
+        "rule_revision": 1,
+        "signal_id": "sig_KSGD0001",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000141"
+      ],
+      "policy_rev": 11,
+      "summary": "Decision: turn on automatically. Low-risk, validated, inside the learning setting for this project. No person clicked.",
+      "payload": {
+        "outcome": "auto_activate",
+        "reasons": [],
+        "mode": "auto_low_risk",
+        "model_confidence_used": false,
+        "authority": {
+          "kind": "delegated_learning",
+          "learning_policy_id": "lrn_KESTREL1",
+          "learning_policy_revision": 1,
+          "delegated_by": "usr_MARCUS01"
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:567e2494fa6008cd4045a8f193b423a8624fa4fc49a6e68a0e96834168f74e25",
+      "classification": "meta",
+      "prev_hash": "sha256:4cfc24e20b8df494fc491131ba2d42b68c94cc503f6c9e08473f772d91760e82",
+      "hash": "sha256:6d21dfe9d015358483058b59433120695d9df0781bcfc9f60660617e6b717cfb",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000143",
+      "seq": 143,
+      "type": "rule.activated",
+      "occurred_at": "2026-11-17T06:12:41Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_POLICY01",
+        "display_name": "Policy store"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_KSGDAUTO"
+      },
+      "refs": {
+        "rule_id": "rul_KSGDAUTO",
+        "rule_revision": 1,
+        "decision_id": "dec_KSGD0001",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000142"
+      ],
+      "policy_rev": 12,
+      "summary": "Rule turned on automatically: Kestrel Dental Group quotes are in SGD. Rules revision 11 became 12.",
+      "payload": {
+        "status": "active",
+        "policy_rev_before": 11,
+        "policy_rev_after": 12,
+        "authority": "delegated_learning",
+        "zero_click": true,
+        "undo_available": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:50892289280ab3b83a663ce860ca1e0380582d6e129b092e85249679b1db95aa",
+      "classification": "meta",
+      "prev_hash": "sha256:6d21dfe9d015358483058b59433120695d9df0781bcfc9f60660617e6b717cfb",
+      "hash": "sha256:ffc454b0bcfd62129a08e715284876e35c642a0f9ed163a7c4bc7e6bd478e268",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000144",
+      "seq": 144,
+      "type": "capture.stream_closed",
+      "occurred_at": "2026-11-17T06:40:00Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_CAPTURE1",
+        "display_name": "Capture intake"
+      },
+      "subject": {
+        "kind": "stream",
+        "id": "str_PRIYA1117"
+      },
+      "refs": {
+        "stream_id": "str_PRIYA1117",
+        "session_id": "ses_PRIYA1117",
+        "adapter_id": "adp_TURNHOOK"
+      },
+      "caused_by": [],
+      "policy_rev": 12,
+      "summary": "Capture ended for this session: all 7 events were received.",
+      "payload": {
+        "status": "closed_complete",
+        "final_seq": 7,
+        "acked_through": 7,
+        "gaps_closed": 0,
+        "dead_letters": 0,
+        "health": "healthy",
+        "counts": {
+          "captured": 3,
+          "identified": 1,
+          "compiled": 1,
+          "tested": 1,
+          "activated": 1
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:57f0224af5a5048984d1c6bf94cd0c683d8148a8b89f1ce085ddfa477ed68f71",
+      "classification": "meta",
+      "prev_hash": "sha256:ffc454b0bcfd62129a08e715284876e35c642a0f9ed163a7c4bc7e6bd478e268",
+      "hash": "sha256:f53a01e5b715360ce08035255babc3eb6fa7f03e6d05fc4eed72fa04a86fe3f5",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000145",
+      "seq": 145,
+      "type": "artifact.observed",
+      "occurred_at": "2026-11-18T02:15:30Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_WATCHER1",
+        "display_name": "Folder watcher"
+      },
+      "subject": {
+        "kind": "artifact",
+        "id": "art_KSQ2026A"
+      },
+      "refs": {
+        "artifact_id": "art_KSQ2026A",
+        "content_hash": "sha256:9935963189ebf86dd30ac3c8f7561f43fe52610a394f3d65de34117a5e72f7c6"
+      },
+      "caused_by": [],
+      "policy_rev": 12,
+      "summary": "New version seen: Kestrel-Supply-Quote.docx, version 3. No assistant session declared the change.",
+      "payload": {
+        "version_seq": 3,
+        "new_artifact": false,
+        "detected_type": "docx",
+        "extension_matches": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:882a55e8c712510ff2d43574dc595deb9a9c8b2df349ec53885b1c87725c54cf",
+      "classification": "meta",
+      "prev_hash": "sha256:f53a01e5b715360ce08035255babc3eb6fa7f03e6d05fc4eed72fa04a86fe3f5",
+      "hash": "sha256:78ab51a6873f3db4cc21734be31878cf3eee8cec829edb3ed72c31d791a0d4e0",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000146",
+      "seq": 146,
+      "type": "learning.signal_detected",
+      "occurred_at": "2026-11-18T02:15:31Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_DETECTOR",
+        "display_name": "Signal detector"
+      },
+      "subject": {
+        "kind": "signal",
+        "id": "sig_KEDIT001"
+      },
+      "refs": {
+        "signal_id": "sig_KEDIT001",
+        "artifact_id": "art_KSQ2026A",
+        "content_hash": "sha256:9935963189ebf86dd30ac3c8f7561f43fe52610a394f3d65de34117a5e72f7c6",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000145"
+      ],
+      "policy_rev": 12,
+      "summary": "An edit made outside any assistant session changed one sentence that an assistant had written.",
+      "payload": {
+        "type": "human_edit_diff",
+        "surface": "folder_watch",
+        "trust": "observed_edit",
+        "changed": [
+          {
+            "where": "Summary, first sentence",
+            "in_field_dictionary": false
+          }
+        ],
+        "markers": {
+          "standing": [],
+          "obligation": [],
+          "one_off": [],
+          "hedge": []
+        },
+        "episode_id": "epi_KSQ00002",
+        "anchor_basis": "diff_target"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:60242efae869a1f89c200501128d738769a70cae9c9c2e319ec00f707b3d776a",
+      "classification": "meta",
+      "prev_hash": "sha256:78ab51a6873f3db4cc21734be31878cf3eee8cec829edb3ed72c31d791a0d4e0",
+      "hash": "sha256:c0be204eca5ae70bfa84f21981cd0efa29ed3f279e3c1c277b390c24909a91d7",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000147",
+      "seq": 147,
+      "type": "learning.decision_made",
+      "occurred_at": "2026-11-18T02:15:31Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_LEARNING",
+        "display_name": "Learning decision"
+      },
+      "subject": {
+        "kind": "decision",
+        "id": "dec_KEDIT001"
+      },
+      "refs": {
+        "decision_id": "dec_KEDIT001",
+        "signal_id": "sig_KEDIT001",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000146"
+      ],
+      "policy_rev": 12,
+      "summary": "Decision: not learned. One wording edit in one document, with nothing said about doing it every time.",
+      "payload": {
+        "outcome": "record_only",
+        "reasons": [
+          "not_enough_independent_episodes"
+        ],
+        "independent_episodes": 1,
+        "needed": 3,
+        "model_confidence_used": false
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:c3f661c7a58231cb35c6709c84b4e3d66c6fd0996e73a4d75b5fa5280c0897d8",
+      "classification": "meta",
+      "prev_hash": "sha256:c0be204eca5ae70bfa84f21981cd0efa29ed3f279e3c1c277b390c24909a91d7",
+      "hash": "sha256:d92d52058945c3bdbd5de93e05c3077f9f61a5624194026c03de891b143f8689",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000148",
+      "seq": 148,
+      "type": "session.opened",
+      "occurred_at": "2026-11-18T03:38:50Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "agent",
+        "id": "agt_PRIYAASST",
+        "display_name": "Priya Nair's assistant",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1118"
+      },
+      "subject": {
+        "kind": "session",
+        "id": "ses_PRIYA1118"
+      },
+      "refs": {
+        "session_id": "ses_PRIYA1118"
+      },
+      "caused_by": [],
+      "policy_rev": 12,
+      "summary": "Priya Nair's assistant started a session in a folder of Kestrel Dental Group - 2026 supply.",
+      "payload": {
+        "client": {
+          "name": "example-assistant",
+          "version": "3.2"
+        },
+        "binding_id": "fld_KESTREL01"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:0c3f6124e95a5625a7123982aeb76941670e4f379977bbd0cf5a3c5e8febaf90",
+      "classification": "meta",
+      "prev_hash": "sha256:d92d52058945c3bdbd5de93e05c3077f9f61a5624194026c03de891b143f8689",
+      "hash": "sha256:6382790a17ae14e078080146ec5efca07dd38a72d9def87492d52e8433eaf768",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000149",
+      "seq": 149,
+      "type": "context.resolved",
+      "occurred_at": "2026-11-18T03:38:50Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_RESOLVER",
+        "display_name": "Context resolver"
+      },
+      "subject": {
+        "kind": "session",
+        "id": "ses_PRIYA1118"
+      },
+      "refs": {
+        "session_id": "ses_PRIYA1118",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000148"
+      ],
+      "policy_rev": 12,
+      "summary": "Context resolved to Kestrel Dental Group - 2026 supply, Sales proposal. 7 rules in scope. Learning is on for this project.",
+      "payload": {
+        "status": "resolved",
+        "basis": [
+          "binding",
+          "marker",
+          "default_work_type"
+        ],
+        "in_scope_rule_count": 7,
+        "learning_mode": "auto_low_risk"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:997ecd6286bb4c8f4b07829534b39e72fcf52b46e448bcd7ec94d3dff14fc545",
+      "classification": "meta",
+      "prev_hash": "sha256:6382790a17ae14e078080146ec5efca07dd38a72d9def87492d52e8433eaf768",
+      "hash": "sha256:4256ba7e6a5df2b3e2adef68959aa3f30c2608c2c261e92b09cd1ecc5f6fb0c3",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000150",
+      "seq": 150,
+      "type": "capture.stream_opened",
+      "occurred_at": "2026-11-18T03:38:50Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_CAPTURE1",
+        "display_name": "Capture intake"
+      },
+      "subject": {
+        "kind": "stream",
+        "id": "str_PRIYA1118"
+      },
+      "refs": {
+        "stream_id": "str_PRIYA1118",
+        "session_id": "ses_PRIYA1118",
+        "adapter_id": "adp_TURNHOOK",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000149"
+      ],
+      "policy_rev": 12,
+      "summary": "Capture started for this session: the user-turn adapter is connected, with a durable outbox. What Priya Nair types here is captured for this project.",
+      "payload": {
+        "adapter_kind": "runtime_hook",
+        "attests_user_turns": true,
+        "durable_outbox": true,
+        "supports_replay": true,
+        "cursor": 0,
+        "label": "CAPTURED",
+        "bound_project": "prj_KESTREL1",
+        "binding_id": "fld_KESTREL01"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:a11382a72f42ff32c9b825e69df184a8a6332af5718fc50e3ab909113f0148b8",
+      "classification": "meta",
+      "prev_hash": "sha256:4256ba7e6a5df2b3e2adef68959aa3f30c2608c2c261e92b09cd1ecc5f6fb0c3",
+      "hash": "sha256:fcb5bf3b34275eedd53fdf8236d9a6ca8b5bfc03406d9d39a841701ecdce2967",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000151",
+      "seq": 151,
+      "type": "artifact.observed",
+      "occurred_at": "2026-11-18T03:40:02Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_WATCHER1",
+        "display_name": "Folder watcher"
+      },
+      "subject": {
+        "kind": "artifact",
+        "id": "art_KRFQNOTE"
+      },
+      "refs": {
+        "artifact_id": "art_KRFQNOTE",
+        "content_hash": "sha256:1d994d10512eae44a31b9ce87ef393a1a71c3cc3886ee4c3bd00caeffa7d635e"
+      },
+      "caused_by": [],
+      "policy_rev": 12,
+      "summary": "New file seen: Kestrel-RFQ-Notes.docx, version 1. It contains hidden text.",
+      "payload": {
+        "version_seq": 1,
+        "new_artifact": true,
+        "detected_type": "docx",
+        "extension_matches": true,
+        "risk_flags": [
+          "hidden_text"
+        ]
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:01cfc45e67c0a9fceaf5034a1a32f6f66ee6874406d76d8035e77a08064b66b5",
+      "classification": "meta",
+      "prev_hash": "sha256:fcb5bf3b34275eedd53fdf8236d9a6ca8b5bfc03406d9d39a841701ecdce2967",
+      "hash": "sha256:9ad81b4f367b0adfb0826bb6c79fcd5097c4dc520274c777e1dedf0db635dfc2",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000152",
+      "seq": 152,
+      "type": "learning.signal_discarded",
+      "occurred_at": "2026-11-18T03:42:17Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_DETECTOR",
+        "display_name": "Signal detector"
+      },
+      "subject": {
+        "kind": "signal",
+        "id": "sig_KRFQ0001"
+      },
+      "refs": {
+        "signal_id": "sig_KRFQ0001",
+        "decision_id": "dec_KRFQ0001",
+        "session_id": "ses_PRIYA1118",
+        "artifact_id": "art_KRFQNOTE",
+        "content_hash": "sha256:1d994d10512eae44a31b9ce87ef393a1a71c3cc3886ee4c3bd00caeffa7d635e",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000151"
+      ],
+      "policy_rev": 12,
+      "summary": "Ignored: an assistant passed on a \"correction\" whose words come from hidden text in Kestrel-RFQ-Notes.docx, not from a person.",
+      "payload": {
+        "type": "standing_instruction",
+        "surface": "assistant_relay",
+        "trust": "assistant_relayed",
+        "attested_by_runtime": false,
+        "text_matches_artifact_content": true,
+        "attested_user_turn_with_same_text": false,
+        "reason": "untrusted_origin",
+        "decision_id": "dec_KRFQ0001",
+        "candidate_created": false,
+        "risk_flag_added": "instruction_like_hidden_text"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:de116fdd9f579c366f4686990228a6fd604e22cf40edf5672254462b86723927",
+      "classification": "meta",
+      "prev_hash": "sha256:9ad81b4f367b0adfb0826bb6c79fcd5097c4dc520274c777e1dedf0db635dfc2",
+      "hash": "sha256:f1d6d3643609e3ce48179b93d3256486060d26d9ba14957a5fe5e7fbea84ab07",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000153",
+      "seq": 153,
+      "type": "learning.signal_detected",
+      "occurred_at": "2026-11-18T07:20:44Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "adapter",
+        "id": "adp_TURNHOOK",
+        "display_name": "User-turn event adapter",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1118"
+      },
+      "subject": {
+        "kind": "signal",
+        "id": "sig_KREF0001"
+      },
+      "refs": {
+        "signal_id": "sig_KREF0001",
+        "stream_id": "str_PRIYA1118",
+        "capture_id": "cap_P1118S009",
+        "session_id": "ses_PRIYA1118",
+        "artifact_id": "art_KSQ2026A",
+        "content_hash": "sha256:9935963189ebf86dd30ac3c8f7561f43fe52610a394f3d65de34117a5e72f7c6",
+        "learning_policy_id": "lrn_KESTREL1",
+        "adapter_id": "adp_TURNHOOK"
+      },
+      "caused_by": [],
+      "policy_rev": 12,
+      "summary": "Priya Nair typed a standing instruction in an assistant session about Kestrel-Supply-Quote.docx.",
+      "payload": {
+        "type": "standing_instruction",
+        "surface": "attested_user_turn",
+        "trust": "user_direct",
+        "text": "Always include the quote reference. That goes for every customer, not just Kestrel.",
+        "language": "en",
+        "markers": {
+          "standing": [
+            "always",
+            "every customer"
+          ],
+          "obligation": [],
+          "one_off": [],
+          "hedge": []
+        },
+        "attested_by_runtime": true,
+        "text_matches_artifact_content": false,
+        "episode_id": "epi_KSQ00003",
+        "anchor_basis": "last_agent_output",
+        "capture": {
+          "stream_id": "str_PRIYA1118",
+          "source_seq": 9,
+          "delivery": "live"
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:3d85eed4a1144e73320c6b8bbcce9db691d1cd0dccf2a5b8f811cd0bcbd946a1",
+      "classification": "rule_text",
+      "prev_hash": "sha256:f1d6d3643609e3ce48179b93d3256486060d26d9ba14957a5fe5e7fbea84ab07",
+      "hash": "sha256:41b90fbf28c97aa31bb1436e1585eb56325a5d0b1524f1ae77188704dc8e1777",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000154",
+      "seq": 154,
+      "type": "learning.correction_extracted",
+      "occurred_at": "2026-11-18T07:20:45Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_TRANSLTR",
+        "display_name": "Correction translator",
+        "on_behalf_of": "usr_PRIYA001"
+      },
+      "subject": {
+        "kind": "correction",
+        "id": "cor_KREF0001"
+      },
+      "refs": {
+        "correction_id": "cor_KREF0001",
+        "signal_id": "sig_KREF0001"
+      },
+      "caused_by": [
+        "evt_000153"
+      ],
+      "policy_rev": 12,
+      "summary": "Structured correction extracted: the quote must state a quote reference. Requested for every customer; narrowest scope is this project.",
+      "payload": {
+        "channel": "observed_chat",
+        "field": "quote.reference",
+        "ai_model_used": true,
+        "parameters_grounded": true,
+        "referent_resolved": true,
+        "reusability": "explicit_standing",
+        "requested_scope": "workspace",
+        "narrowest_scope": "project"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:7420b1adaf9db912c50d48c4d9ffd6d9ad13ac5bbf4ac16dd02a465fb140f46e",
+      "classification": "rule_text",
+      "prev_hash": "sha256:41b90fbf28c97aa31bb1436e1585eb56325a5d0b1524f1ae77188704dc8e1777",
+      "hash": "sha256:be8691dc8e7282f8ef07ace448737cbd89d8be5292d8649250887fdbec297ccb",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000155",
+      "seq": 155,
+      "type": "rule.candidate_created",
+      "occurred_at": "2026-11-18T07:20:45Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_TRANSLTR",
+        "display_name": "Correction translator",
+        "on_behalf_of": "usr_PRIYA001"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_KREFAUTO"
+      },
+      "refs": {
+        "correction_id": "cor_KREF0001",
+        "rule_id": "rul_KREFAUTO",
+        "rule_revision": 1,
+        "signal_id": "sig_KREF0001"
+      },
+      "caused_by": [
+        "evt_000154"
+      ],
+      "policy_rev": 12,
+      "summary": "Candidate rule saved (inactive): Quotes state a quote reference.",
+      "payload": {
+        "proposed_by": "translator",
+        "ai_model_used": true,
+        "check_kind": "field_present",
+        "suggested_scope_level": "project",
+        "status": "candidate"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:01521e08c90fbafdc8e8797d0aad83a4647df20743cc88626ff771015fbdb0cf",
+      "classification": "rule_text",
+      "prev_hash": "sha256:be8691dc8e7282f8ef07ace448737cbd89d8be5292d8649250887fdbec297ccb",
+      "hash": "sha256:df4759392b265d87c344312e8bdf1c429d14c27197cff34eb1d5affedb01be49",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000156",
+      "seq": 156,
+      "type": "artifact.observed",
+      "occurred_at": "2026-11-18T07:21:30Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_WATCHER1",
+        "display_name": "Folder watcher"
+      },
+      "subject": {
+        "kind": "artifact",
+        "id": "art_KSQ2026A"
+      },
+      "refs": {
+        "artifact_id": "art_KSQ2026A",
+        "content_hash": "sha256:6295326e083241e2388584a4f005d66778c43ee79fbf52b2d484cbb1dead390b",
+        "session_id": "ses_PRIYA1118"
+      },
+      "caused_by": [],
+      "policy_rev": 12,
+      "summary": "New version seen: Kestrel-Supply-Quote.docx, version 4.",
+      "payload": {
+        "version_seq": 4,
+        "new_artifact": false,
+        "detected_type": "docx",
+        "extension_matches": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:d713da24f7be4991b4f1098e235551329ef419f42feabc88aac5c5255dafed1c",
+      "classification": "meta",
+      "prev_hash": "sha256:df4759392b265d87c344312e8bdf1c429d14c27197cff34eb1d5affedb01be49",
+      "hash": "sha256:090fa795c4fb36dc96fdc093b6dc40063cce4f42fcaed23b2aade1de65a19723",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000157",
+      "seq": 157,
+      "type": "change.recorded",
+      "occurred_at": "2026-11-18T07:21:30Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "agent",
+        "id": "agt_PRIYAASST",
+        "display_name": "Priya Nair's assistant",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1118"
+      },
+      "subject": {
+        "kind": "change",
+        "id": "chg_KSQ00002"
+      },
+      "refs": {
+        "change_id": "chg_KSQ00002",
+        "artifact_id": "art_KSQ2026A",
+        "content_hash": "sha256:6295326e083241e2388584a4f005d66778c43ee79fbf52b2d484cbb1dead390b",
+        "session_id": "ses_PRIYA1118"
+      },
+      "caused_by": [
+        "evt_000153",
+        "evt_000156"
+      ],
+      "policy_rev": 12,
+      "summary": "Version 3 became version 4: 1 paragraph added by Priya Nair's assistant at Priya Nair's request.",
+      "payload": {
+        "from_version": 3,
+        "to_version": 4,
+        "from_hash": "sha256:9935963189ebf86dd30ac3c8f7561f43fe52610a394f3d65de34117a5e72f7c6",
+        "to_hash": "sha256:6295326e083241e2388584a4f005d66778c43ee79fbf52b2d484cbb1dead390b",
+        "cells_changed": 0,
+        "other_changes": 1,
+        "unread_parts_changed": false,
+        "attribution": "declared_by_session"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:e5fb4eed1ec3eef2b64d7d5b7e1b3a9339f7370400cb55b25641585976775b0e",
+      "classification": "meta",
+      "prev_hash": "sha256:090fa795c4fb36dc96fdc093b6dc40063cce4f42fcaed23b2aade1de65a19723",
+      "hash": "sha256:271a4826a7fb643cdc02fc63768f0067a334ba4c39ab7aaf5ab1482eea22b363",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000158",
+      "seq": 158,
+      "type": "learning.candidate_evaluated",
+      "occurred_at": "2026-11-18T07:21:31Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine"
+      },
+      "subject": {
+        "kind": "evaluation",
+        "id": "evl_KREF0001"
+      },
+      "refs": {
+        "evaluation_id": "evl_KREF0001",
+        "rule_id": "rul_KREFAUTO",
+        "rule_revision": 1,
+        "signal_id": "sig_KREF0001"
+      },
+      "caused_by": [
+        "evt_000155",
+        "evt_000157"
+      ],
+      "policy_rev": 12,
+      "summary": "Candidate tested on 5 documents: catches the quote that lacked a reference, passes the corrected version, passes 3 other quotes in this project.",
+      "payload": {
+        "trigger_case": "fail_as_expected",
+        "real_passing_cases": 1,
+        "heldout": {
+          "artifacts": 3,
+          "pass": 3,
+          "fail": 0,
+          "unknown": 0,
+          "error": 0,
+          "not_applicable": 0
+        },
+        "generated": {
+          "run": 4,
+          "unexpected": 0,
+          "counted_as_support": false
+        },
+        "conflicts": [],
+        "duplicates": [],
+        "contradicts_learned": []
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:937afd01b1a486658fbbb8a7e7dbe8a6ce8c8b08fab5865aa9ab4407c2dd5de6",
+      "classification": "meta",
+      "prev_hash": "sha256:271a4826a7fb643cdc02fc63768f0067a334ba4c39ab7aaf5ab1482eea22b363",
+      "hash": "sha256:7a5b5286c37466594d989ccd558b793af66c9ee5673a32a71af79e28914af415",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000159",
+      "seq": 159,
+      "type": "learning.decision_made",
+      "occurred_at": "2026-11-18T07:21:31Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_LEARNING",
+        "display_name": "Learning decision"
+      },
+      "subject": {
+        "kind": "decision",
+        "id": "dec_KREF0001"
+      },
+      "refs": {
+        "decision_id": "dec_KREF0001",
+        "evaluation_id": "evl_KREF0001",
+        "rule_id": "rul_KREFAUTO",
+        "rule_revision": 1,
+        "signal_id": "sig_KREF0001",
+        "learning_policy_id": "lrn_KESTREL1",
+        "inbox_id": "inb_KREFWIDE"
+      },
+      "caused_by": [
+        "evt_000158"
+      ],
+      "policy_rev": 12,
+      "summary": "Decision: turn on automatically for this project only. The request to apply it to every customer needs a workspace steward.",
+      "payload": {
+        "outcome": "auto_activate",
+        "reasons": [],
+        "mode": "auto_low_risk",
+        "widening_requested": "workspace",
+        "model_confidence_used": false,
+        "authority": {
+          "kind": "delegated_learning",
+          "learning_policy_id": "lrn_KESTREL1",
+          "learning_policy_revision": 1,
+          "delegated_by": "usr_MARCUS01"
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:1e7e89070dd0812651d311a0f5dfe85d0b0ca90eeb16edb982319de048a38702",
+      "classification": "meta",
+      "prev_hash": "sha256:7a5b5286c37466594d989ccd558b793af66c9ee5673a32a71af79e28914af415",
+      "hash": "sha256:12670c46a80c9324a2565376f7b49c923744081a2d89c4fedb69a3b83e04e246",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000160",
+      "seq": 160,
+      "type": "rule.activated",
+      "occurred_at": "2026-11-18T07:21:31Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_POLICY01",
+        "display_name": "Policy store"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_KREFAUTO"
+      },
+      "refs": {
+        "rule_id": "rul_KREFAUTO",
+        "rule_revision": 1,
+        "decision_id": "dec_KREF0001",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000159"
+      ],
+      "policy_rev": 13,
+      "summary": "Rule turned on automatically: Quotes state a quote reference (this project only). Rules revision 12 became 13.",
+      "payload": {
+        "status": "active",
+        "policy_rev_before": 12,
+        "policy_rev_after": 13,
+        "authority": "delegated_learning",
+        "zero_click": true,
+        "undo_available": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:93f0c3cf301fa6f4b0bafbf904e8e721645c72b80011d50882a820691d73c71e",
+      "classification": "meta",
+      "prev_hash": "sha256:12670c46a80c9324a2565376f7b49c923744081a2d89c4fedb69a3b83e04e246",
+      "hash": "sha256:32cce19130dc36244e811d5a71f3ffb944dcd01d3f52e15a7302c4647d03aa85",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000161",
+      "seq": 161,
+      "type": "learning.inbox_item_opened",
+      "occurred_at": "2026-11-18T07:21:31Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": null,
+      "actor": {
+        "kind": "system",
+        "id": "sys_LEARNING",
+        "display_name": "Learning decision"
+      },
+      "subject": {
+        "kind": "inbox_item",
+        "id": "inb_KREFWIDE"
+      },
+      "refs": {
+        "inbox_id": "inb_KREFWIDE",
+        "rule_id": "rul_KREFAUTO",
+        "decision_id": "dec_KREF0001"
+      },
+      "caused_by": [
+        "evt_000159"
+      ],
+      "policy_rev": 13,
+      "summary": "Inbox, for a workspace steward: a member asked for \"Quotes state a quote reference\" to apply to all sales proposals.",
+      "payload": {
+        "kind": "widen_scope",
+        "for": [
+          "usr_MARCUS01"
+        ],
+        "requested_level": "workspace",
+        "evidence_shared": "rule sentence only"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:bf8bdb43c41984ed2aefe9f16ec50d54f6b4bc65eae015b2a5e15b0262f7b90f",
+      "classification": "rule_text",
+      "prev_hash": "sha256:32cce19130dc36244e811d5a71f3ffb944dcd01d3f52e15a7302c4647d03aa85",
+      "hash": "sha256:6dc9c2f5d79ee5f551511f13e193b69469abb1bbc604647425d1baa258f57ec7",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000162",
+      "seq": 162,
+      "type": "capture.stream_closed",
+      "occurred_at": "2026-11-18T07:45:00Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_CAPTURE1",
+        "display_name": "Capture intake"
+      },
+      "subject": {
+        "kind": "stream",
+        "id": "str_PRIYA1118"
+      },
+      "refs": {
+        "stream_id": "str_PRIYA1118",
+        "session_id": "ses_PRIYA1118",
+        "adapter_id": "adp_TURNHOOK"
+      },
+      "caused_by": [],
+      "policy_rev": 13,
+      "summary": "Capture ended for this session: all 12 events were received.",
+      "payload": {
+        "status": "closed_complete",
+        "final_seq": 12,
+        "acked_through": 12,
+        "gaps_closed": 0,
+        "dead_letters": 0,
+        "health": "healthy",
+        "counts": {
+          "captured": 5,
+          "identified": 1,
+          "compiled": 1,
+          "tested": 1,
+          "activated": 1
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:aa444ab4ef34fd03e2d3c1671f137b46405a7a3e4e30cd1600ea0c38f11d4c29",
+      "classification": "meta",
+      "prev_hash": "sha256:6dc9c2f5d79ee5f551511f13e193b69469abb1bbc604647425d1baa258f57ec7",
+      "hash": "sha256:414a76cfa9d700d51f2c456970a8414740da1916c522bae13c0eff3f68f3118c",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000163",
+      "seq": 163,
+      "type": "session.opened",
+      "occurred_at": "2026-11-19T02:01:10Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "agent",
+        "id": "agt_PRIYAASST",
+        "display_name": "Priya Nair's assistant",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1119"
+      },
+      "subject": {
+        "kind": "session",
+        "id": "ses_PRIYA1119"
+      },
+      "refs": {
+        "session_id": "ses_PRIYA1119"
+      },
+      "caused_by": [],
+      "policy_rev": 13,
+      "summary": "Priya Nair's assistant started a session in a folder of Kestrel Dental Group - 2026 supply.",
+      "payload": {
+        "client": {
+          "name": "example-assistant",
+          "version": "3.2"
+        },
+        "binding_id": "fld_KESTREL01"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:0c3f6124e95a5625a7123982aeb76941670e4f379977bbd0cf5a3c5e8febaf90",
+      "classification": "meta",
+      "prev_hash": "sha256:414a76cfa9d700d51f2c456970a8414740da1916c522bae13c0eff3f68f3118c",
+      "hash": "sha256:8d435c807dbceadab84aa97e064829689fd4497f028977398c18b6e97210634f",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000164",
+      "seq": 164,
+      "type": "context.resolved",
+      "occurred_at": "2026-11-19T02:01:10Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_RESOLVER",
+        "display_name": "Context resolver"
+      },
+      "subject": {
+        "kind": "session",
+        "id": "ses_PRIYA1119"
+      },
+      "refs": {
+        "session_id": "ses_PRIYA1119",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000163"
+      ],
+      "policy_rev": 13,
+      "summary": "Context resolved to Kestrel Dental Group - 2026 supply, Sales proposal. 8 rules in scope. Learning is on for this project.",
+      "payload": {
+        "status": "resolved",
+        "basis": [
+          "binding",
+          "marker",
+          "default_work_type"
+        ],
+        "in_scope_rule_count": 8,
+        "learning_mode": "auto_low_risk"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:89d15180ffebb38a91b22a127342a6da806843b5e8e63b9d6e244e0ba07e19b0",
+      "classification": "meta",
+      "prev_hash": "sha256:8d435c807dbceadab84aa97e064829689fd4497f028977398c18b6e97210634f",
+      "hash": "sha256:fefaeae1a74d2fbde87fa41f4adfccc61be0b5b2e01e1fcb0c44fee7ea053fbf",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000165",
+      "seq": 165,
+      "type": "capture.stream_opened",
+      "occurred_at": "2026-11-19T02:01:10Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_CAPTURE1",
+        "display_name": "Capture intake"
+      },
+      "subject": {
+        "kind": "stream",
+        "id": "str_PRIYA1119"
+      },
+      "refs": {
+        "stream_id": "str_PRIYA1119",
+        "session_id": "ses_PRIYA1119",
+        "adapter_id": "adp_TURNHOOK",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000164"
+      ],
+      "policy_rev": 13,
+      "summary": "Capture started for this session: the user-turn adapter is connected, with a durable outbox. What Priya Nair types here is captured for this project.",
+      "payload": {
+        "adapter_kind": "runtime_hook",
+        "attests_user_turns": true,
+        "durable_outbox": true,
+        "supports_replay": true,
+        "cursor": 0,
+        "label": "CAPTURED",
+        "bound_project": "prj_KESTREL1",
+        "binding_id": "fld_KESTREL01"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:a11382a72f42ff32c9b825e69df184a8a6332af5718fc50e3ab909113f0148b8",
+      "classification": "meta",
+      "prev_hash": "sha256:fefaeae1a74d2fbde87fa41f4adfccc61be0b5b2e01e1fcb0c44fee7ea053fbf",
+      "hash": "sha256:e4c41dd2fc13cfdcd4539c8cceaccb69a9eff91e0b8de8cf80bc42e9f2308b62",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000166",
+      "seq": 166,
+      "type": "artifact.observed",
+      "occurred_at": "2026-11-19T02:05:02Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_WATCHER1",
+        "display_name": "Folder watcher"
+      },
+      "subject": {
+        "kind": "artifact",
+        "id": "art_KAQ2026A"
+      },
+      "refs": {
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:be0080bb9990149277d470328307f37553bbe31902c0dbc63c38cb544734a7a4",
+        "session_id": "ses_PRIYA1119"
+      },
+      "caused_by": [],
+      "policy_rev": 13,
+      "summary": "New file seen: Kestrel-Addendum-Quote.docx, version 1. It appeared during Priya Nair's assistant session; no editor was declared.",
+      "payload": {
+        "version_seq": 1,
+        "new_artifact": true,
+        "detected_type": "docx",
+        "extension_matches": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:1f601af3c057682a4828e0b481bb02a288429751e671d29495a95aa0cc86b193",
+      "classification": "meta",
+      "prev_hash": "sha256:e4c41dd2fc13cfdcd4539c8cceaccb69a9eff91e0b8de8cf80bc42e9f2308b62",
+      "hash": "sha256:962aea177df5119e56b8b4abd931930ce28a7efe716c9ba4882652e9a61b0d01",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000167",
+      "seq": 167,
+      "type": "capture.gap_detected",
+      "occurred_at": "2026-11-19T02:06:40Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_CAPTURE1",
+        "display_name": "Capture intake"
+      },
+      "subject": {
+        "kind": "stream",
+        "id": "str_PRIYA1119"
+      },
+      "refs": {
+        "stream_id": "str_PRIYA1119",
+        "session_id": "ses_PRIYA1119",
+        "adapter_id": "adp_TURNHOOK"
+      },
+      "caused_by": [
+        "evt_000165"
+      ],
+      "policy_rev": 13,
+      "summary": "Capture gap: on reconnecting, the adapter reported 5 events and 3 had been received. Events 4 to 5 were missing because the local service was restarting.",
+      "payload": {
+        "from_seq": 4,
+        "to_seq": 5,
+        "cause": "local_service_restart",
+        "detected_by": "reconnect_handshake",
+        "adapter_last_seq": 5,
+        "cursor": 3,
+        "auto_activation_held_for_episode": "epi_KAQ00001"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:f52f86e60eceee720a038462ab1e1b4ee31f64e8f99f1a249fe2e24287e88bcb",
+      "classification": "meta",
+      "prev_hash": "sha256:962aea177df5119e56b8b4abd931930ce28a7efe716c9ba4882652e9a61b0d01",
+      "hash": "sha256:3ad545a74e3fc19b065323ad1f5a912cba033f5b9247351c7169d40a4264fa1d",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000168",
+      "seq": 168,
+      "type": "capture.gap_closed",
+      "occurred_at": "2026-11-19T02:06:41Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_CAPTURE1",
+        "display_name": "Capture intake"
+      },
+      "subject": {
+        "kind": "stream",
+        "id": "str_PRIYA1119"
+      },
+      "refs": {
+        "stream_id": "str_PRIYA1119",
+        "session_id": "ses_PRIYA1119",
+        "adapter_id": "adp_TURNHOOK"
+      },
+      "caused_by": [
+        "evt_000167"
+      ],
+      "policy_rev": 13,
+      "summary": "Gap closed by replay from the adapter's outbox: 2 events recovered, 1 repeat dropped, 1 that arrived out of order was put back in order. Nothing was lost.",
+      "payload": {
+        "from_seq": 4,
+        "to_seq": 5,
+        "recovered": 2,
+        "duplicates_dropped": 1,
+        "held_out_of_order": 1,
+        "cursor": 5,
+        "lost": 0
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:e9db778a824322168f2c440a628e046bbb209d91c984d92683a02ceaabce88e0",
+      "classification": "meta",
+      "prev_hash": "sha256:3ad545a74e3fc19b065323ad1f5a912cba033f5b9247351c7169d40a4264fa1d",
+      "hash": "sha256:5550838aee9a7c7424dc6d8bb7b435224fcf19354195eb492e6d7c9b3f810af1",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000169",
+      "seq": 169,
+      "type": "learning.signal_detected",
+      "occurred_at": "2026-11-19T02:06:41Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "adapter",
+        "id": "adp_TURNHOOK",
+        "display_name": "User-turn event adapter",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1119"
+      },
+      "subject": {
+        "kind": "signal",
+        "id": "sig_KLAY0001"
+      },
+      "refs": {
+        "signal_id": "sig_KLAY0001",
+        "stream_id": "str_PRIYA1119",
+        "capture_id": "cap_P1119S004",
+        "session_id": "ses_PRIYA1119",
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:be0080bb9990149277d470328307f37553bbe31902c0dbc63c38cb544734a7a4",
+        "learning_policy_id": "lrn_KESTREL1",
+        "adapter_id": "adp_TURNHOOK"
+      },
+      "caused_by": [
+        "evt_000168"
+      ],
+      "policy_rev": 13,
+      "summary": "Priya Nair typed an instruction in an assistant session about Kestrel-Addendum-Quote.docx. It says it is for this document only. Captured by replay.",
+      "payload": {
+        "type": "direct_correction",
+        "surface": "attested_user_turn",
+        "trust": "user_direct",
+        "text": "Use the supply quote's layout for this one.",
+        "language": "en",
+        "markers": {
+          "standing": [],
+          "obligation": [],
+          "one_off": [
+            "for this one"
+          ],
+          "hedge": []
+        },
+        "attested_by_runtime": true,
+        "text_matches_artifact_content": false,
+        "episode_id": "epi_KAQ00001",
+        "anchor_basis": "last_agent_output",
+        "capture": {
+          "stream_id": "str_PRIYA1119",
+          "source_seq": 4,
+          "delivery": "replay"
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:7f00d7675c4ac55ad73d8ffab90b78be4cb1f8ec09b891bc871ab30c40fb6616",
+      "classification": "rule_text",
+      "prev_hash": "sha256:5550838aee9a7c7424dc6d8bb7b435224fcf19354195eb492e6d7c9b3f810af1",
+      "hash": "sha256:9b807de6807e3fd1a6565f42ceb22b41804f53e2a80fb2275944deffd4f97ef4",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000170",
+      "seq": 170,
+      "type": "learning.decision_made",
+      "occurred_at": "2026-11-19T02:06:41Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_LEARNING",
+        "display_name": "Learning decision"
+      },
+      "subject": {
+        "kind": "decision",
+        "id": "dec_KLAY0001"
+      },
+      "refs": {
+        "decision_id": "dec_KLAY0001",
+        "signal_id": "sig_KLAY0001",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000169"
+      ],
+      "policy_rev": 13,
+      "summary": "Decision: not learned. Priya Nair said it was for this document only.",
+      "payload": {
+        "outcome": "record_only",
+        "reasons": [
+          "one_off"
+        ],
+        "model_confidence_used": false
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:a3c4ae550e2c564dfd25fed9cdb6594040fe9137e1328bbf8f5bce9bc57eae03",
+      "classification": "meta",
+      "prev_hash": "sha256:9b807de6807e3fd1a6565f42ceb22b41804f53e2a80fb2275944deffd4f97ef4",
+      "hash": "sha256:5afdca5859e6e1095b0c744702fd0a7c6ea09f61dc0f1efc80293a469b33a9c6",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000171",
+      "seq": 171,
+      "type": "learning.signal_detected",
+      "occurred_at": "2026-11-19T02:06:41Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "adapter",
+        "id": "adp_TURNHOOK",
+        "display_name": "User-turn event adapter",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1119"
+      },
+      "subject": {
+        "kind": "signal",
+        "id": "sig_KLEAD001"
+      },
+      "refs": {
+        "signal_id": "sig_KLEAD001",
+        "stream_id": "str_PRIYA1119",
+        "capture_id": "cap_P1119S005",
+        "session_id": "ses_PRIYA1119",
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:be0080bb9990149277d470328307f37553bbe31902c0dbc63c38cb544734a7a4",
+        "learning_policy_id": "lrn_KESTREL1",
+        "adapter_id": "adp_TURNHOOK"
+      },
+      "caused_by": [
+        "evt_000168"
+      ],
+      "policy_rev": 13,
+      "summary": "Priya Nair typed a standing instruction in an assistant session about Kestrel-Addendum-Quote.docx. Captured by replay.",
+      "payload": {
+        "type": "standing_instruction",
+        "surface": "attested_user_turn",
+        "trust": "user_direct",
+        "text": "Always state the delivery lead time on addenda.",
+        "language": "en",
+        "markers": {
+          "standing": [
+            "always"
+          ],
+          "obligation": [],
+          "one_off": [],
+          "hedge": []
+        },
+        "attested_by_runtime": true,
+        "text_matches_artifact_content": false,
+        "episode_id": "epi_KAQ00001",
+        "anchor_basis": "last_agent_output",
+        "capture": {
+          "stream_id": "str_PRIYA1119",
+          "source_seq": 5,
+          "delivery": "replay"
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:497b88635cb3ab50f2d438178c8fee78f8d947fabc6a6fc67d4669e6009394b6",
+      "classification": "rule_text",
+      "prev_hash": "sha256:5afdca5859e6e1095b0c744702fd0a7c6ea09f61dc0f1efc80293a469b33a9c6",
+      "hash": "sha256:81b1eebf984f2b34e4cb4963badd20005df7474456097bc3e48b5dc959af20d2",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000172",
+      "seq": 172,
+      "type": "learning.decision_made",
+      "occurred_at": "2026-11-19T02:06:42Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_LEARNING",
+        "display_name": "Learning decision"
+      },
+      "subject": {
+        "kind": "decision",
+        "id": "dec_KLEAD001"
+      },
+      "refs": {
+        "decision_id": "dec_KLEAD001",
+        "signal_id": "sig_KLEAD001",
+        "learning_policy_id": "lrn_KESTREL1",
+        "inbox_id": "inb_KLEADTIM"
+      },
+      "caused_by": [
+        "evt_000171"
+      ],
+      "policy_rev": 13,
+      "summary": "Decision: ask a person. The instruction was captured and recognized, but no check type can express \"delivery lead time\" yet, so no rule was drafted.",
+      "payload": {
+        "outcome": "inbox",
+        "reasons": [
+          "not_compilable"
+        ],
+        "reached": "identified",
+        "model_confidence_used": false
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:882efcfbabc19dc581da259f8c9edd0439a4e1bc48a84bcb6bbc4161d4f93303",
+      "classification": "meta",
+      "prev_hash": "sha256:81b1eebf984f2b34e4cb4963badd20005df7474456097bc3e48b5dc959af20d2",
+      "hash": "sha256:657d6ac138edd60711e7b401addd8542a6b25cc40f0601659278a8eb9a91c806",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000173",
+      "seq": 173,
+      "type": "learning.inbox_item_opened",
+      "occurred_at": "2026-11-19T02:06:42Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_LEARNING",
+        "display_name": "Learning decision"
+      },
+      "subject": {
+        "kind": "inbox_item",
+        "id": "inb_KLEADTIM"
+      },
+      "refs": {
+        "inbox_id": "inb_KLEADTIM",
+        "decision_id": "dec_KLEAD001",
+        "signal_id": "sig_KLEAD001"
+      },
+      "caused_by": [
+        "evt_000172"
+      ],
+      "policy_rev": 13,
+      "summary": "Inbox: \"Always state the delivery lead time on addenda\" could not be turned into a check. Keep it as a note for people, or dismiss it?",
+      "payload": {
+        "kind": "not_compilable",
+        "for": [
+          "usr_PRIYA001",
+          "usr_MARCUS01"
+        ],
+        "options": [
+          "Keep as a note for people and assistants",
+          "Dismiss"
+        ]
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:433da5c2ac626777d0f15f91136e7c54bd65fa507dce1cf5ac182edee2705c29",
+      "classification": "rule_text",
+      "prev_hash": "sha256:657d6ac138edd60711e7b401addd8542a6b25cc40f0601659278a8eb9a91c806",
+      "hash": "sha256:852b6ba3e17742cb793a40fd1724140f03717e9ac84919807191e6314618d5c4",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000174",
+      "seq": 174,
+      "type": "action.requested",
+      "occurred_at": "2026-11-19T02:07:15Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "human",
+        "id": "usr_PRIYA001",
+        "display_name": "Priya Nair"
+      },
+      "subject": {
+        "kind": "action",
+        "id": "act_KAQREL01"
+      },
+      "refs": {
+        "action_id": "act_KAQREL01",
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:be0080bb9990149277d470328307f37553bbe31902c0dbc63c38cb544734a7a4",
+        "trace_id": "trc_KAQ2026A1",
+        "adapter_id": "adp_RELEASE1"
+      },
+      "caused_by": [],
+      "policy_rev": 13,
+      "summary": "Priya Nair asked to release Kestrel-Addendum-Quote.docx version 1.",
+      "payload": {
+        "type": "release",
+        "version_seq": 1,
+        "status": "awaiting_check"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:cbe1e225d3072a0cec1be0b5277d529e341b7c0a3daa4753d6d6c9f287d13f04",
+      "classification": "meta",
+      "prev_hash": "sha256:852b6ba3e17742cb793a40fd1724140f03717e9ac84919807191e6314618d5c4",
+      "hash": "sha256:8709724270bd9e18bcb56f4c5161bbe245cf076143da1eab37d754dd0a4ca70e",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000175",
+      "seq": 175,
+      "type": "run.completed",
+      "occurred_at": "2026-11-19T02:07:17Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine",
+        "on_behalf_of": "usr_PRIYA001"
+      },
+      "subject": {
+        "kind": "run",
+        "id": "run_KAQ00001"
+      },
+      "refs": {
+        "run_id": "run_KAQ00001",
+        "trace_id": "trc_KAQ2026A1",
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:be0080bb9990149277d470328307f37553bbe31902c0dbc63c38cb544734a7a4",
+        "action_id": "act_KAQREL01"
+      },
+      "caused_by": [
+        "evt_000174"
+      ],
+      "policy_rev": 13,
+      "summary": "Check 1: Needs changes. 8 rules in scope: 1 failed, 6 passed, 1 did not apply. The failed rule was learned automatically on 17 Nov.",
+      "payload": {
+        "trigger": {
+          "kind": "pre_action",
+          "reason": "Required before Release"
+        },
+        "verdict": "needs_changes",
+        "counts": {
+          "in_scope": 8,
+          "pass": 6,
+          "fail": 1,
+          "unknown": 0,
+          "error": 0,
+          "conflict": 0,
+          "not_applicable": 1,
+          "waived": 0,
+          "skipped": 0,
+          "notes": 0,
+          "blocking_findings": 1
+        },
+        "failed_rules": [
+          "rul_KSGDAUTO"
+        ],
+        "note_rules": [],
+        "findings": [
+          "fnd_KAQ1C001"
+        ],
+        "failed_rule_authority": {
+          "rul_KSGDAUTO": "delegated_learning"
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:92ee41b066783a20b857b70f619e67358e7718d050cb434af16e9f12cf299cc1",
+      "classification": "meta",
+      "prev_hash": "sha256:8709724270bd9e18bcb56f4c5161bbe245cf076143da1eab37d754dd0a4ca70e",
+      "hash": "sha256:b5ae6de4e91ed38021e07116335668562cf41083e9b16ee4c12b1e4b61cfa0fa",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000176",
+      "seq": 176,
+      "type": "action.blocked",
+      "occurred_at": "2026-11-19T02:07:17Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_GATEWAY1",
+        "display_name": "Gateway"
+      },
+      "subject": {
+        "kind": "action",
+        "id": "act_KAQREL01"
+      },
+      "refs": {
+        "action_id": "act_KAQREL01",
+        "run_id": "run_KAQ00001",
+        "trace_id": "trc_KAQ2026A1",
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:be0080bb9990149277d470328307f37553bbe31902c0dbc63c38cb544734a7a4"
+      },
+      "caused_by": [
+        "evt_000175"
+      ],
+      "policy_rev": 13,
+      "summary": "Release was blocked: 1 thing must be fixed (pricing table row 2 is in USD). Nothing was released.",
+      "payload": {
+        "reason": "verdict_needs_changes",
+        "failed_gate_step": 3,
+        "status": "blocked"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:55397cd5705745841377fa6b60d07e55eafb5cc6271f51bdc253a3225a95e1c3",
+      "classification": "meta",
+      "prev_hash": "sha256:b5ae6de4e91ed38021e07116335668562cf41083e9b16ee4c12b1e4b61cfa0fa",
+      "hash": "sha256:e34936da9786a05027dad8d6ca67c8a2f25773cd0a6a3f5d3a356ad122f39acc",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000177",
+      "seq": 177,
+      "type": "capture.dead_lettered",
+      "occurred_at": "2026-11-19T02:09:30Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_CAPTURE1",
+        "display_name": "Capture intake"
+      },
+      "subject": {
+        "kind": "stream",
+        "id": "str_PRIYA1119"
+      },
+      "refs": {
+        "stream_id": "str_PRIYA1119",
+        "capture_id": "cap_P1119S007",
+        "session_id": "ses_PRIYA1119",
+        "adapter_id": "adp_TURNHOOK"
+      },
+      "caused_by": [
+        "evt_000165"
+      ],
+      "policy_rev": 13,
+      "summary": "One captured event could not be processed (an event kind this version does not know). It is in the dead-letter list; capture continues.",
+      "payload": {
+        "source_seq": 7,
+        "reason": "unsupported_event_kind",
+        "health": "degraded",
+        "content_kept_days": 7,
+        "produces_rules": false
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:37e19d8f594f2eb9b9c4b1c55f97c0c7bccf9a19bc2abdfc473f85655628fa5b",
+      "classification": "meta",
+      "prev_hash": "sha256:e34936da9786a05027dad8d6ca67c8a2f25773cd0a6a3f5d3a356ad122f39acc",
+      "hash": "sha256:49363971a0ea13bd9fca789b9134891aa89e189499c313c89a64b1e272349cd7",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000178",
+      "seq": 178,
+      "type": "artifact.observed",
+      "occurred_at": "2026-11-19T02:11:40Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_WATCHER1",
+        "display_name": "Folder watcher"
+      },
+      "subject": {
+        "kind": "artifact",
+        "id": "art_KAQ2026A"
+      },
+      "refs": {
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:11f673002dcb88d36f00adcb81558d79b0d6694d960c4553f4178694d7fa05e6",
+        "session_id": "ses_PRIYA1119"
+      },
+      "caused_by": [],
+      "policy_rev": 13,
+      "summary": "New version seen: Kestrel-Addendum-Quote.docx, version 2.",
+      "payload": {
+        "version_seq": 2,
+        "new_artifact": false,
+        "detected_type": "docx",
+        "extension_matches": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:3d10a9eb9584845c93dc88755acfbdc34b68862f366b6707a79f6c14d31d987b",
+      "classification": "meta",
+      "prev_hash": "sha256:49363971a0ea13bd9fca789b9134891aa89e189499c313c89a64b1e272349cd7",
+      "hash": "sha256:8979bf1a62e1c84e1b4ffeba64662bd460177839f97b90eb1ac119253f123229",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000179",
+      "seq": 179,
+      "type": "change.recorded",
+      "occurred_at": "2026-11-19T02:11:40Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "agent",
+        "id": "agt_PRIYAASST",
+        "display_name": "Priya Nair's assistant",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1119"
+      },
+      "subject": {
+        "kind": "change",
+        "id": "chg_KAQ00001"
+      },
+      "refs": {
+        "change_id": "chg_KAQ00001",
+        "trace_id": "trc_KAQ2026A1",
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:11f673002dcb88d36f00adcb81558d79b0d6694d960c4553f4178694d7fa05e6",
+        "session_id": "ses_PRIYA1119"
+      },
+      "caused_by": [
+        "evt_000175",
+        "evt_000178"
+      ],
+      "policy_rev": 13,
+      "summary": "Version 1 became version 2: 2 table cells changed by Priya Nair's assistant at Priya Nair's request.",
+      "payload": {
+        "from_version": 1,
+        "to_version": 2,
+        "from_hash": "sha256:be0080bb9990149277d470328307f37553bbe31902c0dbc63c38cb544734a7a4",
+        "to_hash": "sha256:11f673002dcb88d36f00adcb81558d79b0d6694d960c4553f4178694d7fa05e6",
+        "cells_changed": 2,
+        "other_changes": 0,
+        "unread_parts_changed": false,
+        "attribution": "declared_by_session"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:677e1fac77bd02d60c5540b21c1a03ea0258093979bfa9f5bae7d56e2b21e741",
+      "classification": "meta",
+      "prev_hash": "sha256:8979bf1a62e1c84e1b4ffeba64662bd460177839f97b90eb1ac119253f123229",
+      "hash": "sha256:7636e0f3fdda598f5e40127a5c027cc0c8a264a5c0b43f7325fea9be5754837d",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000180",
+      "seq": 180,
+      "type": "run.completed",
+      "occurred_at": "2026-11-19T02:11:41Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine"
+      },
+      "subject": {
+        "kind": "run",
+        "id": "run_KAQ00002"
+      },
+      "refs": {
+        "run_id": "run_KAQ00002",
+        "trace_id": "trc_KAQ2026A1",
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:11f673002dcb88d36f00adcb81558d79b0d6694d960c4553f4178694d7fa05e6",
+        "change_id": "chg_KAQ00001"
+      },
+      "caused_by": [
+        "evt_000179"
+      ],
+      "policy_rev": 13,
+      "summary": "Check 2: Ready. The 1 finding from Check 1 is no longer present.",
+      "payload": {
+        "trigger": {
+          "kind": "auto_recheck",
+          "reason": "New version of an artifact with open findings"
+        },
+        "verdict": "ready",
+        "counts": {
+          "in_scope": 8,
+          "pass": 7,
+          "fail": 0,
+          "unknown": 0,
+          "error": 0,
+          "conflict": 0,
+          "not_applicable": 1,
+          "waived": 0,
+          "skipped": 0,
+          "notes": 0,
+          "blocking_findings": 0
+        },
+        "resolved_findings": [
+          "fnd_KAQ1C001"
+        ],
+        "new_findings": [],
+        "compared_with_run": "run_KAQ00001"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:cc0f1ed2cda85d3c07a0f7437acd59798999d4170fb2534790c7f2cadc5d08e6",
+      "classification": "meta",
+      "prev_hash": "sha256:7636e0f3fdda598f5e40127a5c027cc0c8a264a5c0b43f7325fea9be5754837d",
+      "hash": "sha256:6fb7b53771a08e82340f9bc45490577bbfec107b69b9d83179605f0b593447db",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000181",
+      "seq": 181,
+      "type": "receipt.issued",
+      "occurred_at": "2026-11-19T02:11:41Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine"
+      },
+      "subject": {
+        "kind": "receipt",
+        "id": "rcp_KAQ00002"
+      },
+      "refs": {
+        "receipt_id": "rcp_KAQ00002",
+        "run_id": "run_KAQ00002",
+        "trace_id": "trc_KAQ2026A1",
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:11f673002dcb88d36f00adcb81558d79b0d6694d960c4553f4178694d7fa05e6"
+      },
+      "caused_by": [
+        "evt_000180"
+      ],
+      "policy_rev": 13,
+      "summary": "Check 2 is valid for release until 20 Nov 2026 10:11 unless something changes.",
+      "payload": {
+        "expires_at": "2026-11-20T02:11:41Z",
+        "grants_permission": false
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:4730429119f3f5ca231a1bcb56d08d7d1998f0a0fe7f0c82758d286e13768ca8",
+      "classification": "meta",
+      "prev_hash": "sha256:6fb7b53771a08e82340f9bc45490577bbfec107b69b9d83179605f0b593447db",
+      "hash": "sha256:78861704c9bedcb9cdb60997346b0ceb46cb35321a5095b337386d87d3fac94c",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000182",
+      "seq": 182,
+      "type": "action.requested",
+      "occurred_at": "2026-11-19T02:12:30Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "human",
+        "id": "usr_PRIYA001",
+        "display_name": "Priya Nair"
+      },
+      "subject": {
+        "kind": "action",
+        "id": "act_KAQREL02"
+      },
+      "refs": {
+        "action_id": "act_KAQREL02",
+        "receipt_id": "rcp_KAQ00002",
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:11f673002dcb88d36f00adcb81558d79b0d6694d960c4553f4178694d7fa05e6",
+        "trace_id": "trc_KAQ2026A1",
+        "adapter_id": "adp_RELEASE1"
+      },
+      "caused_by": [],
+      "policy_rev": 13,
+      "summary": "Priya Nair asked to release Kestrel-Addendum-Quote.docx version 2.",
+      "payload": {
+        "type": "release",
+        "version_seq": 2,
+        "status": "awaiting_approval",
+        "approval_policy": "self"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:0dbfcc1862a98220a26eb3e35e983d3a06a5ce82db26f9a256673b9e5c986d97",
+      "classification": "meta",
+      "prev_hash": "sha256:78861704c9bedcb9cdb60997346b0ceb46cb35321a5095b337386d87d3fac94c",
+      "hash": "sha256:a415874fceb4b794472d250503fe68028f94e21d721a3b8c7e4ad6c3f61eb8cb",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000183",
+      "seq": 183,
+      "type": "action.approved",
+      "occurred_at": "2026-11-19T02:12:55Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "human",
+        "id": "usr_PRIYA001",
+        "display_name": "Priya Nair"
+      },
+      "subject": {
+        "kind": "action",
+        "id": "act_KAQREL02"
+      },
+      "refs": {
+        "action_id": "act_KAQREL02",
+        "approval_id": "apr_KAQREL02",
+        "receipt_id": "rcp_KAQ00002",
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:11f673002dcb88d36f00adcb81558d79b0d6694d960c4553f4178694d7fa05e6",
+        "trace_id": "trc_KAQ2026A1"
+      },
+      "caused_by": [
+        "evt_000182",
+        "evt_000181"
+      ],
+      "policy_rev": 13,
+      "summary": "Priya Nair approved her own release of version 2 (this project allows self-approval for release).",
+      "payload": {
+        "self_approval": true,
+        "bound_to": {
+          "receipt_id": "rcp_KAQ00002",
+          "content_hash": "sha256:11f673002dcb88d36f00adcb81558d79b0d6694d960c4553f4178694d7fa05e6",
+          "action_type": "release",
+          "params_digest": "sha256:27948d1cf1a750e9faaa5aad20f0ddd2d9e8509be66cabd844ef47e17afc26eb"
+        },
+        "expires_at": "2026-11-20T02:11:41Z"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:0ae4279eb428e88cf26339c4b33b2d2183d91562acb7b48954b3ab8c6cef33f2",
+      "classification": "meta",
+      "prev_hash": "sha256:a415874fceb4b794472d250503fe68028f94e21d721a3b8c7e4ad6c3f61eb8cb",
+      "hash": "sha256:7928f6da31d34d8b3f879aea1664717b8173804c88e5e94a0539ad48255027d6",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000184",
+      "seq": 184,
+      "type": "action.revalidated",
+      "occurred_at": "2026-11-19T02:12:55Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_GATEWAY1",
+        "display_name": "Gateway"
+      },
+      "subject": {
+        "kind": "action",
+        "id": "act_KAQREL02"
+      },
+      "refs": {
+        "action_id": "act_KAQREL02",
+        "receipt_id": "rcp_KAQ00002",
+        "approval_id": "apr_KAQREL02",
+        "content_hash": "sha256:11f673002dcb88d36f00adcb81558d79b0d6694d960c4553f4178694d7fa05e6",
+        "trace_id": "trc_KAQ2026A1"
+      },
+      "caused_by": [
+        "evt_000183"
+      ],
+      "policy_rev": 13,
+      "summary": "Gateway confirmed: same version, rules unchanged, approval valid.",
+      "payload": {
+        "gate_checks_passed": 9,
+        "gate_checks_total": 9
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:84c244967e969c623ac0f20b23ea313bcb019c5bb3946d000ecb9117a4adcf94",
+      "classification": "meta",
+      "prev_hash": "sha256:7928f6da31d34d8b3f879aea1664717b8173804c88e5e94a0539ad48255027d6",
+      "hash": "sha256:0bd6f2df1b19b4645aebbb85f16723bac9c592523d4139369302ca8958b0b5df",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000185",
+      "seq": 185,
+      "type": "action.executed",
+      "occurred_at": "2026-11-19T02:12:56Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "adapter",
+        "id": "adp_RELEASE1",
+        "display_name": "Release-folder adapter"
+      },
+      "subject": {
+        "kind": "action",
+        "id": "act_KAQREL02"
+      },
+      "refs": {
+        "action_id": "act_KAQREL02",
+        "adapter_id": "adp_RELEASE1",
+        "receipt_id": "rcp_KAQ00002",
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:11f673002dcb88d36f00adcb81558d79b0d6694d960c4553f4178694d7fa05e6",
+        "trace_id": "trc_KAQ2026A1"
+      },
+      "caused_by": [
+        "evt_000184"
+      ],
+      "policy_rev": 13,
+      "summary": "Release-folder adapter copied version 2 to the Released folder with a release record.",
+      "payload": {
+        "outcome": "released",
+        "executed_content_hash": "sha256:11f673002dcb88d36f00adcb81558d79b0d6694d960c4553f4178694d7fa05e6",
+        "status": "executed"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:ea84eb2a954580813f7dac5107ee85ae3f92386b2a116f78626f221e12753446",
+      "classification": "meta",
+      "prev_hash": "sha256:0bd6f2df1b19b4645aebbb85f16723bac9c592523d4139369302ca8958b0b5df",
+      "hash": "sha256:ab929724861907ae3d477fedda7d9a3e11fb54977e75d178b27d882918665d22",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000186",
+      "seq": 186,
+      "type": "receipt.consumed",
+      "occurred_at": "2026-11-19T02:12:56Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_GATEWAY1",
+        "display_name": "Gateway"
+      },
+      "subject": {
+        "kind": "receipt",
+        "id": "rcp_KAQ00002"
+      },
+      "refs": {
+        "receipt_id": "rcp_KAQ00002",
+        "action_id": "act_KAQREL02",
+        "trace_id": "trc_KAQ2026A1"
+      },
+      "caused_by": [
+        "evt_000185"
+      ],
+      "policy_rev": 13,
+      "summary": "Check 2 has been used for this release and cannot be used again.",
+      "payload": {
+        "consumed_by": "act_KAQREL02"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:74fa4bfeea69e11536af6366e974fcdac0897457b13d94380db01a4c631e9a71",
+      "classification": "meta",
+      "prev_hash": "sha256:ab929724861907ae3d477fedda7d9a3e11fb54977e75d178b27d882918665d22",
+      "hash": "sha256:c5e768fddf79dbaca9e7b9ada7d15aa22e169148b9eff10b8595d719374846f0",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000187",
+      "seq": 187,
+      "type": "capture.stream_closed",
+      "occurred_at": "2026-11-19T02:20:00Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_CAPTURE1",
+        "display_name": "Capture intake"
+      },
+      "subject": {
+        "kind": "stream",
+        "id": "str_PRIYA1119"
+      },
+      "refs": {
+        "stream_id": "str_PRIYA1119",
+        "session_id": "ses_PRIYA1119",
+        "adapter_id": "adp_TURNHOOK"
+      },
+      "caused_by": [],
+      "policy_rev": 13,
+      "summary": "Capture ended for this session: all 9 events were received; 1 could not be processed and is in the dead-letter list.",
+      "payload": {
+        "status": "closed_complete",
+        "final_seq": 9,
+        "acked_through": 9,
+        "gaps_closed": 1,
+        "dead_letters": 1,
+        "health": "degraded",
+        "counts": {
+          "captured": 4,
+          "identified": 2,
+          "compiled": 0,
+          "tested": 0,
+          "activated": 0
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:64814f1ea639493631834fd9fd5b07f48197c72ce79b6203ab73994281121e7c",
+      "classification": "meta",
+      "prev_hash": "sha256:c5e768fddf79dbaca9e7b9ada7d15aa22e169148b9eff10b8595d719374846f0",
+      "hash": "sha256:2b934985ae7bd664bbb419240e47b2cda46c11bc6b604ebdecbd67d36e15a406",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000188",
+      "seq": 188,
+      "type": "session.opened",
+      "occurred_at": "2026-11-20T01:38:40Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "agent",
+        "id": "agt_PRIYAASST",
+        "display_name": "Priya Nair's assistant",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1120"
+      },
+      "subject": {
+        "kind": "session",
+        "id": "ses_PRIYA1120"
+      },
+      "refs": {
+        "session_id": "ses_PRIYA1120"
+      },
+      "caused_by": [],
+      "policy_rev": 13,
+      "summary": "Priya Nair's assistant started a session in a folder of Kestrel Dental Group - 2026 supply.",
+      "payload": {
+        "client": {
+          "name": "example-assistant",
+          "version": "3.2"
+        },
+        "binding_id": "fld_KESTREL01"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:0c3f6124e95a5625a7123982aeb76941670e4f379977bbd0cf5a3c5e8febaf90",
+      "classification": "meta",
+      "prev_hash": "sha256:2b934985ae7bd664bbb419240e47b2cda46c11bc6b604ebdecbd67d36e15a406",
+      "hash": "sha256:b11a4c914d9fdb6855c250b342641da0bd520352cdd2b2ab6b6d876d20a11e44",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000189",
+      "seq": 189,
+      "type": "context.resolved",
+      "occurred_at": "2026-11-20T01:38:40Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_RESOLVER",
+        "display_name": "Context resolver"
+      },
+      "subject": {
+        "kind": "session",
+        "id": "ses_PRIYA1120"
+      },
+      "refs": {
+        "session_id": "ses_PRIYA1120",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000188"
+      ],
+      "policy_rev": 13,
+      "summary": "Context resolved to Kestrel Dental Group - 2026 supply, Sales proposal. 8 rules in scope. Learning is on for this project.",
+      "payload": {
+        "status": "resolved",
+        "basis": [
+          "binding",
+          "marker",
+          "default_work_type"
+        ],
+        "in_scope_rule_count": 8,
+        "learning_mode": "auto_low_risk"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:89d15180ffebb38a91b22a127342a6da806843b5e8e63b9d6e244e0ba07e19b0",
+      "classification": "meta",
+      "prev_hash": "sha256:b11a4c914d9fdb6855c250b342641da0bd520352cdd2b2ab6b6d876d20a11e44",
+      "hash": "sha256:1d710f27fd7758b8cb000ec491767342aa6e00bb03fa2e6703cd08cbd92a5a4f",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000190",
+      "seq": 190,
+      "type": "capture.stream_opened",
+      "occurred_at": "2026-11-20T01:38:40Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_CAPTURE1",
+        "display_name": "Capture intake"
+      },
+      "subject": {
+        "kind": "stream",
+        "id": "str_PRIYA1120"
+      },
+      "refs": {
+        "stream_id": "str_PRIYA1120",
+        "session_id": "ses_PRIYA1120",
+        "adapter_id": "adp_TURNHOOK",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000189"
+      ],
+      "policy_rev": 13,
+      "summary": "Capture started for this session: the user-turn adapter is connected, with a durable outbox. What Priya Nair types here is captured for this project.",
+      "payload": {
+        "adapter_kind": "runtime_hook",
+        "attests_user_turns": true,
+        "durable_outbox": true,
+        "supports_replay": true,
+        "cursor": 0,
+        "label": "CAPTURED",
+        "bound_project": "prj_KESTREL1",
+        "binding_id": "fld_KESTREL01"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:a11382a72f42ff32c9b825e69df184a8a6332af5718fc50e3ab909113f0148b8",
+      "classification": "meta",
+      "prev_hash": "sha256:1d710f27fd7758b8cb000ec491767342aa6e00bb03fa2e6703cd08cbd92a5a4f",
+      "hash": "sha256:cc7ce932d614103f6886cc88b73616b36ffa56781fc84767ed5c8c94f932ae53",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000191",
+      "seq": 191,
+      "type": "learning.signal_detected",
+      "occurred_at": "2026-11-20T01:40:12Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "adapter",
+        "id": "adp_TURNHOOK",
+        "display_name": "User-turn event adapter",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1120"
+      },
+      "subject": {
+        "kind": "signal",
+        "id": "sig_KUSD0001"
+      },
+      "refs": {
+        "signal_id": "sig_KUSD0001",
+        "stream_id": "str_PRIYA1120",
+        "capture_id": "cap_P1120S002",
+        "session_id": "ses_PRIYA1120",
+        "learning_policy_id": "lrn_KESTREL1",
+        "adapter_id": "adp_TURNHOOK"
+      },
+      "caused_by": [],
+      "policy_rev": 13,
+      "summary": "Priya Nair typed a standing instruction in an assistant session. It is not about a particular document.",
+      "payload": {
+        "type": "standing_instruction",
+        "surface": "attested_user_turn",
+        "trust": "user_direct",
+        "text": "Actually, Kestrel wants USD from now on.",
+        "language": "en",
+        "markers": {
+          "standing": [
+            "from now on"
+          ],
+          "obligation": [],
+          "one_off": [],
+          "hedge": []
+        },
+        "attested_by_runtime": true,
+        "text_matches_artifact_content": false,
+        "episode_id": "epi_KUSD0001",
+        "anchor_basis": null,
+        "capture": {
+          "stream_id": "str_PRIYA1120",
+          "source_seq": 2,
+          "delivery": "live"
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:73219cf4e8863925fe98d0b4c17890a990136f92141032ca559036d63e3633ff",
+      "classification": "rule_text",
+      "prev_hash": "sha256:cc7ce932d614103f6886cc88b73616b36ffa56781fc84767ed5c8c94f932ae53",
+      "hash": "sha256:28fbd0d9209db0897d582a3e109e42e96bb873612bb63330f6b3812b1f9a3bfb",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000192",
+      "seq": 192,
+      "type": "learning.correction_extracted",
+      "occurred_at": "2026-11-20T01:40:12Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_TRANSLTR",
+        "display_name": "Correction translator",
+        "on_behalf_of": "usr_PRIYA001"
+      },
+      "subject": {
+        "kind": "correction",
+        "id": "cor_KUSD0001"
+      },
+      "refs": {
+        "correction_id": "cor_KUSD0001",
+        "signal_id": "sig_KUSD0001"
+      },
+      "caused_by": [
+        "evt_000191"
+      ],
+      "policy_rev": 13,
+      "summary": "Structured correction extracted: currency of every line and the total must be USD. This contradicts a learned rule.",
+      "payload": {
+        "channel": "observed_chat",
+        "field": "currency",
+        "value": "USD",
+        "ai_model_used": true,
+        "parameters_grounded": true,
+        "referent_resolved": true,
+        "reusability": "explicit_standing",
+        "requested_scope": "customer",
+        "narrowest_scope": "project"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:6dbd30cee87c263b8f835cfb464c563385504780bab011bcf9cd140aa7d11e2d",
+      "classification": "rule_text",
+      "prev_hash": "sha256:28fbd0d9209db0897d582a3e109e42e96bb873612bb63330f6b3812b1f9a3bfb",
+      "hash": "sha256:405929ea5a2aace9c67dfee78bdca5efa52a4c97daf619fdc181464e0cb18252",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000193",
+      "seq": 193,
+      "type": "rule.candidate_created",
+      "occurred_at": "2026-11-20T01:40:12Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_TRANSLTR",
+        "display_name": "Correction translator",
+        "on_behalf_of": "usr_PRIYA001"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_KUSDCAND"
+      },
+      "refs": {
+        "correction_id": "cor_KUSD0001",
+        "rule_id": "rul_KUSDCAND",
+        "rule_revision": 1,
+        "signal_id": "sig_KUSD0001"
+      },
+      "caused_by": [
+        "evt_000192"
+      ],
+      "policy_rev": 13,
+      "summary": "Candidate rule saved (inactive): Kestrel Dental Group quotes are in USD.",
+      "payload": {
+        "proposed_by": "translator",
+        "ai_model_used": true,
+        "check_kind": "field_in_set",
+        "suggested_scope_level": "project",
+        "status": "candidate"
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:82f412ad45d60b1ffa9a809aef5a4e0ab36cdd352ad9fe0e4d692c9f7029c51e",
+      "classification": "rule_text",
+      "prev_hash": "sha256:405929ea5a2aace9c67dfee78bdca5efa52a4c97daf619fdc181464e0cb18252",
+      "hash": "sha256:cedb20c7043970c1f92cec33fe0e5dc300fdc92bcfefefd41681069fab1bd561",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000194",
+      "seq": 194,
+      "type": "learning.candidate_evaluated",
+      "occurred_at": "2026-11-20T01:40:13Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_ENGINE01",
+        "display_name": "Check engine"
+      },
+      "subject": {
+        "kind": "evaluation",
+        "id": "evl_KUSD0001"
+      },
+      "refs": {
+        "evaluation_id": "evl_KUSD0001",
+        "rule_id": "rul_KUSDCAND",
+        "rule_revision": 1,
+        "signal_id": "sig_KUSD0001"
+      },
+      "caused_by": [
+        "evt_000193"
+      ],
+      "policy_rev": 13,
+      "summary": "Candidate tested: no document it was said about, no passing example yet, all 5 existing quotes would fail, and it contradicts a learned rule.",
+      "payload": {
+        "trigger_case": "none",
+        "real_passing_cases": 0,
+        "heldout": {
+          "artifacts": 5,
+          "pass": 0,
+          "fail": 5,
+          "unknown": 0,
+          "error": 0,
+          "not_applicable": 0
+        },
+        "generated": {
+          "run": 4,
+          "unexpected": 0,
+          "counted_as_support": false
+        },
+        "conflicts": [],
+        "duplicates": [],
+        "contradicts_learned": [
+          "rul_KSGDAUTO"
+        ]
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:fa7d898ccde65820ddfe8473544cd5cf30aa521277bec635fe401d22c1a9a2e2",
+      "classification": "meta",
+      "prev_hash": "sha256:cedb20c7043970c1f92cec33fe0e5dc300fdc92bcfefefd41681069fab1bd561",
+      "hash": "sha256:40f63d84ca5478d812db3423638c9b11a0194f8c6cf87b612b54ce9ad7dccb6e",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000195",
+      "seq": 195,
+      "type": "learning.decision_made",
+      "occurred_at": "2026-11-20T01:40:13Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_LEARNING",
+        "display_name": "Learning decision"
+      },
+      "subject": {
+        "kind": "decision",
+        "id": "dec_KUSD0001"
+      },
+      "refs": {
+        "decision_id": "dec_KUSD0001",
+        "evaluation_id": "evl_KUSD0001",
+        "rule_id": "rul_KUSDCAND",
+        "rule_revision": 1,
+        "signal_id": "sig_KUSD0001",
+        "learning_policy_id": "lrn_KESTREL1",
+        "inbox_id": "inb_KCURRENC"
+      },
+      "caused_by": [
+        "evt_000194"
+      ],
+      "policy_rev": 13,
+      "summary": "Decision: ask a person. The new statement contradicts a learned rule and would fail every existing quote in this project.",
+      "payload": {
+        "outcome": "inbox",
+        "reasons": [
+          "no_trigger_case",
+          "no_real_pass",
+          "flags_existing_work",
+          "contradicts_learned_rule"
+        ],
+        "mode": "auto_low_risk",
+        "model_confidence_used": false
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:f721ab0124214e2c06f6b3ad79189e971ee5b010dc08602c0691ac5f6440af72",
+      "classification": "meta",
+      "prev_hash": "sha256:40f63d84ca5478d812db3423638c9b11a0194f8c6cf87b612b54ce9ad7dccb6e",
+      "hash": "sha256:a44e0c98397813484b0d9c625d5b467479875f8fcf62ad91538a6f6a3c37f994",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000196",
+      "seq": 196,
+      "type": "rule.auto_paused",
+      "occurred_at": "2026-11-20T01:40:13Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_POLICY01",
+        "display_name": "Policy store"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_KSGDAUTO"
+      },
+      "refs": {
+        "rule_id": "rul_KSGDAUTO",
+        "rule_revision": 1,
+        "decision_id": "dec_KUSD0001",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000195"
+      ],
+      "policy_rev": 14,
+      "summary": "Learned rule moved to shadow (note only): Kestrel Dental Group quotes are in SGD. Reason: contradicted by Priya Nair's new statement. Reversible. Rules revision 13 became 14.",
+      "payload": {
+        "status": "trial",
+        "paused_from": "active",
+        "reason": "contradicted_by_direct_statement",
+        "policy_rev_before": 13,
+        "policy_rev_after": 14,
+        "rule_authority": "delegated_learning",
+        "reversible": true
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:c57a47eda054d73d8f93e41ad16c975b52b8471ec771cca81c7d0b4c0170e18d",
+      "classification": "meta",
+      "prev_hash": "sha256:a44e0c98397813484b0d9c625d5b467479875f8fcf62ad91538a6f6a3c37f994",
+      "hash": "sha256:d6c88083fb5740c689bc7943211589c650bc9c5d43837dd59ad18283b8070e62",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000197",
+      "seq": 197,
+      "type": "learning.inbox_item_opened",
+      "occurred_at": "2026-11-20T01:40:13Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_LEARNING",
+        "display_name": "Learning decision"
+      },
+      "subject": {
+        "kind": "inbox_item",
+        "id": "inb_KCURRENC"
+      },
+      "refs": {
+        "inbox_id": "inb_KCURRENC",
+        "rule_id": "rul_KSGDAUTO",
+        "decision_id": "dec_KUSD0001"
+      },
+      "caused_by": [
+        "evt_000195",
+        "evt_000196"
+      ],
+      "policy_rev": 14,
+      "summary": "Inbox: two statements about Kestrel's currency disagree (SGD on 17 Nov, USD on 20 Nov). Which one holds?",
+      "payload": {
+        "kind": "contradiction",
+        "for": [
+          "usr_PRIYA001",
+          "usr_MARCUS01"
+        ],
+        "options": [
+          "USD from now on",
+          "Keep SGD",
+          "USD for one document only",
+          "Neither: keep both off"
+        ]
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:725b1f4e9bd30ceba37c8847ba4e3f32009e95f11522da3c8031fc9728684190",
+      "classification": "rule_text",
+      "prev_hash": "sha256:d6c88083fb5740c689bc7943211589c650bc9c5d43837dd59ad18283b8070e62",
+      "hash": "sha256:010cbd03fa60bbc35e980813bf80cd6b1a36330d84d450dec3c716e1057c2742",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000198",
+      "seq": 198,
+      "type": "learning.signal_detected",
+      "occurred_at": "2026-11-20T01:41:30Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "adapter",
+        "id": "adp_TURNHOOK",
+        "display_name": "User-turn event adapter",
+        "on_behalf_of": "usr_PRIYA001",
+        "session_id": "ses_PRIYA1120"
+      },
+      "subject": {
+        "kind": "signal",
+        "id": "sig_KSKIP001"
+      },
+      "refs": {
+        "signal_id": "sig_KSKIP001",
+        "stream_id": "str_PRIYA1120",
+        "capture_id": "cap_P1120S003",
+        "session_id": "ses_PRIYA1120",
+        "learning_policy_id": "lrn_KESTREL1",
+        "adapter_id": "adp_TURNHOOK"
+      },
+      "caused_by": [],
+      "policy_rev": 14,
+      "summary": "Priya Nair typed a standing instruction in an assistant session asking for an existing check to stop.",
+      "payload": {
+        "type": "standing_instruction",
+        "surface": "attested_user_turn",
+        "trust": "user_direct",
+        "text": "And stop checking their prices against the price list, their prices are negotiated.",
+        "language": "en",
+        "markers": {
+          "standing": [],
+          "obligation": [
+            "stop"
+          ],
+          "one_off": [],
+          "hedge": []
+        },
+        "attested_by_runtime": true,
+        "text_matches_artifact_content": false,
+        "episode_id": "epi_KUSD0001",
+        "anchor_basis": null,
+        "capture": {
+          "stream_id": "str_PRIYA1120",
+          "source_seq": 3,
+          "delivery": "live"
+        }
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:78168076c7046faf197c63a9e850fd640d9205f08e8dab7c07df3670012eb4b6",
+      "classification": "rule_text",
+      "prev_hash": "sha256:010cbd03fa60bbc35e980813bf80cd6b1a36330d84d450dec3c716e1057c2742",
+      "hash": "sha256:d9000b2086279b3deb596cfd8f839599d3c4f0b0c3c7954716f1b726ac7e6aca",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000199",
+      "seq": 199,
+      "type": "learning.decision_made",
+      "occurred_at": "2026-11-20T01:41:31Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_LEARNING",
+        "display_name": "Learning decision"
+      },
+      "subject": {
+        "kind": "decision",
+        "id": "dec_KSKIP001"
+      },
+      "refs": {
+        "decision_id": "dec_KSKIP001",
+        "signal_id": "sig_KSKIP001",
+        "rule_id": "rul_PRICECUR",
+        "learning_policy_id": "lrn_KESTREL1"
+      },
+      "caused_by": [
+        "evt_000198"
+      ],
+      "policy_rev": 14,
+      "summary": "Decision: declined. Learning can add requirements; it cannot switch off \"Quoted prices match the current price list\". That rule is unchanged.",
+      "payload": {
+        "outcome": "declined",
+        "reasons": [
+          "would_weaken_or_remove"
+        ],
+        "target_rule": "rul_PRICECUR",
+        "target_rule_locked": true,
+        "offered": "ask the rule's owner for an exception",
+        "model_confidence_used": false
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:079ca5990447df9304d52cae3e6c6c38e842503f789094962a2e40b9b2181ffd",
+      "classification": "meta",
+      "prev_hash": "sha256:d9000b2086279b3deb596cfd8f839599d3c4f0b0c3c7954716f1b726ac7e6aca",
+      "hash": "sha256:995a1dd6a7d05be71ce1319e21830085b8fd76d24f8b1fa5c0825999de41ef78",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000200",
+      "seq": 200,
+      "type": "learning.inbox_item_resolved",
+      "occurred_at": "2026-11-20T01:55:03Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "human",
+        "id": "usr_PRIYA001",
+        "display_name": "Priya Nair"
+      },
+      "subject": {
+        "kind": "inbox_item",
+        "id": "inb_KCURRENC"
+      },
+      "refs": {
+        "inbox_id": "inb_KCURRENC",
+        "decision_id": "dec_KUSD0001"
+      },
+      "caused_by": [
+        "evt_000197"
+      ],
+      "policy_rev": 14,
+      "summary": "Priya Nair answered the inbox question: USD from now on.",
+      "payload": {
+        "choice": "USD from now on",
+        "effects": [
+          "retire rul_KSGDAUTO",
+          "approve rul_KUSDCAND"
+        ]
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:883db392ef9d8fbbed658d070bef43f903ed7a50c5d7ed79a3a5a60a6c44d499",
+      "classification": "rule_text",
+      "prev_hash": "sha256:995a1dd6a7d05be71ce1319e21830085b8fd76d24f8b1fa5c0825999de41ef78",
+      "hash": "sha256:81dd72db6a7eda7aa0bbac41ba5726737cbfbae1a9805ad7f3ecd2f9f6b539c2",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000201",
+      "seq": 201,
+      "type": "rule.retired",
+      "occurred_at": "2026-11-20T01:55:03Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "human",
+        "id": "usr_PRIYA001",
+        "display_name": "Priya Nair"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_KSGDAUTO"
+      },
+      "refs": {
+        "rule_id": "rul_KSGDAUTO",
+        "rule_revision": 1,
+        "inbox_id": "inb_KCURRENC"
+      },
+      "caused_by": [
+        "evt_000200"
+      ],
+      "policy_rev": 15,
+      "summary": "Rule retired by Priya Nair: Kestrel Dental Group quotes are in SGD. Reason: replaced after a changed preference. Rules revision 14 became 15.",
+      "payload": {
+        "status": "retired",
+        "reason": "replaced_after_contradiction",
+        "replaced_by": "rul_KUSDCAND",
+        "policy_rev_before": 14,
+        "policy_rev_after": 15
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:a1f71f8599eb28637b9cecb9ac19f20fd484c9784adc26360e0be3decd274777",
+      "classification": "meta",
+      "prev_hash": "sha256:81dd72db6a7eda7aa0bbac41ba5726737cbfbae1a9805ad7f3ecd2f9f6b539c2",
+      "hash": "sha256:2ceeb25c88a7fe653b159eae2cbb541ee7afc197a6074e1f421864f185437d77",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000202",
+      "seq": 202,
+      "type": "rule.approved",
+      "occurred_at": "2026-11-20T01:55:03Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "human",
+        "id": "usr_PRIYA001",
+        "display_name": "Priya Nair"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_KUSDCAND"
+      },
+      "refs": {
+        "rule_id": "rul_KUSDCAND",
+        "rule_revision": 1,
+        "inbox_id": "inb_KCURRENC"
+      },
+      "caused_by": [
+        "evt_000200"
+      ],
+      "policy_rev": 15,
+      "summary": "Priya Nair approved Kestrel Dental Group quotes are in USD for this project: must fix. She was told that 5 existing quotes would not pass it.",
+      "payload": {
+        "scope_level": "project",
+        "enforcement": "block",
+        "activation": "active",
+        "self_approval": true,
+        "approved_via": "learning_inbox",
+        "known_heldout_failures": 5
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:b50d11c2316cc613f8663911c509d9826d4aae5f98cd48173b9b19c25b1ddc89",
+      "classification": "meta",
+      "prev_hash": "sha256:2ceeb25c88a7fe653b159eae2cbb541ee7afc197a6074e1f421864f185437d77",
+      "hash": "sha256:a496e3bf46b9546fb67b29d2e7bfb40f279f515bbeca5f9aa8596c10f1ed26b4",
+      "schema_version": "cl.event/1"
+    },
+    {
+      "event_id": "evt_000203",
+      "seq": 203,
+      "type": "rule.activated",
+      "occurred_at": "2026-11-20T01:55:03Z",
+      "display_tz": "Asia/Singapore",
+      "workspace_id": "ws_HALDEN01",
+      "project_id": "prj_KESTREL1",
+      "actor": {
+        "kind": "system",
+        "id": "sys_POLICY01",
+        "display_name": "Policy store"
+      },
+      "subject": {
+        "kind": "rule",
+        "id": "rul_KUSDCAND"
+      },
+      "refs": {
+        "rule_id": "rul_KUSDCAND",
+        "rule_revision": 1
+      },
+      "caused_by": [
+        "evt_000202"
+      ],
+      "policy_rev": 16,
+      "summary": "Rule turned on: Kestrel Dental Group quotes are in USD. Rules revision 15 became 16.",
+      "payload": {
+        "status": "active",
+        "policy_rev_before": 15,
+        "policy_rev_after": 16,
+        "authority": "individual_approval",
+        "zero_click": false
+      },
+      "payload_state": "present",
+      "payload_digest": "sha256:8c5880dcf63c1338ff06a8ba37d7199f0142cc4a63611282fc8c838272399448",
+      "classification": "meta",
+      "prev_hash": "sha256:a496e3bf46b9546fb67b29d2e7bfb40f279f515bbeca5f9aa8596c10f1ed26b4",
+      "hash": "sha256:31b4c7ab97cae8e9489de4a1cb6802c1eb45ff14d952b1b7c560521503917548",
+      "schema_version": "cl.event/1"
+    }
+  ]
+}

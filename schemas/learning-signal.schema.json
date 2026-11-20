@@ -1,0 +1,363 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "learning-signal.schema.json",
+  "title": "Learning signal",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. One observed event that might carry a reusable correction. Evidence, never authority by itself.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Relative path to this schema, used by tools/check_repo.py."
+    },
+    "_note": {
+      "type": "string",
+      "description": "Marks an example file as proposed/illustrative."
+    },
+    "schema_version": {
+      "const": "cl.learning_signal/1"
+    },
+    "signal_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "workspace_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "type": {
+      "enum": [
+        "direct_correction",
+        "standing_instruction",
+        "human_edit_diff",
+        "agent_retry",
+        "rejection_reason",
+        "finding_dispute"
+      ]
+    },
+    "surface": {
+      "enum": [
+        "app",
+        "attested_user_turn",
+        "assistant_relay",
+        "folder_watch",
+        "review_action"
+      ]
+    },
+    "adapter_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "trust": {
+      "enum": [
+        "user_direct",
+        "assistant_relayed",
+        "observed_edit",
+        "untrusted_content"
+      ],
+      "description": "user_direct: typed by an authenticated person in the app, or a user turn attested by a runtime event adapter. assistant_relayed: an assistant says the user said it. observed_edit: a version change no assistant session declared. untrusted_content: text from a document, email or tool output; never a learning signal."
+    },
+    "author": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/actor"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "occurred_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "display_tz": {
+      "type": "string"
+    },
+    "session_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "episode_id": {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/id"
+        }
+      ],
+      "description": "All retries, repeats and re-edits about one artifact in one attempt share an episode and count once."
+    },
+    "anchor": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "artifact_id": {
+              "$ref": "common.schema.json#/$defs/id"
+            },
+            "content_hash": {
+              "$ref": "common.schema.json#/$defs/hash"
+            },
+            "location": {
+              "$ref": "common.schema.json#/$defs/location"
+            },
+            "basis": {
+              "enum": [
+                "app_selection",
+                "last_agent_output",
+                "diff_target",
+                "finding"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "artifact_id",
+            "content_hash",
+            "basis"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "content": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "language": {
+          "type": "string"
+        },
+        "markers": {
+          "type": "object",
+          "properties": {
+            "standing": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Words such as always, never, from now on, every. Only these make a statement explicitly reusable."
+            },
+            "obligation": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Words such as must, should, stop. Not enough by themselves."
+            },
+            "one_off": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "hedge": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "standing",
+            "obligation",
+            "one_off",
+            "hedge"
+          ]
+        },
+        "diff": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "from_hash": {
+                  "$ref": "common.schema.json#/$defs/hash"
+                },
+                "to_hash": {
+                  "$ref": "common.schema.json#/$defs/hash"
+                },
+                "changed": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "where": {
+                        "type": "string"
+                      },
+                      "in_field_dictionary": {
+                        "type": "boolean"
+                      },
+                      "before": {
+                        "type": "string"
+                      },
+                      "after": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "where",
+                      "in_field_dictionary"
+                    ]
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "from_hash",
+                "to_hash",
+                "changed"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "language",
+        "markers",
+        "diff"
+      ]
+    },
+    "capture": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "stream_id": {
+              "$ref": "common.schema.json#/$defs/id"
+            },
+            "capture_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "common.schema.json#/$defs/id"
+              },
+              "minItems": 1
+            },
+            "source_seqs": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "minItems": 1
+            },
+            "delivery": {
+              "enum": [
+                "live",
+                "replay",
+                "backfill"
+              ]
+            },
+            "late": {
+              "type": "boolean"
+            },
+            "episode_capture_complete": {
+              "type": "boolean",
+              "description": "False while the stream has an open gap inside this episode."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "stream_id",
+            "capture_ids",
+            "source_seqs",
+            "delivery",
+            "late",
+            "episode_capture_complete"
+          ],
+          "description": "Which durably captured events this signal was identified from. Null for signals entered in the app or relayed by an assistant."
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "checks": {
+      "type": "object",
+      "properties": {
+        "attested_by_runtime": {
+          "type": "boolean"
+        },
+        "text_matches_artifact_content": {
+          "type": "boolean"
+        },
+        "author_in_learn_from": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "attested_by_runtime",
+        "text_matches_artifact_content",
+        "author_in_learn_from"
+      ]
+    },
+    "consent": {
+      "type": "object",
+      "properties": {
+        "learning_policy_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "learning_policy_revision": {
+          "type": "integer"
+        },
+        "surface_opted_in": {
+          "const": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "learning_policy_id",
+        "surface_opted_in"
+      ]
+    },
+    "retention": {
+      "type": "object",
+      "properties": {
+        "class": {
+          "enum": [
+            "evidence"
+          ]
+        },
+        "delete_after_days": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "class",
+        "delete_after_days"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "signal_id",
+    "workspace_id",
+    "project_id",
+    "type",
+    "surface",
+    "trust",
+    "author",
+    "occurred_at",
+    "episode_id",
+    "anchor",
+    "content",
+    "capture",
+    "checks",
+    "consent",
+    "retention"
+  ],
+  "additionalProperties": false
+}

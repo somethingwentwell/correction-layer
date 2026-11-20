@@ -33,8 +33,15 @@
       ]
     },
     "text": {
-      "type": "string",
-      "description": "The person's own words, unchanged."
+      "anyOf": [
+        {
+          "type": "string",
+          "description": "The person's own words, unchanged. Null when the correction was extracted from an edit, not from words."
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "author": {
       "$ref": "common.schema.json#/$defs/actor"
@@ -42,9 +49,41 @@
     "channel": {
       "enum": [
         "app",
-        "assistant"
+        "assistant",
+        "observed_chat",
+        "observed_edit",
+        "review_action"
       ],
-      "description": "Where it was entered. Assistant-relayed corrections stay candidates until confirmed in the app."
+      "description": "Where it came from. app: typed into the app. assistant: relayed by an assistant (unattested). observed_chat: a user turn attested by a runtime event adapter. observed_edit: extracted from a human edit. review_action: a rejection or dispute reason."
+    },
+    "signal_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/id"
+      }
+    },
+    "extraction": {
+      "type": "object",
+      "properties": {
+        "ai_model_used": {
+          "type": "boolean"
+        },
+        "parameters_grounded": {
+          "type": "boolean"
+        },
+        "referent_resolved": {
+          "type": "boolean"
+        },
+        "language": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "ai_model_used",
+        "parameters_grounded",
+        "referent_resolved"
+      ]
     },
     "recorded_at": {
       "$ref": "common.schema.json#/$defs/timestamp"

@@ -1,0 +1,48 @@
+{
+  "$schema": "../../schemas/learning-decision.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies and amounts are fictional. Content hashes are digests of descriptive labels, not of real files. All thresholds are proposed, uncalibrated defaults.",
+  "schema_version": "cl.learning_decision/1",
+  "decision_id": "dec_KLEAD001",
+  "workspace_id": "ws_HALDEN01",
+  "project_id": "prj_KESTREL1",
+  "decided_at": "2026-11-19T02:06:42Z",
+  "display_tz": "Asia/Singapore",
+  "learning_policy": {
+    "learning_policy_id": "lrn_KESTREL1",
+    "revision": 1,
+    "mode": "auto_low_risk"
+  },
+  "signals": [
+    {
+      "signal_id": "sig_KLEAD001",
+      "type": "standing_instruction",
+      "surface": "attested_user_turn",
+      "trust": "user_direct",
+      "author_id": "usr_PRIYA001",
+      "episode_id": "epi_KAQ00001",
+      "text_matches_artifact_content": false,
+      "delivery": "replay",
+      "late": false,
+      "episode_capture_complete": true
+    }
+  ],
+  "independent_episodes": 1,
+  "suppressed": false,
+  "candidate": null,
+  "evaluation": null,
+  "outcome": "inbox",
+  "reasons": [
+    "not_compilable"
+  ],
+  "resulting_rule_status": null,
+  "authority": null,
+  "side_effects": [
+    {
+      "effect": "open_inbox_item",
+      "inbox_id": "inb_KLEADTIM",
+      "detail": "Captured and identified, but not compiled: no check type fits."
+    }
+  ],
+  "model_confidence_used": false,
+  "rationale": "Captured and recognized as a standing instruction, but not turned into a rule: sales proposals have no \"delivery lead time\" field that a check could read. It is in the inbox so that a person can keep it as a note or dismiss it. Nothing is enforced."
+}

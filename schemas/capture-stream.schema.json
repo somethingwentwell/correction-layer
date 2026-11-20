@@ -1,0 +1,389 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "capture-stream.schema.json",
+  "title": "Capture stream",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. One stream of capture events from one adapter for one session or surface, with its delivery history, cursor, health and what became of each event.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Relative path to this schema, used by tools/check_repo.py."
+    },
+    "_note": {
+      "type": "string",
+      "description": "Marks an example file as proposed/illustrative."
+    },
+    "schema_version": {
+      "const": "cl.capture_stream/1"
+    },
+    "stream_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "workspace_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "session_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "adapter": {
+      "type": "object",
+      "properties": {
+        "adapter_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "runtime_hook",
+            "app_native",
+            "folder_watch",
+            "app_connector"
+          ]
+        },
+        "runtime": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "attests_user_turns": {
+          "type": "boolean"
+        },
+        "durable_outbox": {
+          "type": "boolean"
+        },
+        "supports_replay": {
+          "type": "boolean"
+        },
+        "supports_backfill": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "adapter_id",
+        "kind",
+        "attests_user_turns",
+        "durable_outbox",
+        "supports_replay",
+        "supports_backfill"
+      ]
+    },
+    "consent": {
+      "type": "object",
+      "properties": {
+        "learning_policy_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "learning_policy_revision": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "learning_policy_id",
+        "learning_policy_revision"
+      ]
+    },
+    "opened_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "closed_at": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "display_tz": {
+      "type": "string"
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "capture-event.schema.json"
+      },
+      "description": "The distinct valid events, in source order."
+    },
+    "deliveries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "arrival": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "received_at": {
+            "$ref": "common.schema.json#/$defs/timestamp"
+          },
+          "source_seq": {
+            "type": "integer"
+          },
+          "capture_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "attempt": {
+            "type": "integer"
+          },
+          "delivery": {
+            "enum": [
+              "live",
+              "replay",
+              "backfill"
+            ]
+          },
+          "content_digest": {
+            "$ref": "common.schema.json#/$defs/hash"
+          },
+          "intake_validation": {
+            "enum": [
+              "ok",
+              "unsupported_event_kind",
+              "schema_invalid",
+              "consent_missing"
+            ]
+          },
+          "result": {
+            "enum": [
+              "accepted",
+              "held_out_of_order",
+              "duplicate",
+              "rejected_conflict",
+              "dead_letter",
+              "consent_blocked"
+            ]
+          },
+          "ack_through": {
+            "type": "integer",
+            "description": "Cursor returned to the adapter: every source_seq up to here is safely received."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "arrival",
+          "received_at",
+          "source_seq",
+          "capture_id",
+          "attempt",
+          "delivery",
+          "content_digest",
+          "intake_validation",
+          "result",
+          "ack_through"
+        ]
+      },
+      "description": "Every delivery attempt in the order it arrived, including repeats."
+    },
+    "pipeline": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source_seq": {
+            "type": "integer"
+          },
+          "reached": {
+            "enum": [
+              "captured",
+              "identified",
+              "compiled",
+              "tested",
+              "activated"
+            ]
+          },
+          "disposition": {
+            "enum": [
+              "not_a_signal",
+              "record_only",
+              "discarded",
+              "declined",
+              "waiting_for_person",
+              "waiting_for_evidence",
+              "shadow",
+              "active"
+            ]
+          },
+          "signal_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "decision_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "source_seq",
+          "reached",
+          "disposition"
+        ]
+      },
+      "description": "How far each captured user turn, edit or review action got, and where it ended."
+    },
+    "state": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "open",
+            "closed_complete",
+            "closed_incomplete"
+          ]
+        },
+        "health": {
+          "enum": [
+            "healthy",
+            "lagging",
+            "gap",
+            "stale",
+            "degraded",
+            "disconnected"
+          ]
+        },
+        "acked_through": {
+          "type": "integer"
+        },
+        "final_seq": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from_seq": {
+                "type": "integer"
+              },
+              "to_seq": {
+                "type": "integer"
+              },
+              "detected_at": {
+                "$ref": "common.schema.json#/$defs/timestamp"
+              },
+              "closed_at": {
+                "anyOf": [
+                  {
+                    "$ref": "common.schema.json#/$defs/timestamp"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cause": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "from_seq",
+              "to_seq",
+              "detected_at",
+              "closed_at",
+              "cause"
+            ]
+          }
+        },
+        "dead_letters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source_seq": {
+                "type": "integer"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "at": {
+                "$ref": "common.schema.json#/$defs/timestamp"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "source_seq",
+              "reason",
+              "at"
+            ]
+          }
+        },
+        "duplicates_dropped": {
+          "type": "integer"
+        },
+        "held_out_of_order": {
+          "type": "integer"
+        },
+        "counts": {
+          "type": "object",
+          "properties": {
+            "captured": {
+              "type": "integer"
+            },
+            "identified": {
+              "type": "integer"
+            },
+            "compiled": {
+              "type": "integer"
+            },
+            "tested": {
+              "type": "integer"
+            },
+            "activated": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "captured",
+            "identified",
+            "compiled",
+            "tested",
+            "activated"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "health",
+        "acked_through",
+        "final_seq",
+        "gaps",
+        "dead_letters",
+        "duplicates_dropped",
+        "held_out_of_order",
+        "counts"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "stream_id",
+    "workspace_id",
+    "project_id",
+    "adapter",
+    "consent",
+    "opened_at",
+    "closed_at",
+    "events",
+    "deliveries",
+    "pipeline",
+    "state"
+  ],
+  "additionalProperties": false
+}

@@ -36,13 +36,13 @@ The contract is small on purpose, so that any assistant, script or application c
 | `list_rules` | Every rule sentence in scope for a context (the unshortened brief) | Nothing |
 | `check` | Check one artifact version for an intended action; receive verdict, findings, fix proposals and, if Ready and gateable, a receipt id | A run |
 | `report_change` | Declare "I produced this new version, applying this fix proposal, for this person" | Attribution on a change |
-| `propose_correction` | Pass on a person's correction with its context | A candidate (inactive) |
+| `propose_correction` | Pass on a person's correction with its context. This is *relay*: best effort, dependent on the assistant, never treated as the person's own words (§11) | A candidate (inactive) |
 | `request_action` | Ask the gateway to perform a registered action on a checked version | A request awaiting approval |
 | `get_status` | Status of a run, an action request or a pending question | Nothing |
 
 **Minimum handshake:** a client that implements `hello` and `check` is a conforming advisory client. Everything else is optional.
 
-**Deliberately absent:** approving a rule, activating a rule, granting an exception, confirming an attestation and approving an action. These are human acts performed in the app. No assistant-facing operation can perform them, and the service rejects them from client tokens ([§4](#4-approval-is-separate-from-validation)).
+**Deliberately absent:** approving a rule, activating a rule, setting or changing a learning policy, granting an exception, confirming an attestation and approving an action. These are human acts performed in the app. No assistant-facing operation can perform them, and the service rejects them from client tokens ([§4](#4-approval-is-separate-from-validation)). Where a rule turns on automatically under a learning policy, the service's own decision procedure does it; delivering events is the only way a client can contribute, and what it delivers is evidence, not an instruction.
 
 ### 2.2 Shapes
 
@@ -273,3 +273,121 @@ Stated here once, and reflected in the product through coverage labels:
 - Content the adapters cannot read, beyond refusing to call it Ready.
 - Mistakes nobody has yet described as a correction.
 - A workspace owner who deliberately misconfigures or removes the gate. That is visible in the ledger, not preventable.
+
+## 11. Capture adapters
+
+Checks and gates are one half of integration. The other half is hearing corrections in the first place. The predecessor tool, and the `propose_correction` relay above, depend on an assistant noticing a correction and choosing to pass it on. That is useful and unreliable. A **capture adapter** removes the dependence: it is a small component attached to a supported runtime or app that delivers events (what the person typed, what changed, what was rejected) to the local service **durably**, whether or not any AI model was paying attention.
+
+Proposed shapes: [capture-event.schema.json](../schemas/capture-event.schema.json), [capture-stream.schema.json](../schemas/capture-stream.schema.json); example: [capture-stream.json](../examples/learning/capture-stream.json).
+
+### 11.1 What an adapter emits
+
+| Field | Purpose |
+|-------|---------|
+| `capture_id` | Idempotency key: the same source event always has the same id, however many times it is delivered |
+| `stream_id`, `source_seq` | One stream per session or surface; a gap-free sequence number assigned by the adapter |
+| `kind` | `session_start`, `user_turn`, `agent_output`, `tool_output`, `edit_observed`, `review_action`, `heartbeat`, `session_end` |
+| `role`, `attested_by` | Who produced it (`user`, `agent`, `tool`, `system`) and who vouches for that: the runtime's own hook, the app, a transcript, or nobody. Only a user turn attested by a runtime hook or the app counts as typed by the person |
+| `binding` | Where it happened, as known at the source at that moment: the folder binding, the project if resolvable, the artifact and version it concerns |
+| `content`, `content_digest` | The person's text for user turns and review actions. For agent and tool output, a digest only; their text is not sent |
+| `final_seq` | On heartbeats and session end: the adapter's highest sequence number, so the receiver can tell whether it has everything |
+
+### 11.2 Operations
+
+| Operation | Purpose |
+|-----------|---------|
+| `capture_hello` | The adapter names itself and its stream and reports its last sequence number. The service answers with its cursor (the highest sequence it has safely received with nothing missing below it) and whether this project has consented to capture on this surface |
+| `capture_deliver` | One or more events. The service stores them in one transaction and answers with a result per event and the new cursor |
+| `capture_heartbeat` | "I am alive and my last sequence number is N" |
+| `capture_close` | The stream has ended at sequence N |
+
+### 11.3 Delivery guarantees
+
+| Property | Mechanism |
+|----------|-----------|
+| **Nothing is dropped because the service was busy, restarting or absent** | The adapter writes each event to a local, append-only outbox *before* trying to deliver it, and removes it only when the cursor has passed it |
+| **Acknowledgement** | Every delivery returns the cursor. An event is "captured" only when it is at or below the cursor |
+| **At-least-once in, effectively-once out** | Adapters retry until acknowledged. The intake is idempotent on (`stream_id`, `source_seq`): a repeat with the same digest is acknowledged and dropped; a repeat with a *different* digest is refused and raised as an integrity problem |
+| **Order** | Events may arrive out of order. The intake holds an early arrival and processes the stream strictly in sequence, so "this time" is never read after the instruction it qualifies |
+| **Replay after a restart** | On reconnecting, `capture_hello` returns the cursor and the adapter re-sends everything above it from its outbox |
+| **Backfill** | Where a runtime keeps its own transcript, an adapter that itself was down can rebuild missed events from it. Backfilled events are marked as such, attested by transcript rather than by a live hook, and can lead to the inbox at most by default |
+| **Lateness** | An event processed more than a set time after it happened (proposed 24 hours) can lead to the inbox at most: the moment has passed and the preference may have changed |
+| **Completeness check** | Heartbeats and `capture_close` carry the adapter's last sequence number. If it is above the cursor, there is a gap, and the stream says so |
+
+The intake procedure, which the repository checker runs against the example stream:
+
+```text
+intake(delivery):                      # per stream; state: received, cursor
+  if delivery.seq already received:
+      same digest      -> result DUPLICATE          (acknowledge, drop)
+      different digest -> result REJECTED_CONFLICT  (integrity alert)
+  else:
+      record seq as received
+      no consent for this project/surface -> result CONSENT_BLOCKED (content dropped, counted)
+      event not valid or kind unknown     -> result DEAD_LETTER     (kept briefly, never processed)
+      seq == cursor + 1                   -> result ACCEPTED
+      seq  > cursor + 1                   -> result HELD_OUT_OF_ORDER
+  advance cursor while the next seq has been received
+  return result, cursor                 # the acknowledgement
+```
+
+### 11.4 Binding events to projects
+
+- The adapter sends the binding it knows; the **intake resolves the project itself**, with the same resolver as everything else ([Context §4](04-context-and-scope.md#4-resolving-context)), as of the event's time.
+- Each event is bound individually. A session that moves from one project's folder to another's produces events for two projects, each under its own learning policy and consent.
+- A user turn with no artifact of its own takes the project of the stream at that sequence number. If that is not exactly one project, the event is marked unbound and can only reach the inbox.
+- Consent is checked at the intake, per project and per surface. Without it the content is discarded on arrival and only a count is kept.
+
+### 11.5 Health and coverage
+
+Every stream and adapter has a visible state, shown per surface in the learning settings and the capture health screen ([Observability §11.3](02-observability.md#113-obs-11--capture-health)).
+
+| Health | Meaning |
+|--------|---------|
+| `healthy` | Connected; cursor equals the adapter's last sequence number |
+| `lagging` | Connected; the adapter has more than it has been able to deliver |
+| `gap` | A sequence number is missing below a received one, and the gap timeout (proposed 60 seconds) has passed |
+| `stale` | A session is known to be open and no heartbeat has arrived |
+| `degraded` | Dead-lettered events exist |
+| `disconnected` | The adapter is paired and not reachable |
+
+| Coverage label | Meaning |
+|----------------|---------|
+| **CAPTURED** | An adapter with a durable outbox, acknowledgements and replay is connected and consented for this project |
+| **RELAYED** | Only the assistant's own `propose_correction` is available. Best effort; always asks a person |
+| **NOT CAPTURED** | No adapter exists for this app or assistant, or it is not switched on. Corrections made there are not seen |
+
+While a gap is open inside an episode, signals from that episode cannot activate anything automatically (`capture_incomplete`): the missing event might be the one that said "just this once".
+
+### 11.6 Failure, retry, dead-letter, recovery
+
+| What goes wrong | What happens | What the user sees |
+|-----------------|--------------|--------------------|
+| Connection to the local service is lost | Events accumulate in the adapter's outbox; retries back off; on reconnect, replay from the cursor | "Lagging", then a line such as "2 events arrived late; all recovered" |
+| The local service crashes or restarts | Nothing acknowledged is lost (it was stored in a transaction). Unacknowledged events are re-sent. Processing stages are keyed by `capture_id`, so re-processing creates no second signal, candidate or rule | A closed gap in capture health |
+| The adapter or the assistant crashes | On restart the adapter resumes its stream from its outbox, or opens a new stream and backfills from the runtime's transcript where one exists | A gap that is closed by replay or backfill, or stays open and visible |
+| The same event arrives twice | Dropped as a duplicate; counted | Nothing, beyond the count |
+| Events arrive out of order | Held, then processed in order | Nothing, beyond the count |
+| The outbox is full or was deleted | The adapter emits a marker naming the range it lost. The gap is permanent and is shown as such | "Events 40 to 52 were lost on *date*. Corrections made then were not seen." |
+| An event cannot be parsed, or its kind is unknown | Dead-lettered with a reason; kept briefly (proposed 7 days); never processed into a signal; can be retried after an update | "1 event could not be read" with Retry and Discard |
+| A digest conflict | Refused; the stream is flagged; nothing from the conflicting event is used | An integrity warning naming the adapter |
+| Consent was withdrawn mid-stream | Later events have their content dropped on arrival | "Learning was turned off at *time*; later messages were not kept" |
+| The clock is wrong | Sequence numbers, not timestamps, decide order. Lateness uses the receiver's clock | — |
+
+### 11.7 Kinds of adapter, and their limits
+
+| Adapter | How it captures | Honest limits |
+|---------|-----------------|---------------|
+| **App-native** | The app's own correction box, rejection reasons and "finding is wrong" are written in the same transaction as the act | None beyond the app itself |
+| **Runtime hook** | For assistant runtimes that offer documented hook events (on user message submitted, on file written, on session start and end), a small hook process writes to the outbox and delivers | Exists only for runtimes with such hooks. A user can remove the hook; the surface then shows NOT CAPTURED |
+| **Folder watch** | New versions of files in registered folders, found by change notifications and confirmed by periodic rescans | Versions saved over between two observations are never seen. Who edited is unknown unless a session declares it |
+| **App connector** (later phase) | An app's own event interface, used with the user's authorization, with the app's event ids as idempotency keys and its cursor for replay | Sees only what that app's permissions give the authorized account. Never a way around them |
+| **Assistant relay** | `propose_correction` | Not capture. Depends on the assistant |
+| *None available* | — | The product says so, by name, and offers the correction box instead |
+
+### 11.8 What reliable capture does not give
+
+- **Understanding.** A perfectly delivered sentence can still be ambiguous, missed by the detector, or wrongly taken for a correction. That is what the learning queue, the "this was a correction" review and Undo are for ([Learning §10](12-learning.md#10-the-learning-queue-and-reconciliation)).
+- **Coverage of unconnected apps.** Conversations in tools without an adapter, phone calls, and comments made in person are not seen.
+- **Authority.** A captured event is evidence about what someone said. Whether it can change anything is decided by trust class, tests and the learning policy.
+- **Protection against a malicious adapter.** An adapter attests roles; a forged adapter could forge them. Adapters are paired explicitly by the user, identified in every event, and limited by the same add-only rules as everything else ([Security §2](07-security-and-governance.md#2-threat-model), T19).

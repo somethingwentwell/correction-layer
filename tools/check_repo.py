@@ -11,6 +11,17 @@ work. It only keeps this specification honest:
   5. A correction in an example can be reconstructed end to end by following
      stored references only (no timestamp or text inference).
   6. ASCII wireframes are rectangular.
+  7. Every example learning decision equals what the documented decision
+     procedure (docs/12-learning.md, section 7) gives for its recorded inputs.
+  8. In every example event log, a rule is only ever activated on a person's
+     individual approval or on an automatic decision made inside a learning
+     policy that a person set earlier; automatic pauses only touch rules that
+     were activated automatically.
+  9. Every example capture stream gives, delivery by delivery, the result and
+     cursor that the documented intake procedure (docs/06, section 11) gives:
+     duplicates dropped, out-of-order events held, gaps closed, dead letters
+     counted, nothing lost silently. Signals that claim to come from a stream
+     point at captured user turns attested by the runtime.
 
 Usage:
   python3 tools/check_repo.py                  run all checks
@@ -197,6 +208,8 @@ VERSION_TO_SCHEMA = {
     "cl.rule/1": "rule", "cl.correction/1": "correction", "cl.source_snapshot/1": "source-snapshot",
     "cl.artifact/1": "artifact", "cl.context/1": "context", "cl.run/1": "run", "cl.receipt/1": "receipt",
     "cl.action/1": "action-request", "cl.event/1": "event", "cl.event_log/1": "event-log", "cl.marker/1": "folder-marker",
+    "cl.learning_policy/1": "learning-policy", "cl.learning_signal/1": "learning-signal", "cl.learning_decision/1": "learning-decision",
+    "cl.capture_event/1": "capture-event", "cl.capture_stream/1": "capture-stream",
 }
 
 
@@ -422,18 +435,370 @@ def reconstruct(example_dir, correction_id):
 
 
 def check_journeys(show=False):
-    targets = [(os.path.join(ROOT, "examples", "sales-proposal"), "cor_PRICE001")]
-    for example_dir, correction_id in targets:
+    targets = [(reconstruct, os.path.join(ROOT, "examples", "sales-proposal"), "cor_PRICE001"),
+               (reconstruct_learning, os.path.join(ROOT, "examples", "learning"), "sig_KSGD0001")]
+    for walker, example_dir, start in targets:
         try:
-            lines = reconstruct(example_dir, correction_id)
-        except (LookupError, KeyError, IndexError) as exc:
-            err(example_dir, "journey of %s cannot be reconstructed: %s" % (correction_id, exc))
+            lines = walker(example_dir, start)
+        except (LookupError, KeyError, IndexError, TypeError) as exc:
+            err(example_dir, "journey of %s cannot be reconstructed: %s" % (start, exc))
             continue
         if show:
-            print("Journey of %s, reconstructed from stored references only:\n" % correction_id)
+            print("Journey of %s, reconstructed from stored references only:\n" % start)
             print("\n".join(lines) + "\n")
     return len(targets)
 
+
+
+# ---------------------------------------------------------------- learning decisions
+SCOPE_RANK = {"artifact": 0, "area": 1, "project": 2, "project_group": 3, "workspace": 4}
+CAP_RANK = {"inbox": 0, "shadow": 1, "auto": 2}
+SOFT_BLOCKERS = {"flags_existing_work", "daily_limit", "no_direct_statement", "surface_limit"}
+EVIDENCE_BLOCKERS = {"no_trigger_case", "no_real_pass"}
+
+
+def decide(d, policy):
+    """Reference form of the decision procedure in docs/12-learning.md section 7.
+
+    Pure function of the recorded inputs. Model confidence is not an input. It exists
+    so that the example decisions can be checked; it is not a product implementation.
+    """
+    signals, cand, ev, lim = d["signals"], d["candidate"], d["evaluation"], policy["limits"]
+    caps = {s["surface"]: s["max_outcome"] for s in policy["surfaces"] if s["enabled"]}
+    if any(s["trust"] == "untrusted_content" or s["surface"] not in caps
+           or (s["trust"] == "assistant_relayed" and s.get("text_matches_artifact_content")) for s in signals):
+        return "discarded", ["untrusted_origin"]
+    if d["suppressed"]:
+        return "discarded", ["suppressed_by_user"]
+    if cand is None:  # captured and identified, but no check type could express it
+        return "inbox", ["not_compilable"]
+    if cand["operation"] == "weaken_or_remove":
+        return "declined", ["would_weaken_or_remove"]
+    if cand["operation"] == "permission_change":
+        return "declined", ["permission_change"]
+    direct = any(s["trust"] == "user_direct" and s["author_id"] in policy["learn_from"] for s in signals)
+    if cand["reusability"] == "one_off":
+        return "record_only", ["one_off"]
+    if cand["reusability"] in ("unclear", "recurring") and not direct and d["independent_episodes"] < lim["recurrence_min_episodes"]:
+        return "record_only", ["not_enough_independent_episodes"]
+    if ev["duplicates"]:
+        return "record_only", ["already_covered"]
+    blockers = []
+    if cand["scope_project_id"] != policy["scope"]["project_id"] or \
+            SCOPE_RANK[cand["scope_level"]] > SCOPE_RANK[policy["auto"]["max_scope_level"]]:
+        blockers.append("scope_outside_delegation")
+    if cand["check_kind"] not in policy["auto"]["check_kinds"] or cand["method"] not in policy["auto"]["methods"]:
+        blockers.append("kind_not_delegated")
+    if cand["touches_protected_targets"]:
+        blockers.append("protected_target")
+    if cand["pins_fact_without_source"]:
+        blockers.append("fact_without_source")
+    if not direct:
+        blockers.append("no_direct_statement")
+    cap = max(CAP_RANK[caps[s["surface"]]] for s in signals)
+    if cap < CAP_RANK["auto"]:
+        blockers.append("surface_limit")
+    if not all(s["episode_capture_complete"] for s in signals):
+        blockers.append("capture_incomplete")
+    if any(s["late"] or s["delivery"] == "backfill" for s in signals):
+        blockers.append("captured_late")
+    if not (cand["referent_resolved"] and cand["parameters_grounded"] and cand["language_supported"]) \
+            or cand["hedged"] or cand["model_flags"] or cand["reusability"] == "unclear":
+        blockers.append("ambiguous")
+    if ev["trigger_case"] is None:
+        blockers.append("no_trigger_case")
+    elif ev["trigger_case"]["result"] != "fail":
+        blockers.append("trigger_not_caught")
+    if sum(1 for c in ev["real_passing_cases"] if c["result"] == "pass") < lim["min_real_pass"]:
+        blockers.append("no_real_pass")
+    if ev["heldout"]["fail"] > lim["max_heldout_failures"]:
+        blockers.append("flags_existing_work")
+    if ev["heldout"]["unknown"] + ev["heldout"]["error"] > 0:
+        blockers.append("undecidable_on_existing_work")
+    if ev["generated"]["unexpected"] > 0:
+        blockers.append("unexpected_on_variants")
+    if ev["conflicts"]:
+        blockers.append("conflict")
+    if ev["contradicts_learned"]:
+        blockers.append("contradicts_learned_rule")
+    if ev["auto_activations_today"] >= lim["max_auto_activations_per_day"]:
+        blockers.append("daily_limit")
+    mode = policy["mode"]
+    if mode == "suggest":
+        return "inbox", ["mode_suggest"] + blockers
+    if not blockers:
+        return ("auto_activate" if mode == "auto_low_risk" else "auto_shadow"), []
+    if set(blockers) <= EVIDENCE_BLOCKERS:
+        return "waiting_for_evidence", blockers
+    if set(blockers) <= SOFT_BLOCKERS and cap >= CAP_RANK["shadow"]:
+        return "shadow_and_inbox", blockers
+    return "inbox", blockers
+
+
+def check_learning_decisions():
+    count = 0
+    by_dir = {}
+    for path in walk(".json"):
+        try:
+            data = load_json(path)
+        except ValueError:
+            continue
+        if isinstance(data, dict):
+            by_dir.setdefault(os.path.dirname(path), []).append((path, data))
+    for folder, docs in by_dir.items():
+        policies = {(d["learning_policy_id"], d["revision"]): d for _, d in docs if d.get("schema_version") == "cl.learning_policy/1"}
+        rules = {d["rule_id"]: d for _, d in docs if d.get("schema_version") == "cl.rule/1"}
+        for path, d in docs:
+            if d.get("schema_version") == "cl.learning_policy/1" and d["set_by"]["kind"] != "human":
+                err(path, "a learning policy must be set by a person")
+            if d.get("schema_version") == "cl.rule/1":
+                auth = d.get("authority") or {}
+                if auth.get("kind") == "delegated_learning":
+                    if d.get("locked") or d["scope"]["level"] in ("workspace", "project_group"):
+                        err(path, "a rule activated by delegated learning cannot be locked or wider than a project")
+                    if d.get("method") == "model_review" or not any(c["kind"] == "negative" for c in d["cases"]) \
+                            or not any(c["kind"] == "positive" for c in d["cases"]):
+                        err(path, "a learned rule needs a real blocking and a real allowing example and cannot rest on a model's opinion")
+                elif d.get("status") in ("active", "trial") and not d.get("approval"):
+                    err(path, "an active rule without delegated authority must record who approved it")
+            if d.get("schema_version") != "cl.learning_decision/1":
+                continue
+            count += 1
+            ref = d["learning_policy"]
+            policy = policies.get((ref["learning_policy_id"], ref["revision"]))
+            if policy is None:
+                err(path, "decision names a learning policy that is not in this folder")
+                continue
+            try:
+                outcome, reasons = decide(d, policy)
+            except (KeyError, TypeError) as exc:
+                err(path, "decision inputs are incomplete: %r" % exc)
+                continue
+            if (outcome, reasons) != (d["outcome"], d["reasons"]):
+                err(path, "recorded outcome %s %s differs from the decision procedure: %s %s" % (d["outcome"], d["reasons"], outcome, reasons))
+            automatic = d["outcome"] in ("auto_activate", "auto_shadow", "shadow_and_inbox")
+            if automatic != (d["authority"] is not None):
+                err(path, "authority must be recorded for automatic outcomes and only for them")
+            if automatic and d["authority"] and d["authority"]["delegated_by"] != policy["set_by"]["id"]:
+                err(path, "delegated authority must name the person who set the learning policy")
+            expected_status = {"auto_activate": "active", "auto_shadow": "trial", "shadow_and_inbox": "trial",
+                               "inbox": "candidate", "waiting_for_evidence": "candidate"}.get(d["outcome"])
+            if not (d["candidate"] and d["candidate"].get("rule_id")):
+                expected_status = None
+            if d["resulting_rule_status"] != expected_status:
+                err(path, "resulting_rule_status should be %r for outcome %s" % (expected_status, d["outcome"]))
+            effects = d["side_effects"]
+            if d["candidate"] and d["candidate"].get("widening_requested") and not any(e["effect"] == "open_inbox_item" for e in effects):
+                err(path, "a request for a wider scope must open an inbox item")
+            if d["outcome"] in ("inbox", "shadow_and_inbox") and not any(e["effect"] == "open_inbox_item" for e in effects):
+                err(path, "an inbox outcome must open an inbox item")
+            for e in effects:
+                if e["effect"] == "auto_pause_learned_rule":
+                    target = rules.get(e.get("rule_id"))
+                    if e.get("rule_id") not in (d["evaluation"] or {}).get("contradicts_learned", []):
+                        err(path, "automatic pause must name a rule the candidate contradicts")
+                    if target is not None and ((target.get("authority") or {}).get("kind") != "delegated_learning"
+                                               or (target.get("authority") or {}).get("confirmed") or target.get("locked")):
+                        err(path, "automatic pause may only touch an unconfirmed, unlocked rule that was activated by delegated learning")
+    return count
+
+
+def check_activation_authority():
+    """Invariant 8 over every example event log."""
+    count = 0
+    for path, log in event_logs():
+        by_id = {e["event_id"]: e for e in log["events"]}
+        policies_set, auto_rules, approved_rules = {}, set(), set()
+        for e in log["events"]:
+            tag = "event %s" % e["event_id"]
+            causes = [by_id[c] for c in e["caused_by"] if c in by_id]
+            rule = e["refs"].get("rule_id")
+            if e["type"] == "learning.policy_set":
+                if e["actor"]["kind"] != "human":
+                    err(path, "%s: a learning policy must be set by a person" % tag)
+                policies_set[e["refs"]["learning_policy_id"]] = e
+            elif e["type"] == "learning.decision_made" and e["payload"] and e["payload"]["outcome"].startswith("auto"):
+                if e["refs"].get("learning_policy_id") not in policies_set:
+                    err(path, "%s: automatic decision without an earlier learning.policy_set by a person" % tag)
+                if not any(c["type"] == "learning.candidate_evaluated" for c in causes):
+                    err(path, "%s: automatic decision is not caused by an evaluation" % tag)
+            elif e["type"] == "rule.activated":
+                count += 1
+                by_person = any(c["type"] == "rule.approved" and c["actor"]["kind"] == "human" and c["refs"].get("rule_id") == rule for c in causes)
+                by_delegation = any(c["type"] == "learning.decision_made" and c["payload"]["outcome"].startswith("auto")
+                                    and c["refs"].get("rule_id") == rule for c in causes)
+                if not (by_person or by_delegation):
+                    err(path, "%s: rule activated without an individual approval or a delegated automatic decision" % tag)
+                (approved_rules if by_person else auto_rules).add(rule)
+            elif e["type"] == "rule.confirmed":
+                auto_rules.discard(rule)
+                approved_rules.add(rule)
+            elif e["type"] == "rule.auto_paused":
+                if rule not in auto_rules:
+                    err(path, "%s: automatic pause of a rule that was not activated automatically in this log" % tag)
+            elif e["type"] in ("rule.retired", "rule.suspended", "rule.approved", "learning.inbox_item_resolved", "action.approved",
+                               "exception.granted", "attestation.recorded") and e["actor"]["kind"] != "human":
+                err(path, "%s: %s must be performed by a person" % (tag, e["type"]))
+            if e["type"].startswith("learning.signal") and e["payload"] and e["payload"].get("trust") == "untrusted_content":
+                err(path, "%s: untrusted content must never be recorded as a learning signal" % tag)
+    return count
+
+
+def reconstruct_learning(example_dir, signal_id):
+    """Follow one learning signal to its automatic activation and to the first block, repair and recheck it caused."""
+    log = load_json(os.path.join(example_dir, "events.json"))
+    events, tz = log["events"], log["display_tz"]
+    lines = []
+
+    def one(kind, pred, what):
+        found = [e for e in events if e["type"] == kind and pred(e)]
+        if not found:
+            raise LookupError("broken hop: no %s event where %s" % (kind, what))
+        return found[0]
+
+    def caused(e, cause):
+        return cause["event_id"] in e["caused_by"]
+
+    def say(e, verb):
+        lines.append("%-11s %s  [%s]  %s  (by %s)" % (verb, local_time(e["occurred_at"], tz), e["event_id"], e["summary"],
+                                                    e["actor"].get("display_name", e["actor"]["id"])))
+
+    signal = one("learning.signal_detected", lambda e: e["refs"].get("signal_id") == signal_id, "refs.signal_id matches")
+    policy = one("learning.policy_set", lambda e: e["refs"]["learning_policy_id"] == signal["refs"].get("learning_policy_id")
+                 and e["seq"] < signal["seq"] and e["actor"]["kind"] == "human", "a person set the learning policy before the signal")
+    say(policy, "DELEGATED")
+    say(signal, "DETECTED")
+    step = one("learning.correction_extracted", lambda e: caused(e, signal), "caused by the signal")
+    say(step, "EXTRACTED")
+    candidate = one("rule.candidate_created", lambda e: caused(e, step), "caused by the extraction")
+    say(candidate, "SAVED")
+    rule = candidate["refs"]["rule_id"]
+    tested = one("learning.candidate_evaluated", lambda e: caused(e, candidate), "caused by the candidate")
+    say(tested, "TESTED")
+    decided = one("learning.decision_made", lambda e: caused(e, tested), "caused by the evaluation")
+    say(decided, "DECIDED")
+    if decided["payload"]["model_confidence_used"] is not False:
+        raise LookupError("a learning decision must not use model confidence")
+    active = one("rule.activated", lambda e: caused(e, decided) and e["refs"].get("rule_id") == rule, "caused by the decision")
+    say(active, "TURNED ON")
+    fired = one("run.completed", lambda e: e["seq"] > active["seq"] and rule in e["payload"].get("failed_rules", []), "the learned rule failed")
+    say(fired, "TRIGGERED")
+    say(one("action.blocked", lambda e: caused(e, fired), "caused by the failing run"), "BLOCKED")
+    change = one("change.recorded", lambda e: caused(e, fired), "caused by the failing run")
+    say(change, "CHANGED")
+    recheck = one("run.completed", lambda e: caused(e, change), "caused by the change")
+    if not set(fired["payload"]["findings"]) <= set(recheck["payload"].get("resolved_findings", [])):
+        raise LookupError("broken hop: the recheck does not record the finding as resolved")
+    say(recheck, "RE-CHECKED")
+    for e in events:  # what later happened to the learned rule itself
+        if e["seq"] > recheck["seq"] and e["refs"].get("rule_id") == rule and e["type"] in ("rule.auto_paused", "rule.confirmed", "rule.retired"):
+            say(e, {"rule.auto_paused": "AUTO-PAUSED", "rule.confirmed": "CONFIRMED", "rule.retired": "RETIRED"}[e["type"]])
+    return lines
+
+
+# ---------------------------------------------------------------- capture streams
+def intake(deliveries):
+    """Reference form of the capture intake procedure in docs/06 section 11.
+
+    At-least-once delivery in, effectively-once processing out. Returns the result and
+    cursor for each delivery. It exists to check the example; it is not a product implementation.
+    """
+    received, cursor, out = {}, 0, []
+    for d in deliveries:
+        seq = d["source_seq"]
+        if seq in received:
+            result = "duplicate" if received[seq] == d["content_digest"] else "rejected_conflict"
+        else:
+            received[seq] = d["content_digest"]
+            if d["intake_validation"] == "consent_missing":
+                result = "consent_blocked"
+            elif d["intake_validation"] != "ok":
+                result = "dead_letter"
+            else:
+                result = "accepted" if seq == cursor + 1 else "held_out_of_order"
+        while cursor + 1 in received:
+            cursor += 1
+        out.append((result, cursor))
+    return out
+
+
+def check_capture_streams():
+    count = 0
+    streams, signals = {}, []
+    for path in walk(".json"):
+        try:
+            data = load_json(path)
+        except ValueError:
+            continue
+        if isinstance(data, dict) and data.get("schema_version") == "cl.capture_stream/1":
+            streams[data["stream_id"]] = (path, data)
+        if isinstance(data, dict) and data.get("schema_version") == "cl.learning_signal/1":
+            signals.append((path, data))
+    for path, st in streams.values():
+        count += 1
+        state, deliveries = st["state"], st["deliveries"]
+        if [d["arrival"] for d in deliveries] != list(range(1, len(deliveries) + 1)):
+            err(path, "deliveries must be numbered in arrival order")
+        for d, (result, cursor) in zip(deliveries, intake(deliveries)):
+            if (d["result"], d["ack_through"]) != (result, cursor):
+                err(path, "delivery %d: recorded %s/ack %d, intake procedure gives %s/ack %d" % (d["arrival"], d["result"], d["ack_through"], result, cursor))
+        cursor = intake(deliveries)[-1][1] if deliveries else 0
+        results = [d["result"] for d in deliveries]
+        if state["acked_through"] != cursor:
+            err(path, "state.acked_through should be %d" % cursor)
+        complete = state["final_seq"] is not None and cursor == state["final_seq"]
+        if (state["status"] == "closed_complete") != complete:
+            err(path, "state.status does not agree with cursor and final_seq")
+        if state["duplicates_dropped"] != results.count("duplicate") or state["held_out_of_order"] != results.count("held_out_of_order"):
+            err(path, "duplicate or out-of-order counts do not match the deliveries")
+        if sorted(x["source_seq"] for x in state["dead_letters"]) != sorted(d["source_seq"] for d in deliveries if d["result"] == "dead_letter"):
+            err(path, "dead_letters do not match the deliveries")
+        if state["dead_letters"] and state["health"] == "healthy":
+            err(path, "a stream with dead letters cannot be shown as healthy")
+        if any(g["closed_at"] is None for g in state["gaps"]) and state["status"] == "closed_complete":
+            err(path, "a stream with an open gap cannot be closed_complete")
+        events = {e["source_seq"]: e for e in st["events"]}
+        accepted = {d["source_seq"] for d in deliveries if d["result"] in ("accepted", "held_out_of_order")}
+        if set(events) != accepted:
+            err(path, "events listed must be exactly the validly received ones")
+        for e in st["events"]:
+            if e["stream_id"] != st["stream_id"] or e["binding"]["project_id"] != st["project_id"]:
+                err(path, "event %d is bound to another stream or project" % e["source_seq"])
+            if e["kind"] in ("agent_output", "tool_output") and (e["role"] == "user" or e["content"] is not None):
+                err(path, "event %d: agent and tool output is never a user turn and its text is not sent" % e["source_seq"])
+        human = [e["source_seq"] for e in st["events"] if e["kind"] in ("user_turn", "edit_observed", "review_action")]
+        staged = [p["source_seq"] for p in st["pipeline"]]
+        if sorted(human) != sorted(staged):
+            err(path, "pipeline must account for every captured user turn, edit and review action, and nothing else")
+        order = ["captured", "identified", "compiled", "tested", "activated"]
+        for i, stage in enumerate(order):
+            if state["counts"][stage] != sum(1 for p in st["pipeline"] if order.index(p["reached"]) >= i):
+                err(path, "state.counts.%s does not match the pipeline list" % stage)
+        for p in st["pipeline"]:
+            if (p["reached"] == "captured") != (p["disposition"] == "not_a_signal") or (p["reached"] != "captured") != ("signal_id" in p):
+                err(path, "pipeline entry %d: stage, disposition and signal do not agree" % p["source_seq"])
+            if p["disposition"] in ("active", "shadow") and p["reached"] != "activated":
+                err(path, "pipeline entry %d: a rule can only be on if the item reached 'activated'" % p["source_seq"])
+    for path, sig in signals:
+        cap = sig.get("capture")
+        if sig["trust"] == "user_direct" and sig["surface"] == "attested_user_turn" and not cap:
+            err(path, "a signal from an attested user turn must say which captured events it came from")
+        if not cap or cap["stream_id"] not in streams:
+            continue
+        spath, st = streams[cap["stream_id"]]
+        events = {e["source_seq"]: e for e in st["events"]}
+        for seq, cid in zip(cap["source_seqs"], cap["capture_ids"]):
+            e = events.get(seq)
+            if e is None or e["capture_id"] != cid:
+                err(path, "signal points at capture event %s which is not in %s" % (cid, os.path.relpath(spath, ROOT)))
+            elif sig["trust"] == "user_direct" and not (e["kind"] == "user_turn" and e["role"] == "user" and e["attested_by"] in ("runtime_hook", "app")):
+                err(path, "a user_direct signal must come from a user turn attested by the runtime or the app")
+        deliveries = {d["source_seq"]: d for d in st["deliveries"] if d["result"] in ("accepted", "held_out_of_order")}
+        if any(deliveries[seq]["delivery"] != cap["delivery"] for seq in cap["source_seqs"] if seq in deliveries):
+            err(path, "signal's delivery mode differs from the stream's record")
+        if sig["project_id"] != st["project_id"]:
+            err(path, "signal and its capture stream are bound to different projects")
+    return count
 
 # ---------------------------------------------------------------- wireframes
 def check_wireframes(fix=False):
@@ -483,9 +848,13 @@ def main(argv):
     files, blocks, validated = check_json()
     events = check_event_logs()
     journeys = check_journeys(show)
+    decisions = check_learning_decisions()
+    activations = check_activation_authority()
+    streams = check_capture_streams()
     frames = check_wireframes()
     print("links checked: %d | JSON files: %d (validated against schemas: %d) | JSON blocks in docs: %d" % (links, files, validated, blocks))
     print("events verified: %d | journeys reconstructed: %d | wireframes: %d" % (events, journeys, frames))
+    print("learning decisions recomputed: %d | rule activations with recorded authority: %d | capture streams replayed: %d" % (decisions, activations, streams))
     if errors:
         print("\n%d problem(s):" % len(errors))
         for e in errors:

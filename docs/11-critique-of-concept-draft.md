@@ -62,3 +62,15 @@ This design started from an earlier concept page ("Encode the Correction, Beyond
 - That effectiveness numbers show causation.
 - That a single laptop can protect a store from its own administrator.
 - That the hard part of reading documents is solved; it is bounded, made honest, and scheduled for early testing.
+
+## 5. A later revision: capture and learning
+
+After the first version of this design was delivered, two of its own positions were revised ([Learning](12-learning.md), ADR-014 to ADR-017):
+
+| Earlier position in this design | Problem | Revision |
+|---------------------------------|---------|----------|
+| Every must-pass rule is approved individually by a person | The safest option and, in practice, the reason corrections go unrecorded | Authority may be given once, per project, through a learning policy. Low-risk, tested rules then activate without a per-rule click, with a notice, Undo and automatic pause. Everything else still needs an explicit decision |
+| A correction said to an assistant reaches the product only if the assistant passes it on | Inherits the predecessor's weakness: capture depends on a model remembering | Capture adapters deliver the person's own turns, edits and rejections durably, with acknowledgements, replay, gap detection and visible health. Relay remains, labelled best effort |
+| "AI cannot activate" | Still true, and now more precise | Activation under a learning policy is done by a deterministic procedure that uses no model confidence; a model can only add caution |
+
+What did not change: rules are a closed catalogue of typed checks; they combine by conjunction; unknown never passes; checks do not repair; approval of actions is separate; enforcement exists only on gated routes; and the product claims no more than it can see.

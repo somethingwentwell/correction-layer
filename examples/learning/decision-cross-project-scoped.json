@@ -1,0 +1,105 @@
+{
+  "$schema": "../../schemas/learning-decision.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies and amounts are fictional. Content hashes are digests of descriptive labels, not of real files. All thresholds are proposed, uncalibrated defaults.",
+  "schema_version": "cl.learning_decision/1",
+  "decision_id": "dec_KREF0001",
+  "workspace_id": "ws_HALDEN01",
+  "project_id": "prj_KESTREL1",
+  "decided_at": "2026-11-18T07:21:31Z",
+  "display_tz": "Asia/Singapore",
+  "learning_policy": {
+    "learning_policy_id": "lrn_KESTREL1",
+    "revision": 1,
+    "mode": "auto_low_risk"
+  },
+  "signals": [
+    {
+      "signal_id": "sig_KREF0001",
+      "type": "standing_instruction",
+      "surface": "attested_user_turn",
+      "trust": "user_direct",
+      "author_id": "usr_PRIYA001",
+      "episode_id": "epi_KSQ00003",
+      "text_matches_artifact_content": false,
+      "delivery": "live",
+      "late": false,
+      "episode_capture_complete": true
+    }
+  ],
+  "independent_episodes": 1,
+  "suppressed": false,
+  "candidate": {
+    "rule_id": "rul_KREFAUTO",
+    "revision": 1,
+    "statement": "The quote must state a quote reference.",
+    "operation": "add_requirement",
+    "check_kind": "field_present",
+    "method": "deterministic",
+    "scope_level": "project",
+    "scope_project_id": "prj_KESTREL1",
+    "widening_requested": "workspace",
+    "touches_protected_targets": false,
+    "pins_fact_without_source": false,
+    "reusability": "explicit_standing",
+    "referent_resolved": true,
+    "parameters_grounded": true,
+    "hedged": false,
+    "language_supported": true,
+    "model_flags": [],
+    "targets_rule_id": null
+  },
+  "evaluation": {
+    "evaluation_id": "evl_KREF0001",
+    "trigger_case": {
+      "artifact_hash": "sha256:9935963189ebf86dd30ac3c8f7561f43fe52610a394f3d65de34117a5e72f7c6",
+      "description": "The quote Priya was looking at: no quote reference",
+      "kind": "trigger_version",
+      "expect": "fail",
+      "result": "fail"
+    },
+    "real_passing_cases": [
+      {
+        "artifact_hash": "sha256:6295326e083241e2388584a4f005d66778c43ee79fbf52b2d484cbb1dead390b",
+        "description": "The same quote after the reference was added",
+        "kind": "corrected_version",
+        "expect": "pass",
+        "result": "pass"
+      }
+    ],
+    "heldout": {
+      "artifacts": 3,
+      "pass": 3,
+      "fail": 0,
+      "unknown": 0,
+      "error": 0,
+      "not_applicable": 0
+    },
+    "generated": {
+      "run": 4,
+      "unexpected": 0,
+      "counted_as_support": false
+    },
+    "conflicts": [],
+    "duplicates": [],
+    "contradicts_learned": [],
+    "auto_activations_today": 0
+  },
+  "outcome": "auto_activate",
+  "reasons": [],
+  "resulting_rule_status": "active",
+  "authority": {
+    "kind": "delegated_learning",
+    "learning_policy_id": "lrn_KESTREL1",
+    "learning_policy_revision": 1,
+    "delegated_by": "usr_MARCUS01"
+  },
+  "side_effects": [
+    {
+      "effect": "open_inbox_item",
+      "inbox_id": "inb_KREFWIDE",
+      "detail": "Priya Nair asked for this to apply to every customer. That is wider than this project, so it is a question for a workspace steward."
+    }
+  ],
+  "model_confidence_used": false,
+  "rationale": "Learned for Kestrel Dental Group - 2026 supply only: the quote must state a quote reference. Priya Nair said it should apply to every customer; the learning setting covers this project, so it is on here and the wider request has been sent to Marcus Lim to decide."
+}

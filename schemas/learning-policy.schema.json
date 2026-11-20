@@ -1,0 +1,357 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "learning-policy.schema.json",
+  "title": "Learning policy (delegation)",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. A person's standing, revocable decision about what Correction Layer may learn and turn on by itself in one project. All limits are proposed, uncalibrated defaults.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Relative path to this schema, used by tools/check_repo.py."
+    },
+    "_note": {
+      "type": "string",
+      "description": "Marks an example file as proposed/illustrative."
+    },
+    "schema_version": {
+      "const": "cl.learning_policy/1"
+    },
+    "learning_policy_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "workspace_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "enum": [
+            "project",
+            "area"
+          ]
+        },
+        "project_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "area_id": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "project_id"
+      ]
+    },
+    "mode": {
+      "enum": [
+        "off",
+        "suggest",
+        "quiet",
+        "auto_low_risk"
+      ],
+      "description": "off: nothing is observed. suggest: candidates go to the inbox. quiet: validated low-risk rules turn on as shadow (note only). auto_low_risk: validated low-risk rules turn on and block, inside this policy's limits."
+    },
+    "set_by": {
+      "$ref": "common.schema.json#/$defs/actor"
+    },
+    "set_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "display_tz": {
+      "type": "string"
+    },
+    "surfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "surface": {
+            "enum": [
+              "app",
+              "attested_user_turn",
+              "assistant_relay",
+              "folder_watch",
+              "review_action"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "adapter_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "max_outcome": {
+            "enum": [
+              "auto",
+              "shadow",
+              "inbox"
+            ],
+            "description": "The most a signal from this surface can lead to without a person."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surface",
+          "enabled",
+          "max_outcome"
+        ]
+      }
+    },
+    "learn_from": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/id"
+      },
+      "minItems": 1,
+      "description": "People whose direct statements can lead to automatic activation."
+    },
+    "inbox_resolvers": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/id"
+      },
+      "minItems": 1
+    },
+    "auto": {
+      "type": "object",
+      "properties": {
+        "max_scope_level": {
+          "enum": [
+            "artifact",
+            "area",
+            "project"
+          ]
+        },
+        "check_kinds": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "field_present",
+              "field_in_set",
+              "fields_agree",
+              "number_compare",
+              "date_window",
+              "arithmetic_consistency",
+              "section_present",
+              "text_contains",
+              "no_unresolved_markup",
+              "field_matches_source",
+              "attestation",
+              "no_hidden_content",
+              "rows_unique",
+              "value_is_formula",
+              "model_review"
+            ]
+          }
+        },
+        "methods": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "deterministic",
+              "source_backed"
+            ]
+          }
+        },
+        "enforcement_max": {
+          "$ref": "common.schema.json#/$defs/enforcement"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "max_scope_level",
+        "check_kinds",
+        "methods",
+        "enforcement_max"
+      ]
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "calibration": {
+          "const": "proposed_uncalibrated"
+        },
+        "recurrence_min_episodes": {
+          "type": "integer"
+        },
+        "min_real_pass": {
+          "type": "integer"
+        },
+        "max_heldout_failures": {
+          "type": "integer"
+        },
+        "max_auto_activations_per_day": {
+          "type": "integer"
+        },
+        "candidate_expiry_days": {
+          "type": "integer"
+        },
+        "learned_rule_review_days": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "calibration",
+        "recurrence_min_episodes",
+        "min_real_pass",
+        "max_heldout_failures",
+        "max_auto_activations_per_day",
+        "candidate_expiry_days",
+        "learned_rule_review_days"
+      ]
+    },
+    "auto_pause": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "on_direct_contradiction": {
+          "type": "boolean"
+        },
+        "disputes_distinct_artifacts": {
+          "type": "integer"
+        },
+        "on_example_regression": {
+          "type": "boolean"
+        },
+        "on_conflict_with_approved_rule": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "on_direct_contradiction",
+        "disputes_distinct_artifacts",
+        "on_example_regression",
+        "on_conflict_with_approved_rule"
+      ]
+    },
+    "capture": {
+      "type": "object",
+      "properties": {
+        "calibration": {
+          "const": "proposed_uncalibrated"
+        },
+        "late_after_hours": {
+          "type": "integer",
+          "description": "A captured event processed later than this can lead to the inbox at most."
+        },
+        "gap_timeout_seconds": {
+          "type": "integer"
+        },
+        "non_signal_review_days": {
+          "type": "integer",
+          "description": "How long the text of captured user turns that were not identified as corrections is kept so their author can say 'this was a correction'. 0 discards at once."
+        },
+        "dead_letter_days": {
+          "type": "integer"
+        },
+        "backfill_max_outcome": {
+          "enum": [
+            "shadow",
+            "inbox"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "calibration",
+        "late_after_hours",
+        "gap_timeout_seconds",
+        "non_signal_review_days",
+        "dead_letter_days",
+        "backfill_max_outcome"
+      ]
+    },
+    "never_learned": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Operations no learning policy can delegate. Listed for the reader; fixed by the product."
+    },
+    "retention": {
+      "type": "object",
+      "properties": {
+        "signal_text_days": {
+          "type": "integer"
+        },
+        "one_off_episode_days": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "signal_text_days",
+        "one_off_episode_days"
+      ]
+    },
+    "revoked": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "by": {
+              "$ref": "common.schema.json#/$defs/id"
+            },
+            "at": {
+              "$ref": "common.schema.json#/$defs/timestamp"
+            },
+            "learned_rules": {
+              "enum": [
+                "keep",
+                "demote_to_shadow"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "by",
+            "at",
+            "learned_rules"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "learning_policy_id",
+    "revision",
+    "workspace_id",
+    "scope",
+    "mode",
+    "set_by",
+    "set_at",
+    "surfaces",
+    "learn_from",
+    "inbox_resolvers",
+    "auto",
+    "limits",
+    "auto_pause",
+    "capture",
+    "never_learned",
+    "retention",
+    "revoked"
+  ],
+  "additionalProperties": false
+}

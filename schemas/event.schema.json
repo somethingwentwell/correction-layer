@@ -77,7 +77,26 @@
         "ledger.exported",
         "retention.purged",
         "redaction.applied",
-        "policy.imported"
+        "policy.imported",
+        "learning.policy_set",
+        "learning.policy_revoked",
+        "learning.signal_detected",
+        "learning.signal_discarded",
+        "learning.correction_extracted",
+        "learning.candidate_evaluated",
+        "learning.decision_made",
+        "learning.inbox_item_opened",
+        "learning.inbox_item_resolved",
+        "learning.suppression_added",
+        "rule.auto_paused",
+        "rule.confirmed",
+        "capture.stream_opened",
+        "capture.stream_closed",
+        "capture.gap_detected",
+        "capture.gap_closed",
+        "capture.dead_lettered",
+        "capture.health_changed",
+        "capture.consent_blocked"
       ]
     },
     "occurred_at": {
@@ -168,6 +187,27 @@
           "$ref": "common.schema.json#/$defs/id"
         },
         "adapter_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "signal_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "decision_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "evaluation_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "learning_policy_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "inbox_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "stream_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "capture_id": {
           "$ref": "common.schema.json#/$defs/id"
         }
       },

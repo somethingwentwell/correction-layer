@@ -100,6 +100,10 @@
     ],
     "max_days": 30
   },
+  "authority": {
+    "kind": "individual_approval",
+    "zero_click": false
+  },
   "approval": {
     "proposed_by": "usr_MARCUS01",
     "approved_by": "usr_MARCUS01",

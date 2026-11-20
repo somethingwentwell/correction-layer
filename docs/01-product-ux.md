@@ -25,7 +25,7 @@ In a one-person setup the same human plays the first three roles. The product st
 5. **Say who did what.** The product checks. A person or their assistant changes the document. A person approves. A gateway sends. The interface never says "Correction Layer fixed your document".
 6. **Honest about reach.** Each project shows which actions are actually gated and which are only checked on request (the [coverage map](02-observability.md#58-obs-8--coverage-map)).
 7. **Ask only when it matters.** Setup is not repeated for a new session or a moved file. A question appears only when the answer would change which mandatory rules apply or whether a consequential action may proceed.
-8. **The user confirms meaning; the machine never guesses silently.** Project identity, work type, what a table column means, and what a correction covers are suggested, then confirmed by a person.
+8. **The user confirms meaning; the machine never guesses silently.** Project identity, work type, what a table column means, and what a correction covers are suggested, then confirmed by a person. The one exception is chosen by the user in advance: with learning switched on for a project, a low-risk rule that passes its tests turns on by itself, always with a notice that says what was learned, why, and how to undo it ([Learning](12-learning.md)).
 
 ## 3. The words on the screen
 
@@ -36,7 +36,7 @@ The interface uses a small vocabulary. The [glossary](glossary.md) maps each wor
 | **Project** | A piece of ongoing work with its own folders, trusted sources and rules (e.g. "Meridian Clinics — 2026 renewal") |
 | **Work type** | The kind of thing being produced (e.g. "Sales proposal") |
 | **Correction** | What a person said was wrong, in their own words |
-| **Rule** | The reviewed, tested, plain-language requirement that came from a correction |
+| **Rule** | The tested, plain-language requirement that came from a correction. Either a person approved it, or it was let in under a learning setting a person chose for the project; the screen always says which |
 | **Trusted source** | A list a named person vouches for (price list, vendor register), with a date |
 | **Check** | One run of the relevant rules against one version of a piece of work |
 | **Ready / Needs changes / Couldn't verify** | The three verdicts |
@@ -50,10 +50,10 @@ The interface uses a small vocabulary. The [glossary](glossary.md) maps each wor
 |---------|-----|-------|
 | **The app** (runs locally, opens like any desktop application) | Everyone | Home, project pages, rules, activity, reviews. All screens in this document |
 | **Check from anywhere** | Makers | Drop a file on the app; later, a right-click "Check with Correction Layer" and optional auto-check on save for registered folders |
-| **Inside an AI assistant** | Makers using agents | The assistant shows the verdict and findings inline and links to the app. A correction said in chat becomes a *candidate* that is reviewed in the app, never activated from chat |
+| **Inside an AI assistant** | Makers using agents | The assistant shows the verdict and findings inline and links to the app. A correction said in chat is captured (reliably where an event adapter is connected, best-effort where the assistant merely passes it on) and becomes a *candidate*. It is reviewed in the app, or, where learning is on for the project and the candidate is low-risk and tested, turned on automatically with a notice. The assistant itself can never activate anything |
 | **Command line and API** | Developers and integrators only | Same local service; never required for ordinary use |
 
-Rule approval and action approval always happen in the app (or a later trusted approval surface), not inside the assistant's conversation. An assistant can be confused or manipulated by the text it reads; the approval surface is kept outside its reach. See [Enforcement §4](06-enforcement-and-integration.md#4-approval-is-separate-from-validation).
+Individual rule approval, the learning setting for a project, and action approval always happen in the app (or a later trusted approval surface), not inside the assistant's conversation. An assistant can be confused or manipulated by the text it reads; these surfaces are kept outside its reach. Where a rule turns on automatically, it does so by the service's own decision procedure under a learning setting a person saved in the app; nothing the assistant says or calls can activate a rule. See [Enforcement §4](06-enforcement-and-integration.md#4-approval-is-separate-from-validation) and [Learning §7](12-learning.md#7-the-decision).
 
 ## 5. Getting started
 
@@ -200,6 +200,9 @@ The app proposes; the user confirms, or points at the right table and relabels i
 | WHAT IS ENFORCED HERE                               [ See coverage map ]    |
 |  Send to customer (email)   Gated - cannot send without Ready + approval    |
 |  Anything you do outside this app   Not covered - checks on request only    |
+|                                                                             |
+| LEARNING                                           [ Learning settings ]    |
+|  Off for this project. Corrections are added by hand.                       |
 |                                                                             |
 | RECENT ACTIVITY                                        [ See full history ] |
 |  12 Nov 10:02  Check blocked sending: 4 problems in Renewal Proposal        |
@@ -471,7 +474,7 @@ What the user experiences when their assistant is connected (details in [Enforce
 
 - **At the start of a session** the assistant receives a short brief for the folder it is in: the project, the work type, the must-pass rules in plain language, and how current the trusted sources are. The user does not paste rules into prompts.
 - **When the assistant finishes a draft** it can ask for a check and show the result inline, using the wording the service supplies, for example: *"Advisory check: Needs changes. 4 things to fix before this can be sent. 1 note."* with a link to the review. "Advisory" is always part of the line, so nobody mistakes a check in chat for a gate
-- **When the user corrects the assistant in chat**, the assistant can pass the correction on. The user sees: *"I've put that forward as a possible rule. Review it in Correction Layer."* It is a candidate until a person approves it in the app.
+- **When the user corrects the assistant in chat**, what happens depends on the project's learning setting. With learning off, the assistant can pass the correction on and the user sees: *"I've put that forward as a possible rule. Review it in Correction Layer."* With learning on and an event adapter connected, the user's own message is captured directly, and a clear, low-risk correction produces a notice instead: *"Learned for this project: every line and the total must be in SGD. Undo."* Anything unclear or consequential lands in the learning queue for a person.
 - **When the assistant is asked to send or export** through a gated route, the request appears in the app for approval. The assistant cannot approve it.
 - **If the assistant ignores all of this**, nothing breaks silently in the product's records: the work simply shows as *not checked*, and gated actions still cannot happen without a check and whatever approval the project requires. Ungated routes remain ungated, and the coverage map says so.
 
@@ -496,3 +499,15 @@ The brief is advisory help for the assistant. It may be shortened when there are
 | Terminal, scripts | The app; the command line is for integrators |
 | Prompt engineering | The session brief is generated from approved rules |
 | Knowing file internals | "Show me" locations and "Couldn't verify" explanations in plain language |
+
+## 14. Learning without a click per rule
+
+Adding a correction through UX-7 always works. For people who would rather not do that each time, a project can have learning switched on, once, by someone entitled to approve its rules. The screens are specified in [Learning](12-learning.md):
+
+| Screen | What the user does | Where |
+|--------|--------------------|-------|
+| UX-11 Learning for this project | Chooses one of four modes (Off, Suggest, Learn quietly, Learn and enforce), whose corrections count, and which connected surfaces are noticed. Sees in plain words what "safe" means and what is never automatic | [Learning §8](12-learning.md#8-learning-modes-what-a-person-sets-once) |
+| UX-12 Learning notice | Nothing, unless they disagree: "Learned for *project*: *rule*. Because you said: *their words*. Undo" | [Learning §9](12-learning.md#9-after-a-rule-is-learned) |
+| UX-13 Learning queue | Answers only what could not be settled automatically; can see what was captured, what was understood, what turned on by itself, and what was not learned and why | [Learning §10](12-learning.md#10-the-learning-queue-and-reconciliation) |
+
+What stays the same: the rule sentence is rendered from the typed rule; scope defaults to the narrowest; checking, repairing, approving an action and executing it remain separate acts by separate actors. Learning adds rules. It never fixes, sends or approves anything.

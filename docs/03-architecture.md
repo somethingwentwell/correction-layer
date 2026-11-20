@@ -51,6 +51,9 @@ One local service owns one workspace store. Everything else talks to the service
 | **Gateway** | Holds the ability to perform registered actions; verifies receipt, approval and bindings before executing ([06](06-enforcement-and-integration.md)) | Treat a passing check as permission |
 | **Ledger and views** | Appends events; maintains the read models behind every screen ([02](02-observability.md)) | Allow updates or deletes of envelopes |
 | **Surfaces** | App for people; MCP tools, hooks and a skill for assistants; CLI and local API for integrators | Hold credentials for gated actions |
+| **Capture intake** | Receives events from opted-in capture adapters; acknowledges, de-duplicates, orders, detects gaps, binds each event to a project, enforces consent ([06 §11](06-enforcement-and-integration.md#11-capture-adapters)) | Decide what an event means; keep text it has no consent for |
+| **Signal detector** | Identifies learning signals among captured events by fixed trigger conditions; groups them into episodes ([12 §5](12-learning.md#5-what-counts-as-a-signal)) | Treat document, email or tool text as a signal |
+| **Learning decision** | A pure function from (signals, candidate, evaluation, learning policy) to an outcome; activates a low-risk, tested rule only inside a learning policy a person set ([12 §7](12-learning.md#7-the-decision)) | Use model confidence; weaken, pause or retire anything a person approved; act on artifacts |
 
 The check engine being a pure function is a load-bearing decision: it is what makes "re-run as recorded" possible and what lets regression examples act as real tests.
 
@@ -77,6 +80,7 @@ Table groups (logical; exact DDL is implementation work):
 | Work | `artifacts`, `artifact_versions`, `runs`, `check_results`, `findings`, `fix_proposals`, `changes`, `attestations`, `feedback` |
 | Gate | `receipts`, `action_requests`, `approvals`, `executions`, `adapters` |
 | Ledger | `events`, `event_payloads`, `anchors` |
+| Capture and learning | `learning_policies`, `capture_streams`, `capture_events`, `capture_dead_letters`, `signals`, `episodes`, `learning_decisions`, `inbox_items`, `suppressions` |
 
 Properties:
 
@@ -105,7 +109,7 @@ Proposed shape: [rule.schema.json](../schemas/rule.schema.json). Example: [rule-
 | Consequence | `enforcement`, `locked` | What a failure does; whether narrower scopes may be exempted without the owner |
 | Tests | `cases[]` | Stored examples with expected outcomes |
 | Exceptions | `exception_policy` | Who may grant one and for how long |
-| Approval | `approval.approved_by`, `approved_at`, `activated_at` | Who made it real |
+| Authority | `authority.kind` (`individual_approval` or `delegated_learning`), `authority.zero_click`, the learning policy and decision for delegated rules; `approval.approved_by`, `approved_at`, `activated_at` for individually approved ones | On whose authority the rule is in force |
 
 ### 4.2 Three separate axes
 
@@ -131,7 +135,8 @@ stateDiagram-v2
     [*] --> candidate: correction translated, or template chosen
     candidate --> rejected: reviewer rejects
     candidate --> trial: approved to try quietly
-    candidate --> active: approved, examples pass
+    candidate --> active: approved by a person, or low-risk and tested inside a learning policy
+    active --> trial: automatic pause (automatically added rules only)
     trial --> active: owner promotes
     trial --> retired: owner drops
     active --> suspended: paused with reason and end date
@@ -143,6 +148,7 @@ stateDiagram-v2
 
 - **Revising** an active rule creates a new candidate revision that goes through the same approval; on activation the new revision's `supersedes` field names the previous one, which is no longer evaluated. Runs keep pointing at the revision they used.
 - **Suspension always has an end date.** A paused rule that nobody resumes comes back by itself, with an event.
+- **Automatic pause** exists only for rules that were added automatically under a learning policy and never confirmed by a person: a direct contradiction, repeated disputes, a failing example or a conflict with an approved rule moves such a rule from `active` to `trial` (shadow), with an event and a question to a person ([12 §9](12-learning.md#9-after-a-rule-is-learned)). No other rule can be demoted without a person.
 - **Retirement is never automatic.** Dormant or overdue rules are queued for their owner; only a person retires a rule.
 - Every transition is an event with actor, approver and reason ([02 §4.2](02-observability.md#42-event-catalogue)).
 
@@ -178,7 +184,7 @@ Targets address three namespaces: semantic fields of the artifact (`quote.line_i
 
 ## 6. From correction to active rule
 
-The working hypothesis put human approval before regression cases. The design reverses that: the examples and a dry run on existing work are *what the approver looks at*, so they come first.
+The working hypothesis put human approval before regression cases. The design reverses that: the examples and a dry run on existing work come first, and they are what the authority decision rests on. That decision is made either by a person looking at them (described here), or, where a person has set a learning policy for the project, by a deterministic procedure applied to the same evidence ([Learning](12-learning.md)). The steps are the same in both cases; only step 8 differs.
 
 ```mermaid
 flowchart TD
@@ -192,7 +198,7 @@ flowchart TD
     r --> s["Step 5: Scope chosen by a person; duplicates and conflicts shown"]
     s --> ex["Step 6: Examples: one it blocks, one it allows"]
     ex --> bt["Step 7: Dry run on existing work in scope"]
-    bt --> ap["Step 8: Approval by someone allowed at that scope"]
+    bt --> ap["Step 8: Authority: a person approves, or a learning policy set by a person allows it"]
     ap --> on["Step 9: Trial or active; policy revision advances"]
 ```
 
@@ -205,14 +211,15 @@ Step notes:
 5. **Scope.** The narrowest scope that covers the context is preselected. Wider scopes name the approver they need. Structural duplicates and unsatisfiable combinations are computed here (§10.3, §10.5).
 6. **Examples.** The artifact the correction was about becomes the "should be caught" example automatically. A must-pass rule needs at least one "should pass" example as well. Examples are stored as files plus pinned source snapshots, so they are hermetic.
 7. **Dry run.** The candidate is evaluated against existing artifact versions in its would-be scope. The result ("3 of 9 would need changes", with the list) is shown and recorded. Nothing is blocked retroactively.
-8. **Approval.** By a person holding the steward role for the chosen scope. Approver and proposer may be the same person in small setups; the record shows it.
+8. **Authority.** Either *individual approval* by a person holding the steward role for the chosen scope (approver and proposer may be the same person in small setups; the record shows it), or *delegated learning*: the candidate is low-risk, has passed its tests on real evidence, and falls inside a learning policy that such a person saved earlier for this project ([12 §7](12-learning.md#7-the-decision)). Anything broad, consequential, ambiguous or loosening always takes the first route.
 9. **Activation.** `trial` or `active`. The policy revision advances; outstanding receipts whose in-scope rule set changed become invalid ([06 §3](06-enforcement-and-integration.md#3-validation-receipts)).
 
 What AI may and may not do in this pipeline:
 
 | May | May not |
 |-----|---------|
-| Suggest which check kind fits a correction | Activate, approve, widen scope or raise enforcement |
+| Suggest which check kind fits a correction | Activate, approve, widen scope or raise enforcement. Automatic activation is done by the deterministic learning decision, never by a model |
+| Raise a concern about a candidate, which blocks automation | Vouch for a candidate: no model output, and no model confidence, can remove a blocker |
 | Fill in typed parameters for review | Produce the sentence that is approved |
 | Suggest a field mapping for a new document layout | Have its extracted values satisfy a must-pass rule without confirmation ([05 §5](05-formats.md#5-semantic-fields-and-how-they-are-extracted)) |
 | Draft an example description | Infer that a correction applies universally |

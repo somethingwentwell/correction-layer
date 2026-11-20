@@ -40,6 +40,9 @@ The interface and the data model keep five kinds of act separate, because confla
 | OBS-6 Correction journey | From one human correction to its effects | Yes (simple list form) |
 | OBS-7 Effectiveness | Is the rule still catching things? Is it wrong often? | Later (basic counts in MVP) |
 | OBS-8 Coverage map | Where is enforcement real, and where is it advisory? | Yes |
+| OBS-9 Added automatically | Which rules turned on with no click, on whose standing permission, and why? | Yes |
+| OBS-10 Learning timeline | From a captured sentence to a rule, to the block it later caused | Yes |
+| OBS-11 Capture health | What is being captured, what is not, and is anything missing? | Yes |
 
 ## 3. The data model behind the screens
 
@@ -66,6 +69,12 @@ erDiagram
     ACTION_REQUEST ||--o| EXECUTION : "results in"
     EXCEPTION }o--|| RULE : "waives"
     RULE ||--o{ FEEDBACK : "receives"
+    CAPTURE_STREAM ||--o{ CAPTURE_EVENT : "delivers"
+    CAPTURE_EVENT }o--o| SIGNAL : "identified as"
+    SIGNAL }|--o| CORRECTION : "compiled into"
+    LEARNING_POLICY ||--o{ LEARNING_DECISION : "authorizes"
+    LEARNING_DECISION ||--o| RULE_REVISION : "activates"
+    SIGNAL }o--o{ LEARNING_DECISION : "weighed in"
 ```
 
 Key relationships, in words:
@@ -77,6 +86,7 @@ Key relationships, in words:
 - A **finding** is one located problem. A **fix proposal** addresses one or more findings. A **change** is the transition from one artifact version to the next, optionally linked to the fix proposal it applied.
 - A **trace** groups everything about one artifact heading toward one action: runs, fix proposals, changes, receipts, approval, execution. It is what the timeline screen shows.
 - A **journey** is not stored; it is the path through these links starting from a correction (§5.6).
+- A **capture event** is something an opted-in adapter delivered (a user turn, an edit, a rejection). A **signal** is a capture event, or a group of them, identified as possibly carrying a correction. A **learning decision** records the inputs and outcome of the deterministic decision about a signal, and names the **learning policy** (a person's standing permission) under which any automatic activation happened. Every rule revision records its `authority`: a person's individual approval, or a learning decision. See [Learning](12-learning.md).
 
 Proposed shapes: [run.schema.json](../schemas/run.schema.json), [rule.schema.json](../schemas/rule.schema.json), [event.schema.json](../schemas/event.schema.json).
 
@@ -124,8 +134,12 @@ Three properties matter for users:
 | Checking | `run.completed`, `fix.proposed`, `fix.dismissed`, `change.recorded`, `feedback.recorded` | system, agent, human |
 | Gate | `receipt.issued`, `receipt.invalidated`, `receipt.expired`, `receipt.consumed`, `action.requested`, `action.approved`, `action.rejected`, `action.revalidated`, `action.paused`, `action.blocked`, `action.executed`, `action.failed`, `action.outcome_unknown` | system, human, adapter |
 | Ledger care | `ledger.anchored`, `ledger.exported`, `retention.purged`, `redaction.applied`, `policy.imported` | system, human |
+| Capture | `capture.stream_opened`, `capture.stream_closed`, `capture.gap_detected`, `capture.gap_closed`, `capture.dead_lettered`, `capture.health_changed`, `capture.consent_blocked` | system |
+| Learning | `learning.policy_set`, `learning.policy_revoked`, `learning.signal_detected`, `learning.signal_discarded`, `learning.correction_extracted`, `learning.candidate_evaluated`, `learning.decision_made`, `learning.inbox_item_opened`, `learning.inbox_item_resolved`, `learning.suppression_added`, `rule.auto_paused`, `rule.confirmed` | human, adapter, system |
 
 `run.completed` carries the verdict and counts; the per-rule results and findings live in the run record it references, so that "show me every time rule X was evaluated" is an indexed query rather than a scan of event payloads.
+
+Individual capture events (every message a person types in a connected session) are **not** ledger events: there are too many, and most are not corrections. They live in the capture store with their own sequence numbers and acknowledgements ([Enforcement §11](06-enforcement-and-integration.md#11-capture-adapters)). The ledger records what matters for history: streams opening and closing, gaps and dead letters, and every signal, decision and activation, each pointing back to the capture events it came from.
 
 ### 4.3 Identifiers and reproducibility
 
@@ -183,6 +197,7 @@ Design notes:
 - The default grouping is **by where a rule applies**, because "does this apply to my work?" is the first question. Alternative groupings: by topic (the field the rule is about, e.g. *price*, *currency*), by owner, by status.
 - **"View as project"**: choosing a project in *Applies to* shows exactly the rules that would be in scope for it, computed by the same deterministic resolver the engine uses ([Context and scope §5](04-context-and-scope.md#5-which-rules-apply-deterministic-scope-matching)). The list a person reads and the set the engine evaluates come from one code path, and acceptance test AT-O1 requires them to be equal.
 - **Kind** uses the four honest labels: *Exact*, *Trusted source*, *Person confirms*, *AI opinion (note only)*.
+- **How it was added** is shown for every rule and can be filtered: *Approved by* a named person; *Learned* (turned on automatically under a named person's learning setting); *Learned, then kept* (a person later confirmed it); *Starter* or *Imported*. Status distinguishes *On*, *Shadow* (evaluated, note only: on trial or automatically paused), *Paused* and *Retired*.
 - **Needs attention** is the health queue for a growing rule set: conflicts, overdue reviews, rules whose stored examples now fail, rules depending on stale sources, and rules that have not applied to anything for a long period.
 - Search matches rule sentences, the original correction text, owner names and field names. It is a convenience for people; it plays no part in deciding which rules are enforced.
 
@@ -239,6 +254,7 @@ Design notes:
 - **History** lists every lifecycle event with actor and approver. Editing never rewrites a revision; "version 2" would appear above "version 1" with a field-by-field comparison between them.
 - **Pause** (suspend) and **Retire** require a reason; pausing requires an end date. Both are events and both appear here and in Activity.
 - **Details** reveals identifiers (`rul_PRICECUR`, revision, digest), the typed definition, and the raw examples, for support and audit.
+- For a learned rule, **Where it came from** shows the captured words (or the edit), the surface they came through and its trust class, the tests it passed, the decision's rationale, and the learning setting that authorized it, with **Undo** and **Keep**. Nothing about a learned rule is less visible than for an approved one.
 
 ### 5.3 OBS-3 · Activity (what was added, changed, turned off)
 
@@ -633,6 +649,9 @@ Rules:
 | Other artifact snapshots | 30 days after the last run on them | Supports compare and re-run during active work |
 | Source snapshots | While referenced by any retained run | Needed to replay source-backed results |
 | Example files for rule cases | While the rule is not retired, plus 90 days | Needed for regression; owners are prompted to use minimal examples |
+| Text of captured user turns that were not identified as corrections | 14 days (proposed), visible only to their author; 0 disables the "this was a correction" review | Lets a person recover a missed correction without keeping conversations |
+| Envelopes of capture events (identifier, sequence, digest, time; no text) | Life of the workspace | Delivery audit: what was received, what was missing |
+| Dead-lettered capture events | 7 days (proposed) | Long enough to retry or inspect; not a second copy of conversations |
 
 The defaults are starting points for discussion, not compliance advice ([Open questions Q7](10-open-questions.md)). When retention removes something, a `retention.purged` event records what class and which references were removed; affected screens say so in place.
 
@@ -652,3 +671,107 @@ The defaults are starting points for discussion, not compliance advice ([Open qu
 | Effectiveness | Plain counts on rule detail | Full view with trends, thresholds and caveats |
 | Re-run as recorded | Yes for deterministic and source-backed rules | — |
 | Export of a trace packet with redaction | Yes (JSON and printable) | Signed packets, external anchoring |
+| Added-automatically audit list, learning timeline, capture health | Yes | Trends per surface; digests |
+| Learning measures ([Learning §15](12-learning.md#15-proposed-measures)) | Plain counts | With the effectiveness view |
+
+## 11. Capture and learning views
+
+These screens make automatic behaviour as inspectable as manual behaviour. They are projections of the same ledger, plus the capture store for delivery detail. The learning queue itself (UX-13) is in [Learning §10](12-learning.md#10-the-learning-queue-and-reconciliation).
+
+### 11.1 OBS-9 · Added automatically
+
+```text
++----------------------------------------------------------------------------+
+| Rules that turned on without a click           Kestrel Dental Group - ...  |
+| Under the learning setting saved by Marcus Lim, 16 Nov 2026 09:20          |
++----------------------------------------------------------------------------+
+| 18 Nov 15:21  Quotes state a quote reference                    ON         |
+|   From      Priya Nair, typed to her assistant (captured, attested):       |
+|             "Always include the quote reference. That goes for every       |
+|              customer, not just Kestrel."                                  |
+|   Why safe  Exact check - this project only - adds a requirement           |
+|   Tested    Catches the quote she was looking at; passes the corrected     |
+|             version; passes 3 other quotes; no conflicts                   |
+|   Also      She asked for every customer. Not automatic: sent to           |
+|             Marcus Lim to decide.                                          |
+|   [ Undo ]  [ Keep (make it person-approved) ]  [ Timeline ]  [ Details ]  |
+|                                                                            |
+| 17 Nov 14:12  Kestrel Dental Group quotes are in SGD            RETIRED    |
+|   From      Priya Nair, typed to her assistant (captured, attested):       |
+|             "No, Kestrel's quotes must always be in SGD."                  |
+|   Why safe  Exact check - this project only - adds a requirement           |
+|   Tested    Catches the draft; passes the corrected version; passes 3      |
+|             other quotes; no conflicts                                     |
+|   Since     19 Nov blocked 1 release (fixed and released the same day)     |
+|             20 Nov paused automatically: contradicted by Priya Nair        |
+|             20 Nov retired by Priya Nair, replaced by a USD rule she       |
+|             approved herself                            [ Timeline ]       |
++----------------------------------------------------------------------------+
+| Considered and not turned on: 6   [ see why ]                              |
++----------------------------------------------------------------------------+
+```
+
+Every automatically activated rule appears here for good, including ones later undone, paused or retired, with: whose standing permission it used; the captured words or edit and how they arrived; the low-risk conditions it met; the tests; anything that was *not* done automatically (a wider scope, for instance); and what it has done since. "Considered and not turned on" lists every decision that ended in the inbox, as record-only, declined or discarded, with its reasons, so that the absence of a rule is explainable too.
+
+### 11.2 OBS-10 · Learning timeline
+
+```text
++----------------------------------------------------------------------------+
+| Timeline of a learned rule: Kestrel Dental Group quotes are in SGD         |
+| Times: Singapore (UTC+8)                                 [ Details: IDs ]  |
++----------------------------------------------------------------------------+
+| 16 Nov 09:20  PERMITTED  Marcus Lim switched on "learn and enforce" for    |
+|                          this project.                                     |
+| 17 Nov 14:12  CAPTURED   Priya Nair's message, from her assistant's event  |
+|                          adapter. Delivered live, acknowledged.            |
+| 17 Nov 14:12  IDENTIFIED Standing instruction ("always"), typed by Priya.  |
+| 17 Nov 14:12  COMPILED   Candidate saved, off: every line and the total    |
+|                          must be in SGD. "SGD" is from her own words.      |
+| 17 Nov 14:12  CHANGED    Priya's assistant changed the quote at her        |
+|                          request (version 2).                              |
+| 17 Nov 14:12  TESTED     5 documents: catches version 1, passes version    |
+|                          2, passes 3 other quotes. 4 generated variants    |
+|                          behaved as expected (not counted as support).     |
+| 17 Nov 14:12  DECIDED    Turn on automatically. No blockers. No model      |
+|                          confidence used. No person clicked.               |
+| 17 Nov 14:12  ON         Rules revision 11 became 12. Notice shown to      |
+|                          Priya with Undo.                                  |
+| 19 Nov 10:07  TRIGGERED  Kestrel-Addendum-Quote.docx, before release:      |
+|                          BLOCKED. Row 2 in USD.           [ open check ]   |
+| 19 Nov 10:11  CHANGED    Priya's assistant fixed row 2 at her request.     |
+| 19 Nov 10:11  RE-CHECKED Ready. Released at 10:12 (Priya, self-approved).  |
+| 20 Nov 09:40  PAUSED     Automatically, to note-only: Priya said "Kestrel  |
+|                          wants USD from now on". Asked her which holds.    |
+| 20 Nov 09:55  RETIRED    By Priya Nair, who approved a USD rule instead.   |
++----------------------------------------------------------------------------+
+```
+
+The fixed words on the left extend the timeline vocabulary of §5.4: PERMITTED, CAPTURED, IDENTIFIED, COMPILED, TESTED, DECIDED, ON, PAUSED, plus the existing CHANGED, TRIGGERED, RE-CHECKED, RETIRED. Detection, repair, approval and execution remain distinct lines by distinct actors; "ON" is never followed by a change the product made. Each line is one or more ledger events linked by `caused_by`; the repository checker walks exactly this chain for the example ([AT-R6](08-mvp-and-acceptance.md#5-acceptance-tests)).
+
+### 11.3 OBS-11 · Capture health
+
+```text
++----------------------------------------------------------------------------+
+| What is captured for learning: Kestrel Dental Group - 2026 supply          |
++----------------------------------------------------------------------------+
+| SURFACE                      STATUS                                        |
+| This app                     CAPTURED   healthy                            |
+| Priya's assistant (desktop)  CAPTURED   degraded: 1 event could not be     |
+|   event adapter                         read on 19 Nov  [ see ] [ retry ]  |
+|                                         19 Nov 10:05-10:06: 2 events       |
+|                                         arrived late after a restart;      |
+|                                         all recovered, none lost           |
+| Edits in this folder         CAPTURED   healthy; last scan 2 min ago.      |
+|                                         Saves between scans can be missed  |
+| Corrections an assistant     RELAYED    best effort: depends on the        |
+|   passes on                             assistant; always asks you         |
+| Marcus's assistant (web)     NOT CAPTURED  this assistant has no event     |
+|                                         adapter. Corrections typed there   |
+|                                         are not seen. Add them in the app. |
+| Team chat                    NOT CAPTURED  not connected                   |
++----------------------------------------------------------------------------+
+| This week: 15 captured - 0 lost - 1 unreadable - 1 gap, closed by replay   |
++----------------------------------------------------------------------------+
+```
+
+The labels are generated from the adapters actually paired and their live state, in the same spirit as the coverage map (§5.8): **CAPTURED** (a durable adapter with acknowledgements), **RELAYED** (an assistant's own best effort), **NOT CAPTURED** (no adapter, or not switched on). Health is one of *healthy*, *lagging*, *gap*, *stale*, *degraded*, *disconnected*, each with the plain reason. A gap that was never closed stays on this screen until someone acknowledges it; it is never aged out silently.

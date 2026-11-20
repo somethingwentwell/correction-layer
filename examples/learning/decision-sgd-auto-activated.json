@@ -1,0 +1,99 @@
+{
+  "$schema": "../../schemas/learning-decision.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies and amounts are fictional. Content hashes are digests of descriptive labels, not of real files. All thresholds are proposed, uncalibrated defaults.",
+  "schema_version": "cl.learning_decision/1",
+  "decision_id": "dec_KSGD0001",
+  "workspace_id": "ws_HALDEN01",
+  "project_id": "prj_KESTREL1",
+  "decided_at": "2026-11-17T06:12:41Z",
+  "display_tz": "Asia/Singapore",
+  "learning_policy": {
+    "learning_policy_id": "lrn_KESTREL1",
+    "revision": 1,
+    "mode": "auto_low_risk"
+  },
+  "signals": [
+    {
+      "signal_id": "sig_KSGD0001",
+      "type": "standing_instruction",
+      "surface": "attested_user_turn",
+      "trust": "user_direct",
+      "author_id": "usr_PRIYA001",
+      "episode_id": "epi_KSQ00001",
+      "text_matches_artifact_content": false,
+      "delivery": "live",
+      "late": false,
+      "episode_capture_complete": true
+    }
+  ],
+  "independent_episodes": 1,
+  "suppressed": false,
+  "candidate": {
+    "rule_id": "rul_KSGDAUTO",
+    "revision": 1,
+    "statement": "Every line in the pricing table, and the total, must be in SGD.",
+    "operation": "add_requirement",
+    "check_kind": "field_in_set",
+    "method": "deterministic",
+    "scope_level": "project",
+    "scope_project_id": "prj_KESTREL1",
+    "widening_requested": null,
+    "touches_protected_targets": false,
+    "pins_fact_without_source": false,
+    "reusability": "explicit_standing",
+    "referent_resolved": true,
+    "parameters_grounded": true,
+    "hedged": false,
+    "language_supported": true,
+    "model_flags": [],
+    "targets_rule_id": null
+  },
+  "evaluation": {
+    "evaluation_id": "evl_KSGD0001",
+    "trigger_case": {
+      "artifact_hash": "sha256:d76ef719d82ebb16db6517f24f69d0154952d257c0e5eee5d13eeaf4d543f80f",
+      "description": "The draft Priya was correcting: amounts in USD",
+      "kind": "trigger_version",
+      "expect": "fail",
+      "result": "fail"
+    },
+    "real_passing_cases": [
+      {
+        "artifact_hash": "sha256:597a59d0e21e05137a17e72285f57e923593a1996ed9aeb7a49240a1f64b022a",
+        "description": "The same quote after the assistant changed it at Priya's request: amounts in SGD",
+        "kind": "corrected_version",
+        "expect": "pass",
+        "result": "pass"
+      }
+    ],
+    "heldout": {
+      "artifacts": 3,
+      "pass": 3,
+      "fail": 0,
+      "unknown": 0,
+      "error": 0,
+      "not_applicable": 0
+    },
+    "generated": {
+      "run": 4,
+      "unexpected": 0,
+      "counted_as_support": false
+    },
+    "conflicts": [],
+    "duplicates": [],
+    "contradicts_learned": [],
+    "auto_activations_today": 0
+  },
+  "outcome": "auto_activate",
+  "reasons": [],
+  "resulting_rule_status": "active",
+  "authority": {
+    "kind": "delegated_learning",
+    "learning_policy_id": "lrn_KESTREL1",
+    "learning_policy_revision": 1,
+    "delegated_by": "usr_MARCUS01"
+  },
+  "side_effects": [],
+  "model_confidence_used": false,
+  "rationale": "Learned for Kestrel Dental Group - 2026 supply: every line in the pricing table, and the total, must be in SGD. Because Priya Nair said: \"No, Kestrel's quotes must always be in SGD.\" It catches the draft she was correcting, passes the corrected version, and passes the 3 other quotes in this project. Low-risk kind (exact check, this project only, adds a requirement). On now under the learning setting Marcus Lim chose on 16 Nov 2026."
+}

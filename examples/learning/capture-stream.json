@@ -1,0 +1,372 @@
+{
+  "$schema": "../../schemas/capture-stream.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies and amounts are fictional. Content hashes are digests of descriptive labels, not of real files. All thresholds are proposed, uncalibrated defaults.",
+  "schema_version": "cl.capture_stream/1",
+  "stream_id": "str_PRIYA1119",
+  "workspace_id": "ws_HALDEN01",
+  "project_id": "prj_KESTREL1",
+  "session_id": "ses_PRIYA1119",
+  "adapter": {
+    "adapter_id": "adp_TURNHOOK",
+    "kind": "runtime_hook",
+    "runtime": "example-assistant desktop",
+    "version": "1.0",
+    "attests_user_turns": true,
+    "durable_outbox": true,
+    "supports_replay": true,
+    "supports_backfill": false
+  },
+  "consent": {
+    "learning_policy_id": "lrn_KESTREL1",
+    "learning_policy_revision": 1
+  },
+  "opened_at": "2026-11-19T02:01:10Z",
+  "closed_at": "2026-11-19T02:20:00Z",
+  "display_tz": "Asia/Singapore",
+  "events": [
+    {
+      "capture_id": "cap_P1119S001",
+      "adapter_id": "adp_TURNHOOK",
+      "stream_id": "str_PRIYA1119",
+      "source_seq": 1,
+      "kind": "session_start",
+      "occurred_at": "2026-11-19T02:01:10Z",
+      "role": "system",
+      "attested_by": "runtime_hook",
+      "binding": {
+        "binding_id": "fld_KESTREL01",
+        "project_id": "prj_KESTREL1"
+      },
+      "content": null,
+      "content_state": "not_sent",
+      "content_digest": "sha256:c10ff467071fff77ffad233a2aaac4c11f87daea244ba29b430511b9203d9c60",
+      "schema_version": "cl.capture_event/1"
+    },
+    {
+      "capture_id": "cap_P1119S002",
+      "adapter_id": "adp_TURNHOOK",
+      "stream_id": "str_PRIYA1119",
+      "source_seq": 2,
+      "kind": "user_turn",
+      "occurred_at": "2026-11-19T02:02:00Z",
+      "role": "user",
+      "attested_by": "runtime_hook",
+      "binding": {
+        "binding_id": "fld_KESTREL01",
+        "project_id": "prj_KESTREL1"
+      },
+      "content": {
+        "text": "Draft the addendum quote for the 12 extra chairs.",
+        "language": "en"
+      },
+      "content_state": "held_for_review",
+      "content_digest": "sha256:659a5a78c178b6c080e2044f9daa51a137d2c34dafd35aa92858e536ec55c77e",
+      "schema_version": "cl.capture_event/1"
+    },
+    {
+      "capture_id": "cap_P1119S003",
+      "adapter_id": "adp_TURNHOOK",
+      "stream_id": "str_PRIYA1119",
+      "source_seq": 3,
+      "kind": "agent_output",
+      "occurred_at": "2026-11-19T02:05:02Z",
+      "role": "agent",
+      "attested_by": "runtime_hook",
+      "binding": {
+        "binding_id": "fld_KESTREL01",
+        "project_id": "prj_KESTREL1",
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:be0080bb9990149277d470328307f37553bbe31902c0dbc63c38cb544734a7a4"
+      },
+      "content": null,
+      "content_state": "not_sent",
+      "content_digest": "sha256:6435c3623502ed829433d8548b20f696acb0fcbfc25b14980eda0f1baf22d584",
+      "schema_version": "cl.capture_event/1"
+    },
+    {
+      "capture_id": "cap_P1119S004",
+      "adapter_id": "adp_TURNHOOK",
+      "stream_id": "str_PRIYA1119",
+      "source_seq": 4,
+      "kind": "user_turn",
+      "occurred_at": "2026-11-19T02:05:50Z",
+      "role": "user",
+      "attested_by": "runtime_hook",
+      "binding": {
+        "binding_id": "fld_KESTREL01",
+        "project_id": "prj_KESTREL1"
+      },
+      "content": {
+        "text": "Use the supply quote's layout for this one.",
+        "language": "en"
+      },
+      "content_state": "present",
+      "content_digest": "sha256:feb68a3d02b0cbeaf296c85340aabf22b7fa762d54add9347fc6d56df21be52c",
+      "schema_version": "cl.capture_event/1"
+    },
+    {
+      "capture_id": "cap_P1119S005",
+      "adapter_id": "adp_TURNHOOK",
+      "stream_id": "str_PRIYA1119",
+      "source_seq": 5,
+      "kind": "user_turn",
+      "occurred_at": "2026-11-19T02:06:10Z",
+      "role": "user",
+      "attested_by": "runtime_hook",
+      "binding": {
+        "binding_id": "fld_KESTREL01",
+        "project_id": "prj_KESTREL1"
+      },
+      "content": {
+        "text": "Always state the delivery lead time on addenda.",
+        "language": "en"
+      },
+      "content_state": "present",
+      "content_digest": "sha256:927ff5ce5cb5cfa758910aeb1adf616d4e99d7bf5db69d1ec63cbd8028a5d15c",
+      "schema_version": "cl.capture_event/1"
+    },
+    {
+      "capture_id": "cap_P1119S006",
+      "adapter_id": "adp_TURNHOOK",
+      "stream_id": "str_PRIYA1119",
+      "source_seq": 6,
+      "kind": "user_turn",
+      "occurred_at": "2026-11-19T02:08:30Z",
+      "role": "user",
+      "attested_by": "runtime_hook",
+      "binding": {
+        "binding_id": "fld_KESTREL01",
+        "project_id": "prj_KESTREL1"
+      },
+      "content": {
+        "text": "Row 2 should be in SGD, please fix it.",
+        "language": "en"
+      },
+      "content_state": "held_for_review",
+      "content_digest": "sha256:15c6affd54aa26cf93ddadbc6154eb3822ce9dc077fa1b8d223d1a0a99a2a605",
+      "schema_version": "cl.capture_event/1"
+    },
+    {
+      "capture_id": "cap_P1119S008",
+      "adapter_id": "adp_TURNHOOK",
+      "stream_id": "str_PRIYA1119",
+      "source_seq": 8,
+      "kind": "agent_output",
+      "occurred_at": "2026-11-19T02:11:40Z",
+      "role": "agent",
+      "attested_by": "runtime_hook",
+      "binding": {
+        "binding_id": "fld_KESTREL01",
+        "project_id": "prj_KESTREL1",
+        "artifact_id": "art_KAQ2026A",
+        "content_hash": "sha256:11f673002dcb88d36f00adcb81558d79b0d6694d960c4553f4178694d7fa05e6"
+      },
+      "content": null,
+      "content_state": "not_sent",
+      "content_digest": "sha256:62c7a60001ded7eb610c58d71d3fb1a0c496776f46e42f1ef09e643d323675da",
+      "schema_version": "cl.capture_event/1"
+    },
+    {
+      "capture_id": "cap_P1119S009",
+      "adapter_id": "adp_TURNHOOK",
+      "stream_id": "str_PRIYA1119",
+      "source_seq": 9,
+      "kind": "session_end",
+      "occurred_at": "2026-11-19T02:20:00Z",
+      "role": "system",
+      "attested_by": "runtime_hook",
+      "binding": {
+        "binding_id": "fld_KESTREL01",
+        "project_id": "prj_KESTREL1"
+      },
+      "content": null,
+      "content_state": "not_sent",
+      "content_digest": "sha256:74d5f7e15c08cb16ba6a2a7783f050180598f0cee883e3ad2f57001c76eb40b7",
+      "schema_version": "cl.capture_event/1",
+      "final_seq": 9
+    }
+  ],
+  "deliveries": [
+    {
+      "arrival": 1,
+      "received_at": "2026-11-19T02:01:10Z",
+      "source_seq": 1,
+      "capture_id": "cap_P1119S001",
+      "attempt": 1,
+      "delivery": "live",
+      "content_digest": "sha256:c10ff467071fff77ffad233a2aaac4c11f87daea244ba29b430511b9203d9c60",
+      "intake_validation": "ok",
+      "result": "accepted",
+      "ack_through": 1
+    },
+    {
+      "arrival": 2,
+      "received_at": "2026-11-19T02:02:00Z",
+      "source_seq": 2,
+      "capture_id": "cap_P1119S002",
+      "attempt": 1,
+      "delivery": "live",
+      "content_digest": "sha256:659a5a78c178b6c080e2044f9daa51a137d2c34dafd35aa92858e536ec55c77e",
+      "intake_validation": "ok",
+      "result": "accepted",
+      "ack_through": 2
+    },
+    {
+      "arrival": 3,
+      "received_at": "2026-11-19T02:05:02Z",
+      "source_seq": 3,
+      "capture_id": "cap_P1119S003",
+      "attempt": 1,
+      "delivery": "live",
+      "content_digest": "sha256:6435c3623502ed829433d8548b20f696acb0fcbfc25b14980eda0f1baf22d584",
+      "intake_validation": "ok",
+      "result": "accepted",
+      "ack_through": 3
+    },
+    {
+      "arrival": 4,
+      "received_at": "2026-11-19T02:06:40Z",
+      "source_seq": 3,
+      "capture_id": "cap_P1119S003",
+      "attempt": 2,
+      "delivery": "replay",
+      "content_digest": "sha256:6435c3623502ed829433d8548b20f696acb0fcbfc25b14980eda0f1baf22d584",
+      "intake_validation": "ok",
+      "result": "duplicate",
+      "ack_through": 3
+    },
+    {
+      "arrival": 5,
+      "received_at": "2026-11-19T02:06:40Z",
+      "source_seq": 5,
+      "capture_id": "cap_P1119S005",
+      "attempt": 1,
+      "delivery": "replay",
+      "content_digest": "sha256:927ff5ce5cb5cfa758910aeb1adf616d4e99d7bf5db69d1ec63cbd8028a5d15c",
+      "intake_validation": "ok",
+      "result": "held_out_of_order",
+      "ack_through": 3
+    },
+    {
+      "arrival": 6,
+      "received_at": "2026-11-19T02:06:41Z",
+      "source_seq": 4,
+      "capture_id": "cap_P1119S004",
+      "attempt": 1,
+      "delivery": "replay",
+      "content_digest": "sha256:feb68a3d02b0cbeaf296c85340aabf22b7fa762d54add9347fc6d56df21be52c",
+      "intake_validation": "ok",
+      "result": "accepted",
+      "ack_through": 5
+    },
+    {
+      "arrival": 7,
+      "received_at": "2026-11-19T02:08:30Z",
+      "source_seq": 6,
+      "capture_id": "cap_P1119S006",
+      "attempt": 1,
+      "delivery": "live",
+      "content_digest": "sha256:15c6affd54aa26cf93ddadbc6154eb3822ce9dc077fa1b8d223d1a0a99a2a605",
+      "intake_validation": "ok",
+      "result": "accepted",
+      "ack_through": 6
+    },
+    {
+      "arrival": 8,
+      "received_at": "2026-11-19T02:09:30Z",
+      "source_seq": 7,
+      "capture_id": "cap_P1119S007",
+      "attempt": 1,
+      "delivery": "live",
+      "content_digest": "sha256:9cfeae4431804d8ee8212fa1678be9c5cf6eb95c1df2b6f4fd18b36b764e115b",
+      "intake_validation": "unsupported_event_kind",
+      "result": "dead_letter",
+      "ack_through": 7
+    },
+    {
+      "arrival": 9,
+      "received_at": "2026-11-19T02:11:40Z",
+      "source_seq": 8,
+      "capture_id": "cap_P1119S008",
+      "attempt": 1,
+      "delivery": "live",
+      "content_digest": "sha256:62c7a60001ded7eb610c58d71d3fb1a0c496776f46e42f1ef09e643d323675da",
+      "intake_validation": "ok",
+      "result": "accepted",
+      "ack_through": 8
+    },
+    {
+      "arrival": 10,
+      "received_at": "2026-11-19T02:20:00Z",
+      "source_seq": 9,
+      "capture_id": "cap_P1119S009",
+      "attempt": 1,
+      "delivery": "live",
+      "content_digest": "sha256:74d5f7e15c08cb16ba6a2a7783f050180598f0cee883e3ad2f57001c76eb40b7",
+      "intake_validation": "ok",
+      "result": "accepted",
+      "ack_through": 9
+    }
+  ],
+  "pipeline": [
+    {
+      "source_seq": 2,
+      "reached": "captured",
+      "disposition": "not_a_signal",
+      "note": "A request, not a correction. Its text is kept 14 days so Priya Nair can say otherwise."
+    },
+    {
+      "source_seq": 4,
+      "reached": "identified",
+      "disposition": "record_only",
+      "signal_id": "sig_KLAY0001",
+      "decision_id": "dec_KLAY0001",
+      "note": "Explicit one-off."
+    },
+    {
+      "source_seq": 5,
+      "reached": "identified",
+      "disposition": "waiting_for_person",
+      "signal_id": "sig_KLEAD001",
+      "decision_id": "dec_KLEAD001",
+      "note": "Could not be compiled into a check."
+    },
+    {
+      "source_seq": 6,
+      "reached": "captured",
+      "disposition": "not_a_signal",
+      "note": "Refers to an open finding of an existing rule; a repair request, not a new correction."
+    }
+  ],
+  "state": {
+    "status": "closed_complete",
+    "health": "degraded",
+    "acked_through": 9,
+    "final_seq": 9,
+    "gaps": [
+      {
+        "from_seq": 4,
+        "to_seq": 5,
+        "detected_at": "2026-11-19T02:06:40Z",
+        "closed_at": "2026-11-19T02:06:41Z",
+        "cause": "The local service was restarting. The adapter kept the events in its outbox and replayed them on reconnect."
+      }
+    ],
+    "dead_letters": [
+      {
+        "source_seq": 7,
+        "reason": "unsupported_event_kind",
+        "at": "2026-11-19T02:09:30Z"
+      }
+    ],
+    "duplicates_dropped": 1,
+    "held_out_of_order": 1,
+    "counts": {
+      "captured": 4,
+      "identified": 2,
+      "compiled": 0,
+      "tested": 0,
+      "activated": 0
+    }
+  }
+}

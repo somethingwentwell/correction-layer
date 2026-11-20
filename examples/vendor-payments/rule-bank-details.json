@@ -96,6 +96,10 @@
     ],
     "max_days": 3
   },
+  "authority": {
+    "kind": "individual_approval",
+    "zero_click": false
+  },
   "approval": {
     "proposed_by": "usr_AISHA001",
     "approved_by": "usr_TOMAS001",

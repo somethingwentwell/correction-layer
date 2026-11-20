@@ -151,6 +151,8 @@ Format: context, decision, alternatives considered, consequences.
 
 **Consequences.** Adding a rule takes one more step. Dry runs must respect project isolation, which limits them to what the approver may see.
 
+**Later refinement.** ADR-014 allows the authority decision to be delegated in advance for low-risk rules. The ordering decided here is unchanged and becomes more important: the tests are then the only thing standing between a captured sentence and an active rule.
+
 ---
 
 ## ADR-011 · Method, enforcement and outcome are separate axes
@@ -169,7 +171,7 @@ Format: context, decision, alternatives considered, consequences.
 
 **Context.** The design covers many formats, teams and adapters. Building it all first would delay learning whether the core loop works for non-developers.
 
-**Decision.** MVP: sales-proposal documents in DOCX (plus plain text and Markdown, which need almost no parsing), spreadsheet sources, solo use, release-folder gateway, and the observability minimum (rule list, timeline, compare and recheck, journey, coverage map).
+**Decision.** MVP: sales-proposal documents in DOCX (plus plain text and Markdown, which need almost no parsing), spreadsheet sources, solo use, release-folder gateway, the observability minimum (rule list, timeline, compare and recheck, journey, coverage map), and opt-in learning for one project at a time with one runtime capture adapter (ADR-014 to ADR-017).
 
 **Alternatives.**
 - *Start with the email gateway.* Rejected: needs credential handling and team mode to be honest about isolation.
@@ -189,3 +191,64 @@ Format: context, decision, alternatives considered, consequences.
 **Alternatives.** *Auto-apply deterministic fixes.* Rejected: a silent change to a customer document by a checking tool is exactly the kind of unreviewed action the product exists to prevent.
 
 **Consequences.** One more step for the user on every fix. Attribution in the timeline stays truthful.
+
+---
+
+## ADR-014 · Authority for a rule can be given in advance: bounded learning delegation
+
+**Context.** The first version of this design required a person to approve each must-pass rule. That keeps a human in every decision and makes recording a correction cost a review every time, which in practice means corrections stop being recorded. The request was explicit: detect and add automatically.
+
+**Decision.** A person entitled to approve rules for a project may save a *learning policy* for it: a standing, revocable permission with a mode, a list of people whose corrections count, the surfaces observed, the kinds of rule allowed, and limits. Inside it, a candidate that is low-risk and has passed tests on real evidence is activated without a per-rule click, and announced with Undo. Each rule records whether it is in force by individual approval or by delegated learning. Everything broad, consequential, ambiguous, permission-related or loosening still requires an explicit decision by a person.
+
+**Alternatives.**
+- *Keep per-rule approval for every must-pass rule.* Rejected as the only option: it is the friction that was asked to be removed, and it remains available as the Off and Suggest modes.
+- *Automatic activation by default.* Rejected: the default is Off. Authority has to be given by someone who holds it.
+- *Let confidence decide: activate when a model is sure enough.* Rejected (ADR-015).
+- *Automatic activation at any scope the person mentions.* Rejected: one sentence from one person should not bind other projects.
+
+**Consequences.** Some rules will be in force that no person looked at individually; the design accepts this for one project at a time and for exact, add-only checks, and makes each one loud (notice), reversible (Undo), weak against disagreement (automatic pause) and permanently listed (audit). The claim "every hard rule is human-approved" is replaced by "every hard rule is in force on recorded human authority, given individually or in advance".
+
+---
+
+## ADR-015 · The learning decision is deterministic; a model may veto, never vouch
+
+**Context.** Deciding whether a sentence is a reusable correction involves language, and models are good at language. They are also the component most exposed to manipulation by the text they read, and their confidence is not evidence.
+
+**Decision.** The decision to activate is a pure function of recorded inputs: trust class of the signal, lexical markers from fixed lists, grounding of every parameter in the person's own words, results of tests on real artifacts, static conflict analysis, and the learning policy. A model may propose the typed candidate and may raise concerns. A concern always blocks automation. No model output can remove a blocker, and model confidence is not an input. Generated tests can count against a candidate and never for it.
+
+**Alternatives.**
+- *A model classifies "safe to auto-add".* Rejected: unexplainable, not reproducible, and attackable through content.
+- *No model at all.* Rejected: compiling a correction into a typed rule from free text is where a model earns its place, and the grounding check bounds what it can invent.
+
+**Consequences.** The procedure is conservative: statements without an explicit standing marker, in unsupported languages, or with pronouns that do not resolve, go to a person even when a human reader would find them obvious. That is the intended trade. Every decision can be recomputed from the ledger, and this repository's checker does so for the examples.
+
+---
+
+## ADR-016 · Learning is add-only; automatic pause touches only automatically added rules
+
+**Context.** A system that can add rules from conversation could, if built carelessly, also remove them from conversation. "Stop checking prices" is exactly what an injected instruction, or a person in a hurry, would say.
+
+**Decision.** The learning pipeline has one write operation on policy: add a requirement, at project scope or narrower. It cannot pause, retire, narrow or except any rule, change approval policies, roles, adapters or sources, or act on artifacts. One automatic step moves away from enforcement: a rule that was itself added automatically, and that no person has since kept, is moved to shadow when a listed person directly contradicts it, when it is disputed on distinct artifacts, when its examples regress, or when it conflicts with an approved or wider rule. It stays visible and a person is asked.
+
+**Alternatives.**
+- *Never pause automatically.* Rejected: a wrong learned rule would keep blocking until someone found the Undo, and a changed preference would be fought by the product.
+- *Let a direct statement replace the old learned rule outright.* Rejected: a contradiction is precisely where a person should choose.
+- *Allow automatic pause of any rule after enough disputes.* Rejected: that would let disagreement, or an attacker, remove organizational gates.
+
+**Consequences.** Learned rules are deliberately weaker than approved ones until someone clicks Keep. The earlier principle "lapses go toward enforcement" now has one stated exception, limited to rules no person ever reviewed.
+
+---
+
+## ADR-017 · Capture is durable delivery by adapters, not an assistant's memory; captured is not understood
+
+**Context.** The predecessor relies on a skill: the assistant is asked to notice corrections and record them. Whether that happens depends on the model, the prompt, the context window and luck. The request was for capture that is reliable in its own right.
+
+**Decision.** Corrections are captured by opt-in adapters attached to supported runtimes and apps. An adapter writes each event to a local outbox, delivers it with a per-stream sequence number and an idempotency key, and keeps it until the service's cursor has passed it. The service acknowledges, de-duplicates, orders, detects gaps through heartbeats and close markers, replays after restarts, dead-letters what it cannot read, and binds each event to a project under that project's consent. Health and gaps are shown to the user. Pipeline stages are named and kept apart: captured, identified, compiled, tested, activated. An assistant passing a correction on by itself remains possible and is labelled RELAYED.
+
+**Alternatives.**
+- *Improve the skill.* Rejected as the foundation: no prompt makes an arbitrary model reliable, and a relayed sentence cannot be distinguished from one the model was tricked into producing.
+- *Exactly-once delivery.* Not attempted: at-least-once with idempotent intake gives the same effect with ordinary means.
+- *Capture everything, everywhere.* Not possible and not wanted: only surfaces with a real adapter, switched on for a project, by someone entitled to.
+- *Put every captured message in the ledger.* Rejected: volume and privacy. The ledger records streams, gaps, signals and decisions; message text lives briefly in the capture store.
+
+**Consequences.** Adapters are real integration work per runtime, and many runtimes will have none at first; the product must say NOT CAPTURED by name. Reliable delivery raises expectations that understanding is equally reliable, which it is not; the learning queue, the "this was a correction" review and Undo exist to keep that gap visible and cheap to close.

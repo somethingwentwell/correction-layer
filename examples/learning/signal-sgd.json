@@ -1,0 +1,71 @@
+{
+  "$schema": "../../schemas/learning-signal.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies and amounts are fictional. Content hashes are digests of descriptive labels, not of real files. All thresholds are proposed, uncalibrated defaults.",
+  "schema_version": "cl.learning_signal/1",
+  "signal_id": "sig_KSGD0001",
+  "workspace_id": "ws_HALDEN01",
+  "project_id": "prj_KESTREL1",
+  "type": "standing_instruction",
+  "surface": "attested_user_turn",
+  "adapter_id": "adp_TURNHOOK",
+  "trust": "user_direct",
+  "author": {
+    "kind": "human",
+    "id": "usr_PRIYA001",
+    "display_name": "Priya Nair"
+  },
+  "occurred_at": "2026-11-17T06:12:05Z",
+  "display_tz": "Asia/Singapore",
+  "session_id": "ses_PRIYA1117",
+  "episode_id": "epi_KSQ00001",
+  "anchor": {
+    "artifact_id": "art_KSQ2026A",
+    "content_hash": "sha256:d76ef719d82ebb16db6517f24f69d0154952d257c0e5eee5d13eeaf4d543f80f",
+    "basis": "last_agent_output",
+    "location": {
+      "locator": "docx:/body/tbl[2]",
+      "label": "Pricing table (page 2)"
+    }
+  },
+  "content": {
+    "text": "No, Kestrel's quotes must always be in SGD.",
+    "language": "en",
+    "markers": {
+      "standing": [
+        "always"
+      ],
+      "obligation": [
+        "must"
+      ],
+      "one_off": [],
+      "hedge": []
+    },
+    "diff": null
+  },
+  "capture": {
+    "stream_id": "str_PRIYA1117",
+    "capture_ids": [
+      "cap_P1117S004"
+    ],
+    "source_seqs": [
+      4
+    ],
+    "delivery": "live",
+    "late": false,
+    "episode_capture_complete": true
+  },
+  "checks": {
+    "attested_by_runtime": true,
+    "text_matches_artifact_content": false,
+    "author_in_learn_from": true
+  },
+  "consent": {
+    "learning_policy_id": "lrn_KESTREL1",
+    "learning_policy_revision": 1,
+    "surface_opted_in": true
+  },
+  "retention": {
+    "class": "evidence",
+    "delete_after_days": 400
+  }
+}

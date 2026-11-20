@@ -1,0 +1,635 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "learning-decision.schema.json",
+  "title": "Learning decision",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. The recorded inputs and outcome of the deterministic decision about one learning signal or candidate. Model confidence is not an input.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Relative path to this schema, used by tools/check_repo.py."
+    },
+    "_note": {
+      "type": "string",
+      "description": "Marks an example file as proposed/illustrative."
+    },
+    "schema_version": {
+      "const": "cl.learning_decision/1"
+    },
+    "decision_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "workspace_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "decided_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "display_tz": {
+      "type": "string"
+    },
+    "learning_policy": {
+      "type": "object",
+      "properties": {
+        "learning_policy_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "revision": {
+          "type": "integer"
+        },
+        "mode": {
+          "enum": [
+            "off",
+            "suggest",
+            "quiet",
+            "auto_low_risk"
+          ],
+          "description": "off: nothing is observed. suggest: candidates go to the inbox. quiet: validated low-risk rules turn on as shadow (note only). auto_low_risk: validated low-risk rules turn on and block, inside this policy's limits."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "learning_policy_id",
+        "revision",
+        "mode"
+      ]
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "signal_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "type": {
+            "type": "string"
+          },
+          "surface": {
+            "enum": [
+              "app",
+              "attested_user_turn",
+              "assistant_relay",
+              "folder_watch",
+              "review_action"
+            ]
+          },
+          "trust": {
+            "enum": [
+              "user_direct",
+              "assistant_relayed",
+              "observed_edit",
+              "untrusted_content"
+            ],
+            "description": "user_direct: typed by an authenticated person in the app, or a user turn attested by a runtime event adapter. assistant_relayed: an assistant says the user said it. observed_edit: a version change no assistant session declared. untrusted_content: text from a document, email or tool output; never a learning signal."
+          },
+          "author_id": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/id"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "episode_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "text_matches_artifact_content": {
+            "type": "boolean"
+          },
+          "delivery": {
+            "enum": [
+              "live",
+              "replay",
+              "backfill",
+              "not_captured"
+            ]
+          },
+          "late": {
+            "type": "boolean"
+          },
+          "episode_capture_complete": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "signal_id",
+          "type",
+          "surface",
+          "trust",
+          "author_id",
+          "episode_id",
+          "delivery",
+          "late",
+          "episode_capture_complete"
+        ]
+      },
+      "minItems": 1
+    },
+    "independent_episodes": {
+      "type": "integer",
+      "description": "Distinct episodes on distinct, unrelated artifacts. Retries inside one episode count once."
+    },
+    "suppressed": {
+      "type": "boolean"
+    },
+    "candidate": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "rule_id": {
+              "anyOf": [
+                {
+                  "$ref": "common.schema.json#/$defs/id"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "revision": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "statement": {
+              "type": "string"
+            },
+            "operation": {
+              "enum": [
+                "add_requirement",
+                "weaken_or_remove",
+                "permission_change"
+              ],
+              "description": "Only add_requirement can ever be learned."
+            },
+            "check_kind": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "field_present",
+                    "field_in_set",
+                    "fields_agree",
+                    "number_compare",
+                    "date_window",
+                    "arithmetic_consistency",
+                    "section_present",
+                    "text_contains",
+                    "no_unresolved_markup",
+                    "field_matches_source",
+                    "attestation",
+                    "no_hidden_content",
+                    "rows_unique",
+                    "value_is_formula",
+                    "model_review"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "method": {
+              "anyOf": [
+                {
+                  "$ref": "common.schema.json#/$defs/method"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "scope_level": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "artifact",
+                    "area",
+                    "project",
+                    "project_group",
+                    "workspace"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "scope_project_id": {
+              "anyOf": [
+                {
+                  "$ref": "common.schema.json#/$defs/id"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "widening_requested": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "project_group",
+                    "workspace"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "touches_protected_targets": {
+              "type": "boolean"
+            },
+            "pins_fact_without_source": {
+              "type": "boolean"
+            },
+            "reusability": {
+              "enum": [
+                "explicit_standing",
+                "recurring",
+                "one_off",
+                "unclear"
+              ],
+              "description": "explicit_standing: a standing marker is present, or it was typed into the app's correction box. one_off: an explicit one-off marker. recurring: the same edit in enough independent episodes. unclear: none of these."
+            },
+            "referent_resolved": {
+              "type": "boolean"
+            },
+            "parameters_grounded": {
+              "type": "boolean"
+            },
+            "hedged": {
+              "type": "boolean"
+            },
+            "language_supported": {
+              "type": "boolean"
+            },
+            "model_flags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Concerns raised by an AI model. They can only make the outcome more cautious."
+            },
+            "targets_rule_id": {
+              "anyOf": [
+                {
+                  "$ref": "common.schema.json#/$defs/id"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "reusability",
+            "touches_protected_targets",
+            "pins_fact_without_source",
+            "referent_resolved",
+            "parameters_grounded",
+            "hedged",
+            "language_supported",
+            "model_flags"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "evaluation": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "evaluation_id": {
+              "$ref": "common.schema.json#/$defs/id"
+            },
+            "trigger_case": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "artifact_hash": {
+                      "$ref": "common.schema.json#/$defs/hash"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": [
+                        "trigger_version",
+                        "corrected_version",
+                        "accepted_existing"
+                      ]
+                    },
+                    "expect": {
+                      "$ref": "common.schema.json#/$defs/outcome"
+                    },
+                    "result": {
+                      "$ref": "common.schema.json#/$defs/outcome"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "artifact_hash",
+                    "kind",
+                    "expect",
+                    "result"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "real_passing_cases": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "artifact_hash": {
+                    "$ref": "common.schema.json#/$defs/hash"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": [
+                      "trigger_version",
+                      "corrected_version",
+                      "accepted_existing"
+                    ]
+                  },
+                  "expect": {
+                    "$ref": "common.schema.json#/$defs/outcome"
+                  },
+                  "result": {
+                    "$ref": "common.schema.json#/$defs/outcome"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "artifact_hash",
+                  "kind",
+                  "expect",
+                  "result"
+                ]
+              }
+            },
+            "heldout": {
+              "type": "object",
+              "properties": {
+                "artifacts": {
+                  "type": "integer"
+                },
+                "pass": {
+                  "type": "integer"
+                },
+                "fail": {
+                  "type": "integer"
+                },
+                "unknown": {
+                  "type": "integer"
+                },
+                "error": {
+                  "type": "integer"
+                },
+                "not_applicable": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "artifacts",
+                "pass",
+                "fail",
+                "unknown",
+                "error",
+                "not_applicable"
+              ]
+            },
+            "generated": {
+              "type": "object",
+              "properties": {
+                "run": {
+                  "type": "integer"
+                },
+                "unexpected": {
+                  "type": "integer"
+                },
+                "counted_as_support": {
+                  "const": false
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "run",
+                "unexpected",
+                "counted_as_support"
+              ]
+            },
+            "conflicts": {
+              "type": "array",
+              "items": {
+                "$ref": "common.schema.json#/$defs/id"
+              }
+            },
+            "duplicates": {
+              "type": "array",
+              "items": {
+                "$ref": "common.schema.json#/$defs/id"
+              }
+            },
+            "contradicts_learned": {
+              "type": "array",
+              "items": {
+                "$ref": "common.schema.json#/$defs/id"
+              }
+            },
+            "auto_activations_today": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "evaluation_id",
+            "trigger_case",
+            "real_passing_cases",
+            "heldout",
+            "generated",
+            "conflicts",
+            "duplicates",
+            "contradicts_learned",
+            "auto_activations_today"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "outcome": {
+      "enum": [
+        "discarded",
+        "declined",
+        "record_only",
+        "inbox",
+        "waiting_for_evidence",
+        "shadow_and_inbox",
+        "auto_shadow",
+        "auto_activate"
+      ]
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "untrusted_origin",
+          "suppressed_by_user",
+          "not_compilable",
+          "capture_incomplete",
+          "captured_late",
+          "would_weaken_or_remove",
+          "permission_change",
+          "one_off",
+          "not_enough_independent_episodes",
+          "already_covered",
+          "mode_suggest",
+          "scope_outside_delegation",
+          "kind_not_delegated",
+          "protected_target",
+          "fact_without_source",
+          "no_direct_statement",
+          "surface_limit",
+          "ambiguous",
+          "no_trigger_case",
+          "trigger_not_caught",
+          "no_real_pass",
+          "flags_existing_work",
+          "undecidable_on_existing_work",
+          "unexpected_on_variants",
+          "conflict",
+          "contradicts_learned_rule",
+          "daily_limit"
+        ]
+      }
+    },
+    "resulting_rule_status": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/rule_status"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "authority": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "enum": [
+                "delegated_learning"
+              ]
+            },
+            "learning_policy_id": {
+              "$ref": "common.schema.json#/$defs/id"
+            },
+            "learning_policy_revision": {
+              "type": "integer"
+            },
+            "delegated_by": {
+              "$ref": "common.schema.json#/$defs/id"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "learning_policy_id",
+            "learning_policy_revision",
+            "delegated_by"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "side_effects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "effect": {
+            "enum": [
+              "auto_pause_learned_rule",
+              "open_inbox_item",
+              "offer_exception_request",
+              "risk_flag_on_artifact"
+            ]
+          },
+          "rule_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "inbox_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "effect"
+        ]
+      }
+    },
+    "model_confidence_used": {
+      "const": false
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Rendered plain-language explanation shown in the receipt, inbox or audit."
+    }
+  },
+  "required": [
+    "schema_version",
+    "decision_id",
+    "workspace_id",
+    "project_id",
+    "decided_at",
+    "learning_policy",
+    "signals",
+    "independent_episodes",
+    "suppressed",
+    "candidate",
+    "evaluation",
+    "outcome",
+    "reasons",
+    "resulting_rule_status",
+    "authority",
+    "side_effects",
+    "model_confidence_used",
+    "rationale"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,67 @@
+{
+  "$schema": "../../schemas/learning-decision.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies and amounts are fictional. Content hashes are digests of descriptive labels, not of real files. All thresholds are proposed, uncalibrated defaults.",
+  "schema_version": "cl.learning_decision/1",
+  "decision_id": "dec_KSKIP001",
+  "workspace_id": "ws_HALDEN01",
+  "project_id": "prj_KESTREL1",
+  "decided_at": "2026-11-20T01:41:31Z",
+  "display_tz": "Asia/Singapore",
+  "learning_policy": {
+    "learning_policy_id": "lrn_KESTREL1",
+    "revision": 1,
+    "mode": "auto_low_risk"
+  },
+  "signals": [
+    {
+      "signal_id": "sig_KSKIP001",
+      "type": "standing_instruction",
+      "surface": "attested_user_turn",
+      "trust": "user_direct",
+      "author_id": "usr_PRIYA001",
+      "episode_id": "epi_KUSD0001",
+      "text_matches_artifact_content": false,
+      "delivery": "live",
+      "late": false,
+      "episode_capture_complete": true
+    }
+  ],
+  "independent_episodes": 1,
+  "suppressed": false,
+  "candidate": {
+    "rule_id": null,
+    "revision": null,
+    "statement": "(not drafted) Stop checking Kestrel prices against the price list.",
+    "operation": "weaken_or_remove",
+    "check_kind": null,
+    "method": null,
+    "scope_level": null,
+    "scope_project_id": "prj_KESTREL1",
+    "widening_requested": null,
+    "touches_protected_targets": false,
+    "pins_fact_without_source": false,
+    "reusability": "explicit_standing",
+    "referent_resolved": true,
+    "parameters_grounded": true,
+    "hedged": false,
+    "language_supported": true,
+    "model_flags": [],
+    "targets_rule_id": "rul_PRICECUR"
+  },
+  "evaluation": null,
+  "outcome": "declined",
+  "reasons": [
+    "would_weaken_or_remove"
+  ],
+  "resulting_rule_status": null,
+  "authority": null,
+  "side_effects": [
+    {
+      "effect": "offer_exception_request",
+      "rule_id": "rul_PRICECUR",
+      "detail": "Owner: Marcus Lim. Exceptions need a reason, a scope and an expiry."
+    }
+  ],
+  "model_confidence_used": false,
+  "rationale": "Not something that can be learned. \"Quoted prices match the current price list\" is a workspace rule owned by Marcus Lim. Learning can only add requirements; it can never switch a rule off or narrow it. Priya Nair can ask Marcus Lim for an exception. The rule is unchanged and still blocks."
+}

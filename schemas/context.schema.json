@@ -248,6 +248,30 @@
           },
           "description": "Notes for people and assistants that are not enforced."
         },
+        "learning": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "enum": [
+                "off",
+                "suggest",
+                "quiet",
+                "auto_low_risk"
+              ]
+            },
+            "learning_policy_id": {
+              "$ref": "common.schema.json#/$defs/id"
+            },
+            "notice": {
+              "type": "string",
+              "description": "Line the client should show so the user knows corrections here may become rules."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ]
+        },
         "instructions": {
           "type": "array",
           "items": {
@@ -304,6 +328,46 @@
           "label"
         ]
       }
+    },
+    "capture": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "surface": {
+            "type": "string"
+          },
+          "label": {
+            "enum": [
+              "CAPTURED",
+              "RELAYED",
+              "NOT_CAPTURED"
+            ]
+          },
+          "adapter_id": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "health": {
+            "enum": [
+              "healthy",
+              "lagging",
+              "gap",
+              "stale",
+              "degraded",
+              "disconnected"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surface",
+          "label"
+        ]
+      },
+      "description": "What is reliably captured for learning in this project, and what is not."
     }
   },
   "required": [

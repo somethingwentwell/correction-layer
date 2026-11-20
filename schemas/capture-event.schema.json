@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "capture-event.schema.json",
+  "title": "Capture event",
+  "description": "PROPOSED contract for Correction Layer. Design stage only; no implementation produces or consumes this yet. One event emitted by an opted-in capture adapter. Captured means durably received and acknowledged; it says nothing yet about whether the event is a correction.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "cl.capture_event/1"
+    },
+    "capture_id": {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/id"
+        }
+      ],
+      "description": "Idempotency key. Stable for the same source event however often it is delivered."
+    },
+    "adapter_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "stream_id": {
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "source_seq": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Position in the stream, assigned by the adapter. No gaps, no reuse."
+    },
+    "kind": {
+      "enum": [
+        "session_start",
+        "user_turn",
+        "agent_output",
+        "tool_output",
+        "edit_observed",
+        "review_action",
+        "heartbeat",
+        "session_end"
+      ]
+    },
+    "occurred_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "role": {
+      "enum": [
+        "user",
+        "agent",
+        "tool",
+        "system"
+      ]
+    },
+    "attested_by": {
+      "enum": [
+        "runtime_hook",
+        "app",
+        "runtime_transcript",
+        "none"
+      ],
+      "description": "Who vouches for the role. Only runtime_hook and app make a user turn count as typed by the person."
+    },
+    "binding": {
+      "type": "object",
+      "properties": {
+        "binding_id": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "artifact_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "content_hash": {
+          "$ref": "common.schema.json#/$defs/hash"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "binding_id",
+        "project_id"
+      ],
+      "description": "Where the event happened, as known at the source at that moment."
+    },
+    "content": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "text": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "language": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "text"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "content_state": {
+      "enum": [
+        "present",
+        "not_sent",
+        "purged",
+        "held_for_review"
+      ],
+      "description": "not_sent: the adapter sends only a digest for this kind (agent and tool output). held_for_review: kept until the non-signal review window ends."
+    },
+    "content_digest": {
+      "$ref": "common.schema.json#/$defs/hash"
+    },
+    "final_seq": {
+      "type": "integer",
+      "description": "On heartbeat and session_end: the adapter's highest source_seq so far."
+    }
+  },
+  "required": [
+    "schema_version",
+    "capture_id",
+    "adapter_id",
+    "stream_id",
+    "source_seq",
+    "kind",
+    "occurred_at",
+    "role",
+    "attested_by",
+    "binding",
+    "content",
+    "content_state",
+    "content_digest"
+  ],
+  "additionalProperties": false
+}

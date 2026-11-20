@@ -57,12 +57,102 @@
         },
         "pack": {
           "type": "string"
+        },
+        "signal_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/id"
+          },
+          "description": "Learning signals the correction was extracted from, if any."
         }
       },
       "additionalProperties": false,
       "required": [
         "kind"
       ]
+    },
+    "authority": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "individual_approval",
+            "delegated_learning"
+          ],
+          "description": "individual_approval: a person approved this rule. delegated_learning: it turned on inside a learning delegation a person set in advance."
+        },
+        "zero_click": {
+          "type": "boolean",
+          "description": "True when no person clicked to approve this specific rule."
+        },
+        "learning_policy_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "learning_policy_revision": {
+          "type": "integer"
+        },
+        "decision_id": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "delegated_by": {
+          "$ref": "common.schema.json#/$defs/id"
+        },
+        "confirmed": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "by": {
+                  "$ref": "common.schema.json#/$defs/id"
+                },
+                "at": {
+                  "$ref": "common.schema.json#/$defs/timestamp"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "by",
+                "at"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "auto_paused": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "$ref": "common.schema.json#/$defs/timestamp"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "paused_from": {
+                  "$ref": "common.schema.json#/$defs/rule_status"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "at",
+                "reason"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "zero_click"
+      ],
+      "description": "On whose authority this revision is in force."
     },
     "owner": {
       "$ref": "common.schema.json#/$defs/id"

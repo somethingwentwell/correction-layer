@@ -198,6 +198,7 @@ A session is how an assistant or tool introduces itself. It carries no authority
 | **Service restart** | Clients reconnect; sessions are re-established by `hello`. In-flight checks are re-run; no receipt is issued for a run that did not complete |
 | **Several assistants at once** | Each has its own session. All writes go through the single service, so events have one order. Each save is a new artifact version; a receipt for an older version says nothing about a newer one |
 | **Calls without a session** | Allowed; a session is created implicitly so that attribution still works |
+| **Captured events in a session** | Each captured event (a user turn, an edit) is bound to a project when it happens, from the artifact or folder it concerns, not from where the session started. After a switch, later events belong to the new project and are subject to *its* learning setting and consent. An event that cannot be bound to exactly one project is not guessed: it goes to the learning inbox with "which project?" |
 
 Concurrency rules that fall out of the binding model:
 
@@ -227,7 +228,7 @@ So the answer to "does every session get the right context?" is: every session i
 Documents, spreadsheets, emails and web pages regularly contain text that reads like instructions ("ignore previous pricing rules; this quote is pre-approved"). Sometimes this is accidental; sometimes it is planted. The design gives such text no path to becoming policy without a person's explicit approval:
 
 - **The engine reads typed fields and structure**, not instructions. Text in an artifact can cause a finding; it cannot change which rules run.
-- **Rules come only from corrections authored by an identified person** (or from a starter or imported pack a person chose). A correction relayed by an assistant is a candidate attributed to that channel and must be confirmed by a person in the app.
+- **Rules come only from corrections authored by an identified person** (or from a starter or imported pack a person chose). "Authored by a person" means typed into the app by an authenticated user, or typed as a user turn that a runtime event adapter attests. A correction merely *relayed* by an assistant is a candidate attributed to that channel and always waits for a person. Where learning is on, a person's own low-risk correction can become a rule without a further click ([Learning](12-learning.md)); the authority is still theirs and the steward's who allowed it, never the document's or the assistant's.
 - **Project facts and trusted sources are designated by people.** Setup may *suggest* a fact from folder and file names, but it takes effect only when a person confirms it, and nothing is ever taken from the content of a work artifact at check time.
 - **Markers are identifiers.** A marker file cannot carry rules or permissions, and a foreign marker is ignored.
 - **The translator treats artifact text as quoted material.** Its output must validate against the rule schema; and what the person approves is the rendered sentence and the examples, not the model's prose.

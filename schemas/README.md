@@ -16,6 +16,11 @@
 | [action-request.schema.json](action-request.schema.json) | An action request, its approval and execution | [Enforcement §4–5](../docs/06-enforcement-and-integration.md#4-approval-is-separate-from-validation) | [send request](../examples/sales-proposal/action-request.json) |
 | [event.schema.json](event.schema.json) | One ledger event | [Observability §4](../docs/02-observability.md#4-the-event-model) | — |
 | [event-log.schema.json](event-log.schema.json) | An exported, contiguous segment of the ledger | [Observability §4](../docs/02-observability.md#4-the-event-model) | [timeline](../examples/sales-proposal/events.json) |
+| [learning-policy.schema.json](learning-policy.schema.json) | A person's standing permission for learning in one project | [Learning §2, §8](../docs/12-learning.md#2-authority-given-once) | [policy](../examples/learning/learning-policy.json) |
+| [capture-event.schema.json](capture-event.schema.json) | One event delivered by a capture adapter | [Enforcement §11](../docs/06-enforcement-and-integration.md#11-capture-adapters) | inside the stream example |
+| [capture-stream.schema.json](capture-stream.schema.json) | One adapter stream: events, every delivery attempt, cursor, health, pipeline stages | [Enforcement §11](../docs/06-enforcement-and-integration.md#11-capture-adapters) | [stream](../examples/learning/capture-stream.json) |
+| [learning-signal.schema.json](learning-signal.schema.json) | A captured event identified as possibly carrying a correction | [Learning §5](../docs/12-learning.md#5-what-counts-as-a-signal) | [SGD](../examples/learning/signal-sgd.json), [replayed](../examples/learning/signal-lead-time-replayed.json) |
+| [learning-decision.schema.json](learning-decision.schema.json) | Inputs and outcome of the deterministic learning decision | [Learning §7](../docs/12-learning.md#7-the-decision) | [auto-activated](../examples/learning/decision-sgd-auto-activated.json) and seven others |
 
 Not yet specified as schemas: exception, attestation, fix proposal, change and trace. They are described in prose and appear inside event payloads ([Open questions Q21](../docs/10-open-questions.md)).
 
@@ -28,6 +33,15 @@ Not yet specified as schemas: exception, attestation, fix proposal, change and t
 - **Hashes.** `sha256:` followed by 64 hexadecimal digits. In the examples, content hashes are digests of descriptive labels because no real files exist.
 - **Numbers that matter** (money, quantities) are decimal strings, never binary floating point.
 - **Example files** name their schema in `"$schema"` and carry a `"_note"` stating that they are proposed and illustrative. Both properties exist only for this repository.
+
+## Checks specific to capture and learning (proposed)
+
+`tools/check_repo.py` contains two small reference procedures so that the examples can be verified against the prose. They are not a product implementation.
+
+- `decide(...)` is the decision procedure of [Learning §7](../docs/12-learning.md#7-the-decision). Every `learning-decision` example must record exactly the outcome and reasons it yields for that example's inputs and learning policy.
+- `intake(...)` is the capture intake procedure of [Enforcement §11.3](../docs/06-enforcement-and-integration.md#113-delivery-guarantees). The `capture-stream` example's deliveries must each record the result and cursor it yields.
+
+The checker also confirms, across every example event log, that a rule is activated only after a person's approval or an automatic decision under a learning policy a person set earlier, and that an automatic pause only ever touches a rule that was activated automatically.
 
 ## The ledger hash chain (proposed)
 

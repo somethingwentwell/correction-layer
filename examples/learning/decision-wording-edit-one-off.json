@@ -1,0 +1,61 @@
+{
+  "$schema": "../../schemas/learning-decision.schema.json",
+  "_note": "PROPOSED, ILLUSTRATIVE example. Not produced by working software; no implementation exists. People, companies and amounts are fictional. Content hashes are digests of descriptive labels, not of real files. All thresholds are proposed, uncalibrated defaults.",
+  "schema_version": "cl.learning_decision/1",
+  "decision_id": "dec_KEDIT001",
+  "workspace_id": "ws_HALDEN01",
+  "project_id": "prj_KESTREL1",
+  "decided_at": "2026-11-18T02:15:31Z",
+  "display_tz": "Asia/Singapore",
+  "learning_policy": {
+    "learning_policy_id": "lrn_KESTREL1",
+    "revision": 1,
+    "mode": "auto_low_risk"
+  },
+  "signals": [
+    {
+      "signal_id": "sig_KEDIT001",
+      "type": "human_edit_diff",
+      "surface": "folder_watch",
+      "trust": "observed_edit",
+      "author_id": null,
+      "episode_id": "epi_KSQ00002",
+      "text_matches_artifact_content": false,
+      "delivery": "live",
+      "late": false,
+      "episode_capture_complete": true
+    }
+  ],
+  "independent_episodes": 1,
+  "suppressed": false,
+  "candidate": {
+    "rule_id": null,
+    "revision": null,
+    "statement": "(not drafted) The opening sentence of the summary reads \"Thank you for the opportunity to quote\".",
+    "operation": "add_requirement",
+    "check_kind": null,
+    "method": null,
+    "scope_level": null,
+    "scope_project_id": "prj_KESTREL1",
+    "widening_requested": null,
+    "touches_protected_targets": false,
+    "pins_fact_without_source": false,
+    "reusability": "unclear",
+    "referent_resolved": true,
+    "parameters_grounded": true,
+    "hedged": false,
+    "language_supported": true,
+    "model_flags": [],
+    "targets_rule_id": null
+  },
+  "evaluation": null,
+  "outcome": "record_only",
+  "reasons": [
+    "not_enough_independent_episodes"
+  ],
+  "resulting_rule_status": null,
+  "authority": null,
+  "side_effects": [],
+  "model_confidence_used": false,
+  "rationale": "Not learned. Someone reworded one sentence in one document and nobody said to do it every time. A single wording edit is treated as a one-off. The edit is remembered for 90 days; if the same change is made in 3 unrelated documents it will be suggested, not turned on."
+}

@@ -45,6 +45,13 @@
 | T14 | Content is sent to an AI provider without the user realizing | Translator is optional; what it may send is explicit and minimal (§5); the model used is recorded on the candidate | Provider-side handling is outside the product's control |
 | T15 | The clock is wrong or changed, defeating freshness and expiry | Backward jumps relative to the last event halt receipt issuance; `seq` is the authoritative order | Forward drift within plausible bounds |
 | T16 | A malicious or careless imported policy pack | Signature check, preview of every rule as a rendered sentence, conflict analysis, examples re-run, steward approval (§7) | Trust in the publisher |
+| T17 | **Poisoned learning.** Text planted in a document, email or tool result is turned into a rule automatically | Such text is never a signal. Only a user turn attested by a runtime hook, or typed into the app, is `user_direct`. An assistant's relay is never the person's words, and a relay whose text matches artifact or tool content is discarded and the artifact flagged. The decision procedure uses no model confidence | An attacker who can type as the user, or who controls a paired adapter (T19) |
+| T18 | **Learning used to loosen controls.** A person, or injected text, says "stop checking X" or "no approval needed", and it is learned | The learning pipeline can only add requirements. Requests to weaken, except, pause, retire, or change approvals, roles, adapters or sources are declined, recorded, and the person is pointed to the proper route. A learned rule that conflicts with an approved or wider rule yields to it | None identified for approved rules. Learned rules can be paused automatically (T20) |
+| T19 | **A forged or compromised capture adapter** fabricates user turns | Adapters are paired explicitly, carry an identity in every event, and can be revoked. What they can cause is bounded: add-only, one project, low-risk kinds, tests on real work, a daily limit, a notice for every activation | Within those bounds, a forged adapter could add unwanted (not loosening) rules until noticed. Notices and the audit list are the detection |
+| T20 | **Automatic pause abused** to switch off a learned rule (two false "this finding is wrong" clicks, or a contradicting statement) | Only automatically added, unconfirmed rules can be paused; they move to shadow, stay visible, and raise an inbox item. A rule a person has kept, approved, locked or imported cannot be paused this way | A learned rule is weaker than an approved one by design. People who want it to hold click Keep |
+| T21 | **Runaway learning**: many rules added quickly, blocking work | A daily limit per project (proposed 3); held-out failures tolerated: 0; every activation announced with Undo; a steward can turn learning off in one click, with learned rules moved to shadow | Rules that are individually reasonable and collectively annoying. The audit list and dispute counts show it |
+| T22 | **Capture as surveillance or leakage**: more of people's conversation is stored than they expect, or one project's conversation informs another | Opt-in per project and per surface, by a steward; a notice line in every captured session; only listed people are captured; assistant and tool text is never stored; non-signal text is author-only and short-lived; events are bound to one project and never cross; consent is enforced at the intake | People forget that a surface is captured. The notice and capture health screen are the mitigation |
+| T23 | **Silent loss**: corrections are missed and nobody knows | Sequence numbers, acknowledgements, heartbeats, completeness checks at session end, permanent display of unclosed gaps, dead-letter counts | Gaps on surfaces that were never captured at all are invisible by definition; the coverage labels say which those are |
 
 ## 3. Roles and permissions
 
@@ -63,6 +70,12 @@
 | Request a gated action | ✔ | | | ✔ | | | ✔ (creates request) |
 | Approve a gated action | per action policy | | | only if "self" policy | ✔ | | |
 | Configure adapters and approval policies | ✔ | | | | | | |
+| Set, change or turn off the learning policy for a project | ✔ | ✔ (own remit) | | only in a one-person workspace | | | |
+| Have one's direct corrections count for automatic learning | if listed | if listed | if listed | if listed in the policy | if listed | | never |
+| Undo a learned rule; mark "not a correction"; suppress | ✔ | ✔ | | own, or any in own project if listed | | | |
+| Keep (confirm) a learned rule; answer a learning inbox item | ✔ | ✔ | | if named as resolver in the policy, for low-risk items in scope | | | |
+| Answer a request to widen a learned rule beyond the project | ✔ | ✔ (workspace steward) | | | | | |
+| Pair or revoke a capture adapter | ✔ | | | for their own assistant, if allowed | | | |
 | Export ledger, manage roles, retention | ✔ | | | | | export own view | |
 
 Notes:
@@ -74,11 +87,12 @@ Notes:
 ## 4. Governing the rule set
 
 - **Every rule has one owner** (a person, not a group) and a review date. Ownership transfers are events. Rules whose owner leaves are queued to a steward.
-- **Change control.** Any change is a new revision that passes the same gates as a new rule: validation against the schema, duplicate analysis, conflict analysis, example suite, approval at the right scope. The previous revision stays readable.
+- **Change control.** Any change is a new revision that passes the same gates as a new rule: validation against the schema, duplicate analysis, conflict analysis, example suite, and an authority decision at the right scope. That decision is a person's individual approval, or, for a low-risk rule inside one project, a learning policy that a person entitled to approve such rules saved in advance ([Learning §2](12-learning.md#2-authority-given-once)). The previous revision stays readable.
 - **Before anything becomes active** (a new rule, a revision, an imported pack) the store runs: schema validation; structural duplicate detection; static conflict analysis against rules it can meet; the rule's examples. Failures block activation.
 - **Exceptions** require: the rule, a scope no wider than the grantor's remit, a reason in words, an expiry within the rule's `exception_policy.max_days`. They show in every affected run and in the rule's effectiveness view. They cannot be granted by the person requesting the action unless that person is also the rule's owner, and then the record says so.
 - **Pauses** require a reason and an end date.
-- **Lapses go toward enforcement.** Exceptions, pauses, receipts and approvals expire; rules do not. A source going stale makes dependent rules *Couldn't verify*, which blocks. Nothing in the system stops enforcing through the mere passage of time.
+- **Lapses go toward enforcement.** Exceptions, pauses, receipts and approvals expire; rules do not. A source going stale makes dependent rules *Couldn't verify*, which blocks. Nothing a person approved stops enforcing through the mere passage of time or through any automatic step. There is exactly one automatic movement the other way, and it is narrow: a rule that was added automatically and never confirmed can be moved to shadow by an automatic pause ([Learning §9](12-learning.md#9-after-a-rule-is-learned)). It stays visible, raises a question to a person, and is reversible.
+- **Delegation is recorded authority.** A learning policy names who set it, when, for which project, and what it allows. Every rule it lets in records the policy and the decision. Turning the policy off is one click and an event. No learning policy can delegate exceptions, pauses, retirements, approval policies, roles, adapters, source designation, or anything beyond its own project.
 - **Review.** Overdue rules are queued, not disabled. A rule that has been dormant for a long period is suggested for retirement to its owner.
 - **Starter and imported rules** are ordinary rules with a different origin; they are not hidden defaults.
 
@@ -91,6 +105,7 @@ Notes:
 - **Retention and erasure** are defined per data class ([Observability §9.3](02-observability.md#93-retention-proposed-defaults-configurable-per-workspace)); erasing evidence and content does not break the ledger.
 - **Encryption at rest.** The MVP relies on operating-system disk encryption and says so during setup. Encrypting blobs and evidence with the workspace key is intended for team mode ([Open questions Q8](10-open-questions.md)).
 - **People in the ledger.** The ledger records who did what. Display names can be changed or removed; stable internal identifiers remain so that history stays coherent.
+- **Capture is opt-in, per project and per surface.** Nothing is captured until a steward switches learning on for a project and ticks a surface. Captured sessions show a notice. Only the people listed in the policy are captured for learning. Assistant and tool output is never stored as text. Text of captured messages that were not identified as corrections is kept briefly, for their author only, and deleted; this window can be set to zero. Withdrawing consent stops capture at once ([Learning §12](12-learning.md#12-projects-privacy-consent-deletion)).
 
 ## 6. Isolation
 
@@ -110,6 +125,9 @@ Notes:
 | Translator context | Only the current project's dictionary and the current correction |
 | Trusted sources | A source is workspace-level but must be explicitly made available to a project before its rows can appear in that project's findings |
 | Exports | Filtered by the exporter's view |
+| Captured events and signals | Bound to exactly one project when they happen; never used as evidence, shown, or acted on in another. An unbound event is not guessed |
+| Learned rules | Active only in the policy's project. A request to widen shares the rule sentence, not the words or documents it came from |
+| The "captured, not seen as corrections" list | Visible only to the person who typed each message |
 
 Acceptance tests for isolation are in [MVP and acceptance, AT-I1 to AT-I7](08-mvp-and-acceptance.md#5-acceptance-tests).
 
@@ -159,3 +177,7 @@ Collected in one place so that nobody has to infer them.
 10. **Conflict detection is partial.** Only comparable rule kinds on the same target are analysed ahead of time.
 11. **Effectiveness figures are descriptive.** They cannot show that the product caused work to improve, and they cannot see missed problems nobody reported.
 12. **People can still approve without looking.** The design makes the right information unavoidable on the approval screen; it cannot make anyone read it.
+13. **Reliable delivery is not reliable understanding.** Capture adapters make it very unlikely that a typed correction is lost on a connected surface. They do nothing about a correction that is ambiguous, phrased as a question, implied, or simply not recognized. Some will be missed and some non-corrections will be picked up; the queue makes both visible and cheap to fix, not impossible.
+14. **Only connected surfaces are seen.** A correction made in a tool without an adapter, in a meeting, or by a person not listed in the learning policy is not captured.
+15. **Automatically added rules are only as good as their tests.** A rule can catch the corrected draft, pass the corrected version, flag no other existing work, and still be wrong for the next document. The safeguards are narrow scope, a notice with Undo, dispute-triggered pause and a review date, not proof.
+16. **All learning thresholds are uncalibrated proposals.** Episode counts, daily limits, dispute counts and time windows are starting values with no data behind them yet.

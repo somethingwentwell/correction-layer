@@ -38,6 +38,19 @@ Words as they appear on screen, and their technical counterparts in this specifi
 | Gated / Advisory / Observed / Not covered | coverage label; integration tier | How far the product's control actually reaches for an action. "Gated" comes with a qualifier: exclusive route, by convention, or same-account |
 | Brief | `brief` | The advisory summary of context and rules given to an assistant at session start |
 | Rules as of… | `policy_rev` | The workspace's policy revision in force at a moment |
+| Learning (Off / Suggest / Learn quietly / Learn and enforce) | `learning_policy.mode`: `off`, `suggest`, `quiet`, `auto_low_risk` | A project's standing setting for what may be noticed and what may turn on by itself |
+| Learning setting, standing permission | `learning_policy`; delegation | A person's recorded, revocable decision that low-risk tested rules may activate in one project without a per-rule click |
+| Approved by … / Learned / Learned, then kept | `authority.kind`: `individual_approval`, `delegated_learning`; `authority.confirmed` | On whose authority a rule is in force |
+| Shadow (note only) | `status: trial` | Evaluated and recorded on every check, shown as a note, cannot block. Used for trials and for automatically paused learned rules |
+| Captured / Relayed / Not captured | capture coverage label | Whether a surface has a durable capture adapter, only an assistant's best-effort relay, or nothing |
+| Captured, Identified, Compiled, Tested, On | pipeline stage: `captured`, `identified`, `compiled`, `tested`, `activated` | How far an item got between being received and becoming a rule |
+| (behind "Details") | `capture_event`, `capture_stream`, cursor | One delivered event; one adapter's sequence of them; the highest sequence number safely received with nothing missing below it |
+| Something you said or changed | `signal`; `trust`: `user_direct`, `assistant_relayed`, `observed_edit`, `untrusted_content` | An event identified as possibly carrying a correction, and how far its origin can be trusted |
+| One attempt at one piece of work | `episode` | All messages, retries and edits about one artifact in one attempt; counts once as support |
+| Learning notice | (rendered from `learning_decision.rationale`) | "Learned for *project*: *rule*. Because you said …" with Undo. Not to be confused with a validation receipt |
+| Learning queue; Needs you | `inbox_item` | Where items the procedure could not settle wait for a person |
+| Undo / Keep / Don't learn this | `rule.retired`; `rule.confirmed`; `suppression` | Remove a learned rule; make it person-approved; stop the same thing being raised again |
+| Paused automatically | `rule.auto_paused` | A learned, unconfirmed rule moved to shadow after a contradiction or disputes |
 | Details: IDs | `run_id`, `trace_id`, `event_id`, hashes | Identifiers for support, audit and re-running |
 
-Identifier prefixes used in examples: `ws_` workspace, `prj_` project, `fld_` folder binding, `area_` area, `usr_` person, `agt_` assistant client, `ses_` session, `cor_` correction, `rul_` rule, `case_` example, `src_` source, `snap_` snapshot, `map_` field mapping, `art_` artifact, `run_` run, `trc_` trace, `fnd_` finding, `fix_` fix proposal, `chg_` change, `att_` attestation, `exc_` exception, `rcp_` receipt, `act_` action request, `apr_` approval, `adp_` adapter, `evt_` event.
+Identifier prefixes used in examples: `ws_` workspace, `prj_` project, `fld_` folder binding, `area_` area, `usr_` person, `agt_` assistant client, `ses_` session, `cor_` correction, `rul_` rule, `case_` example, `src_` source, `snap_` snapshot, `map_` field mapping, `art_` artifact, `run_` run, `trc_` trace, `fnd_` finding, `fix_` fix proposal, `chg_` change, `att_` attestation, `exc_` exception, `rcp_` receipt, `act_` action request, `apr_` approval, `adp_` adapter, `evt_` event, `lrn_` learning policy, `str_` capture stream, `cap_` capture event, `sig_` signal, `epi_` episode, `evl_` candidate evaluation, `dec_` learning decision, `inb_` inbox item, `sys_` product component.
