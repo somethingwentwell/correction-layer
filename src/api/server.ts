@@ -34,6 +34,10 @@ import { CSS, html, layout } from "../ui/html.ts";
 import type { Page } from "../ui/pages.ts";
 import { Pages } from "../ui/pages.ts";
 import { ManagePages, templateValues } from "../ui/manage.ts";
+import { StartPages } from "../ui/start.ts";
+import { importDocuments, previewDocuments } from "../work/onboarding.ts";
+import { sentenceTemplate } from "../learning/compiler.ts";
+import { seedDemo } from "../seed/demo.ts";
 
 const MAX_BODY = 6 * 1024 * 1024;
 const BRIEF_BUDGET = 50;
@@ -52,7 +56,8 @@ interface Route {
   pattern: RegExp;
   keys: string[];
   handler: Handler;
-  kind: "json" | "page" | "form";
+  /** json: client API. page: GET screen. form: app act, answered with a redirect. formpage: app POST (token-checked) that changes nothing and renders a page, e.g. a preview before saving. */
+  kind: "json" | "page" | "form" | "formpage";
 }
 
 /** Operations that exist only for people in the app. Named here so a client gets an explicit refusal. */
@@ -73,11 +78,11 @@ export interface Upload {
 }
 
 /** Minimal multipart/form-data parser (RFC 7578) for the app's upload forms. Total: malformed parts are ignored. */
-export function parseMultipart(body: Buffer, contentType: string): Record<string, string | Upload> {
+export function parseMultipart(body: Buffer, contentType: string): Record<string, string | Upload | Array<string | Upload>> {
   const m = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType);
   if (!m) throw new ValidationError("request", ["the upload has no boundary"]);
   const boundary = Buffer.from(`--${(m[1] ?? m[2])!.trim()}`);
-  const out: Record<string, string | Upload> = {};
+  const out: Record<string, string | Upload | Array<string | Upload>> = {};
   let start = body.indexOf(boundary);
   while (start >= 0) {
     const next = body.indexOf(boundary, start + boundary.length);
@@ -89,7 +94,12 @@ export function parseMultipart(body: Buffer, contentType: string): Record<string
       const data = part.subarray(split + 4);
       const name = /name="([^"]*)"/i.exec(head)?.[1];
       const filename = /filename="([^"]*)"/i.exec(head)?.[1];
-      if (name) out[name] = filename !== undefined ? { filename: filename.split(/[\\/]/).pop()!, bytes: new Uint8Array(data) } : data.toString("utf8");
+      if (name) {
+        const value: string | Upload = filename !== undefined ? { filename: filename.split(/[\\/]/).pop()!, bytes: new Uint8Array(data) } : data.toString("utf8");
+        // Repeated names (several files in one input) become a list, in order.
+        const prev = out[name];
+        out[name] = prev === undefined ? value : Array.isArray(prev) ? [...prev, value] : [prev, value];
+      }
     }
     start = next;
   }
@@ -121,6 +131,7 @@ export function buildRoutes(app: App, csrf: string): Route[] {
   };
   const pages = new Pages(app, csrf);
   const manage = new ManagePages(app, csrf);
+  const start = new StartPages(app, csrf);
 
   /** Every caller of /api/v1 is a client. A client can never be a person, whatever it sends. */
   const client = (c: Ctx): Actor => {
@@ -269,8 +280,10 @@ export function buildRoutes(app: App, csrf: string): Route[] {
   add("json", "GET", "/api/v1/capture/streams/:id", (c) => app.intake.stream(c.params.id!));
 
   // ------------------------------------------------------------ pages (docs/01, docs/02)
-  add("page", "GET", "/", () => pages.home());
-  add("page", "GET", "/onboarding", () => pages.onboarding());
+  add("page", "GET", "/", () => start.home());
+  add("page", "GET", "/onboarding", () => start.onboarding());
+  add("page", "GET", "/start", (c) => start.start(Object.fromEntries(c.url.searchParams)));
+  add("page", "GET", "/import", (c) => start.importHub(Object.fromEntries(c.url.searchParams)));
   add("page", "GET", "/projects/:id", (c) => pages.project(c.params.id!));
   add("page", "GET", "/projects/:id/rules", (c) => pages.rules(c.params.id!, c.url.searchParams.get("action") ?? "release", { q: c.url.searchParams.get("q") ?? "", status: c.url.searchParams.get("status") ?? "" }));
   add("page", "GET", "/projects/:id/rules/new", (c) => manage.ruleEditor(c.params.id!, Object.fromEntries(c.url.searchParams)));
@@ -313,6 +326,121 @@ export function buildRoutes(app: App, csrf: string): Route[] {
     const out = app.checks.check({ project_id: c.params.id!, name, bytes, action: { type: str(c.body.action) || "release" }, actor: me() });
     return out.review_url ?? `/projects/${c.params.id}`;
   });
+  // ---------------------------------------------------------- first-run guidance: start new, import existing, demo
+  const uploads = (v: unknown): Upload[] => ([] as unknown[]).concat(v ?? []).map((x) => upload(x)).filter((x): x is Upload => x !== null);
+  const ownProject = (id: string) => {
+    const p = app.projects.get(id);
+    if (p.is_demo) throw new ValidationError("project", ["DEMO projects are fictional. Use a project of your own."]);
+    return p;
+  };
+  add("form", "POST", "/app/start/project", (c) => {
+    const p = app.projects.createProject({ name: str(c.body.name), default_work_type: "sales_proposal", folder: str(c.body.folder).trim() || undefined, facts: str(c.body.customer_name).trim() ? { customer_name: str(c.body.customer_name) } : {} }, me());
+    // Releases are simulated and approved by a person; learning is NOT set (off).
+    app.gateway.setActionPolicy(p.project_id, "release", "self", me());
+    return flash(`/start?project=${p.project_id}`, "Project created. Next: add your first document.");
+  });
+  add("form", "POST", "/app/start/document", (c) => {
+    const p = ownProject(str(c.body.project_id));
+    const file = upload(c.body.file);
+    const doc = file ? { name: file.filename, bytes: file.bytes } : { name: str(c.body.name).trim(), bytes: new TextEncoder().encode(str(c.body.content)) };
+    if (!doc.name || doc.bytes.length === 0) throw new ValidationError("document", ["choose a file, or give a file name and paste its content"]);
+    const [preview] = previewDocuments(app, p.project_id, [doc]);
+    if (!preview!.importable) throw new ValidationError("document", [`${preview!.name}: ${preview!.problem}`]);
+    const [done] = importDocuments(app, p.project_id, [{ ...doc, expected_hash: preview!.hash }], "new_version", me());
+    return flash(`/start?project=${p.project_id}`, done!.outcome === "unchanged" ? `${done!.name} is identical to a stored version; nothing changed.` : `${done!.stored_as} added (version ${done!.version_seq}). Below is what was read. Next: add a first rule, or skip to the check.`);
+  });
+  add("form", "POST", "/app/start/rule", (c) => {
+    const p = ownProject(str(c.body.project_id));
+    let template: Record<string, unknown>;
+    let words = "";
+    if (str(c.body.sentence).trim()) {
+      const read = sentenceTemplate(str(c.body.sentence));
+      if (!read.template) throw new ValidationError("rule", [`"${str(c.body.sentence).trim()}": ${read.why}`, "Try one of the listed patterns, pick a rule from the list, or use the full rule editor."]);
+      template = { ...read.template };
+      words = str(c.body.sentence).trim();
+    } else template = { template: str(c.body.template), ...templateValues(c.body) };
+    const rule = app.authoring.create({ project_id: p.project_id, template, words }, me());
+    // The person's explicit click: on as a NOTE only (never blocking) until it has real examples.
+    app.rules.approveAndActivate(rule.rule_id, me(), { trial: true });
+    return flash(`/start?project=${p.project_id}`, `Rule added as a note: ${rule.statement} Add another, or continue to the check.`);
+  });
+  add("form", "POST", "/app/start/check", (c) => {
+    const p = ownProject(str(c.body.project_id));
+    const a = app.checks.artifact(str(c.body.artifact_id));
+    if (a.project_id !== p.project_id) throw new ValidationError("check", ["that document belongs to another project"]);
+    const latest = app.checks.versions(a.artifact_id).at(-1)!;
+    const bytes = (app.db.prepare("SELECT bytes FROM blobs WHERE content_hash = ?").get(latest.content_hash) as { bytes: Uint8Array } | undefined)?.bytes;
+    if (!bytes) throw new ValidationError("check", ["the stored bytes are no longer available; add the document again"]);
+    const out = app.checks.check({ project_id: p.project_id, name: a.name, bytes: new Uint8Array(bytes), action: { type: "release" }, actor: me() });
+    return `/start?project=${p.project_id}&run=${out.run_id}`;
+  });
+  add("form", "POST", "/app/projects/:id/check-all", (c) => {
+    const p = app.projects.get(c.params.id!);
+    const runs = app.checks.listRuns({ project_id: p.project_id, limit: 1000 });
+    let n = 0;
+    for (const v of app.checks.latestVersions(p.project_id)) {
+      if (runs.some((r) => r.artifact.artifact_id === v.artifact_id && r.artifact.content_hash === v.content_hash)) continue;
+      const bytes = (app.db.prepare("SELECT bytes FROM blobs WHERE content_hash = ?").get(v.content_hash) as { bytes: Uint8Array } | undefined)?.bytes;
+      if (!bytes) continue;
+      app.checks.check({ project_id: p.project_id, name: v.name, bytes: new Uint8Array(bytes), action: { type: "release" }, actor: me() });
+      n++;
+    }
+    return flash(`/projects/${p.project_id}`, n ? `Checked ${n} document(s). Their results are in "Recent work".` : "Every document's newest version was already checked.");
+  });
+  const importTarget = (c: Ctx): { project_id: string | null; new_name: string | null } => {
+    if (str(c.body.project_id) && str(c.body.project_id) !== "new") return { project_id: ownProject(str(c.body.project_id)).project_id, new_name: null };
+    const name = str(c.body.new_project_name).trim();
+    if (!name) throw new ValidationError("import", ["choose a project, or give a name for the new project"]);
+    return { project_id: null, new_name: name.slice(0, 120) };
+  };
+  add("formpage", "POST", "/app/import/documents/preview", (c) => {
+    const files = uploads(c.body.files).map((u) => ({ name: u.filename, bytes: u.bytes }));
+    if (str(c.body.paste_content).trim()) files.push({ name: str(c.body.paste_name).trim() || "Pasted-Quote.md", bytes: new TextEncoder().encode(str(c.body.paste_content)) });
+    return start.documentsPreview({ target: importTarget(c), onExisting: c.body.on_existing === "keep_both" ? "keep_both" : "new_version", files });
+  });
+  add("form", "POST", "/app/import/documents", (c) => {
+    const target = importTarget(c);
+    const names = ([] as unknown[]).concat(c.body.doc_name ?? []).map(String);
+    const hashes = ([] as unknown[]).concat(c.body.doc_hash ?? []).map(String);
+    const b64 = ([] as unknown[]).concat(c.body.doc_b64 ?? []).map(String);
+    if (!names.length || names.length !== hashes.length || names.length !== b64.length) throw new ValidationError("import", ["nothing to import; preview the files first"]);
+    const files = names.map((name, i) => ({ name, bytes: new Uint8Array(Buffer.from(b64[i]!, "base64")), expected_hash: hashes[i]! }));
+    const projectId = target.project_id ?? (() => {
+      const p = app.projects.createProject({ name: target.new_name!, default_work_type: "sales_proposal" }, me());
+      app.gateway.setActionPolicy(p.project_id, "release", "self", me());
+      return p.project_id;
+    })();
+    const done = importDocuments(app, projectId, files, c.body.on_existing === "keep_both" ? "keep_both" : "new_version", me());
+    const summary = done.map((d) => (d.outcome === "kept_both" ? `${d.name} as ${d.stored_as}` : d.outcome === "new_version" ? `${d.name} (version ${d.version_seq})` : d.outcome === "unchanged" ? `${d.name} (unchanged)` : d.name)).join(", ");
+    return flash(`/projects/${projectId}`, `Imported: ${summary}. Nothing was checked yet; see the next step below.`);
+  });
+  const sourceDraft = (c: Ctx) => {
+    const cols = (v: unknown): string[] => str(v).split(",").map((x) => x.trim()).filter(Boolean);
+    const days = Number(str(c.body.max_age_days) || 30);
+    const draft = { name: str(c.body.name).trim(), key_columns: cols(c.body.key_columns), value_columns: cols(c.body.value_columns), max_age_days: days };
+    if (!draft.name || !draft.key_columns.length || !draft.value_columns.length || !Number.isInteger(days) || days < 1 || days > 365) throw new ValidationError("trusted source", ["for a new source give a name, key column(s), value column(s) and a freshness window of 1 to 365 days"]);
+    return draft;
+  };
+  add("formpage", "POST", "/app/import/source/preview", (c) => {
+    const file = upload(c.body.file);
+    const text = file ? new TextDecoder().decode(file.bytes) : str(c.body.csv);
+    if (!text.trim()) throw new ValidationError("CSV import", ["choose a CSV file, or paste CSV"]);
+    const existing = str(c.body.source_id) && str(c.body.source_id) !== "new" ? app.projects.sourceRecord(str(c.body.source_id)).source_id : null;
+    return start.sourcePreview({ source_id: existing, draft: existing ? null : sourceDraft(c), file_name: file?.filename ?? "pasted.csv", text });
+  });
+  add("form", "POST", "/app/import/source", (c) => {
+    const text = Buffer.from(str(c.body.csv_b64), "base64").toString("utf8");
+    const sourceId = str(c.body.source_id) && str(c.body.source_id) !== "new" ? app.projects.sourceRecord(str(c.body.source_id)).source_id
+      : app.projects.registerSource(sourceDraft(c), me());
+    const { report } = app.projects.importCsv(sourceId, { file_name: str(c.body.file_name) || "pasted.csv", text }, me());
+    return flash(`/sources/${sourceId}`, `Imported ${report.rows_imported} row(s); ${report.rejected.length} left out (listed below). Next: add a price rule in a project ("Unit prices must match a trusted price list").`);
+  });
+  add("form", "POST", "/app/demo", () => {
+    const out = seedDemo(app);
+    if (!out.seeded) throw new ValidationError("demo", [`The fictional demo was not loaded: ${out.reason}. Demo and real work never mix; start a separate copy with CL_DATA_DIR=./demo-data CL_SEED_DEMO=1.`]);
+    return flash(`/projects/${out.project_id}`, "The fictional demo is loaded. Everything marked DEMO is made up.");
+  });
+
   add("form", "POST", "/app/projects/:id/facts", (c) => (app.projects.setFact(c.params.id!, str(c.body.key), str(c.body.value), me()), flash(`/projects/${c.params.id}/settings`, "Fact confirmed. Outstanding receipts in this project need a fresh check.")));
   add("form", "POST", "/app/projects/:id/folders", (c) => (app.projects.registerFolder(c.params.id!, str(c.body.folder), me()), flash(`/projects/${c.params.id}/settings`, "Folder connected.")));
   add("form", "POST", "/app/projects/:id/sources", (c) => {
@@ -420,10 +548,10 @@ export function buildRoutes(app: App, csrf: string): Route[] {
   return routes;
 }
 
-function render(app: App, page: Page, flash: string | null, path?: string): string {
+function render(app: App, page: Page, flash: string | null, path?: string, flashKind?: string | null): string {
   const ws = app.projects.workspace();
   const demo = ws.is_demo || !!(app.db.prepare("SELECT 1 FROM projects WHERE is_demo = 1 LIMIT 1").get());
-  return layout({ title: page.title, body: page.body, project: page.project ?? null, demo, workspace: ws.name, flash, ...(path ? { path } : {}) });
+  return layout({ title: page.title, body: page.body, project: page.project ?? null, demo, workspace: ws.name, flash, flashKind: flashKind === "error" ? "error" : "success", ...(path ? { path } : {}) });
 }
 
 /** What a person can do next, for each kind of refusal (AT-U5 spirit: never a dead end). */
@@ -498,7 +626,7 @@ async function handle(app: App, routes: Route[], csrf: string, req: IncomingMess
     const result = route.handler({ req, res, url, params, body });
     if (route.kind === "json") return send(200, "application/json; charset=utf-8", JSON.stringify(result));
     if (route.kind === "form") return send(303, "text/plain; charset=utf-8", "See other", { location: String(result) });
-    return send(200, "text/html; charset=utf-8", render(app, result as Page, url.searchParams.get("flash"), url.pathname));
+    return send(200, "text/html; charset=utf-8", render(app, result as Page, url.searchParams.get("flash"), url.pathname, url.searchParams.get("flash_kind")));
   } catch (error) {
     const known = error instanceof ClError;
     const status = known ? error.status : 500;

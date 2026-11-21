@@ -14,7 +14,7 @@ import { CURRENCIES, FIELD_DICTIONARY, TEMPLATES } from "../policy/templates.ts"
 import type { ContentDiffResult } from "../work/diff.ts";
 import { JOURNEY_WORDS, correctionJourney } from "../work/journey.ts";
 import type { Page } from "./pages.ts";
-import type { Safe } from "./html.ts";
+import type { ButtonKind, Safe } from "./html.ts";
 import { empty, html, label, outcomeWord, postButton, unavailable, verdictBadge } from "./html.ts";
 
 /** The plain fields for one template, pre-filled. Shared by the editor and the rule's "Change" form. */
@@ -76,8 +76,8 @@ export class ManagePages {
     return value ? displayTime(value, this.app.displayTz) : "";
   }
 
-  private post(action: string, button: string, fields: Record<string, string> = {}, primary = false): Safe {
-    return postButton(this.csrf, action, button, fields, primary);
+  private post(action: string, button: string, fields: Record<string, string> = {}, kind: ButtonKind = false): Safe {
+    return postButton(this.csrf, action, button, fields, kind);
   }
 
   private token(): Safe {
@@ -142,12 +142,12 @@ export class ManagePages {
     const body = html`
       <p>Vouched for by ${this.app.projects.displayName(s.owner)}. Key: <span class="mono">${s.key_columns.join(", ")}</span>; values: <span class="mono">${s.value_columns.join(", ")}</span>; must be re-confirmed within ${s.max_age_days} days.</p>
       <h2>Import a new version (CSV)</h2>
-      <form method="post" action="/app/sources/${sourceId}/import" enctype="multipart/form-data">${this.token()}${back ? html`<input type="hidden" name="back" value="${back}">` : ""}
+      <form method="post" action="/app/import/source/preview" enctype="multipart/form-data">${this.token()}<input type="hidden" name="source_id" value="${sourceId}">${back ? html`<input type="hidden" name="back" value="${back}">` : ""}
         <label>CSV file <input type="file" name="file" accept=".csv,text/csv"></label>
         <label>Or paste CSV (first row: column names, including ${columns.join(", ")}) <textarea name="csv"></textarea></label>
-        <button class="primary" type="submit">Import</button>
+        <button class="primary" type="submit">Preview</button>
       </form>
-      <p class="muted">Rows with a formula and no computed value, an empty value, a key that appears twice or the wrong number of cells are reported and left out; they are never read as zero. Excel (XLSX) files cannot be read in this build: export the sheet as CSV.</p>
+      <p class="muted">You see the rows that would be imported and the rows left out before anything is saved. Rows with a formula and no computed value, an empty value, a key that appears twice or the wrong number of cells are reported and left out; they are never read as zero. Excel (XLSX) files cannot be read in this build: export the sheet as CSV.</p>
       ${report ? html`<h2>Last import: ${report.file_name}</h2><p>${report.rows_imported} of ${report.rows_read} row(s) imported.</p>${report.rejected.length ? html`<table><caption>Rows not used</caption><thead><tr><th scope="col">Row</th><th scope="col">Why</th></tr></thead><tbody>${report.rejected.map((r) => html`<tr><td>${r.row}</td><td>${r.reason}</td></tr>`)}</tbody></table>` : html`<p>Every row was usable.</p>`}` : ""}
       <h2>Current version</h2>
       ${latest ? html`<p class="muted">Imported ${this.t(latest.imported_at)}; ${latest.rows.length} row(s).</p><table><thead><tr><th scope="col">Row</th>${columns.map((c) => html`<th scope="col">${c}</th>`)}</tr></thead><tbody>${latest.rows.slice(0, 100).map((r) => html`<tr><td>${r.row}</td>${columns.map((c) => html`<td class="mono">${r.key[c] ?? r.values[c] ?? ""}</td>`)}</tr>`)}</tbody></table>${latest.rows.length > 100 ? html`<p class="muted">First 100 rows shown.</p>` : ""}` : empty("Nothing imported yet. Rules that read this source report Couldn't verify until a version is imported.")}`;

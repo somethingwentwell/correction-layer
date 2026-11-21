@@ -78,6 +78,56 @@ export function parseCsv(text: string): string[][] {
   return rows;
 }
 
+/**
+ * Validate CSV text against a source's columns WITHOUT saving anything (the import
+ * preview, and the first half of `importCsv`). Rows that cannot be relied on are
+ * listed with the reason; they are never read as zero or blank.
+ */
+export function previewCsv(record: { key_columns: string[]; value_columns: string[] }, text: string): { header: string[]; rows: SourceRow[]; rejected: Array<{ row: number; reason: string }>; rows_read: number; problems: string[] } {
+  const none = { header: [] as string[], rows: [] as SourceRow[], rejected: [] as Array<{ row: number; reason: string }>, rows_read: 0 };
+  if (!text.trim()) return { ...none, problems: ["the file is empty"] };
+  if (text.length > 2 * 1024 * 1024) return { ...none, problems: ["the file is larger than 2 MB"] };
+  const table = parseCsv(text);
+  if (table.length > 10001) return { ...none, problems: ["more than 10,000 rows"] };
+  const header = (table[0] ?? []).map((h) => h.trim());
+  const missing = [...record.key_columns, ...record.value_columns].filter((c) => !header.includes(c));
+  if (missing.length) return { ...none, header, problems: [`the header row has no column named ${missing.join(", ")} (it has: ${header.join(", ") || "nothing"})`] };
+  const rejected: Array<{ row: number; reason: string }> = [];
+  const candidates: SourceRow[] = [];
+  const DECIMAL_WITH_COMMAS = /^-?\d{1,3}(,\d{3})+(\.\d+)?$|^-?\d+(\.\d+)?$/;
+  table.slice(1).forEach((cells, i) => {
+    const line = i + 2;
+    if (cells.length === 1 && cells[0]!.trim() === "") return; // blank line
+    if (cells.length !== header.length) return void rejected.push({ row: line, reason: `has ${cells.length} cells; the header has ${header.length}` });
+    const cell = (c: string): string => cells[header.indexOf(c)]!.trim();
+    const key: Record<string, string> = {};
+    for (const c of record.key_columns) {
+      if (!cell(c)) return void rejected.push({ row: line, reason: `the key ${c} is empty` });
+      key[c] = cell(c);
+    }
+    const values: Record<string, string> = {};
+    for (const c of record.value_columns) {
+      const v = cell(c);
+      if (/^[=@]/.test(v)) return void rejected.push({ row: line, reason: `${c} is a formula with no computed result (${v.slice(0, 40)}); it is never read as zero or blank` });
+      if (!v) return void rejected.push({ row: line, reason: `${c} is empty; it is never read as zero` });
+      values[c] = DECIMAL_WITH_COMMAS.test(v) ? v.replace(/,/g, "") : v;
+    }
+    candidates.push({ row: line, key, values });
+  });
+  const keyOf = (r: SourceRow): string => JSON.stringify(record.key_columns.map((c) => r.key[c]));
+  const counts = new Map<string, number>();
+  for (const r of candidates) counts.set(keyOf(r), (counts.get(keyOf(r)) ?? 0) + 1);
+  const rows = candidates.filter((r) => {
+    if (counts.get(keyOf(r))! > 1) {
+      rejected.push({ row: r.row, reason: `the key ${record.key_columns.map((c) => r.key[c]).join(" / ")} appears more than once; ambiguous rows are not used for lookups` });
+      return false;
+    }
+    return true;
+  });
+  rejected.sort((a, b) => a.row - b.row);
+  return { header, rows, rejected, rows_read: table.length - 1, problems: [] };
+}
+
 export class ProjectService {
   private db: Db;
   private ledger: Ledger;
@@ -264,51 +314,13 @@ export class ProjectService {
     const src = get<any>(this.db, "SELECT record_json FROM sources WHERE source_id = ? AND workspace_id = ?", sourceId, this.workspaceId);
     if (!src) throw new NotFound("source", sourceId);
     const record = parse<{ key_columns: string[]; value_columns: string[] }>(src.record_json);
-    const text = input.text ?? "";
-    if (!text.trim()) throw new ValidationError("CSV import", ["the file is empty"]);
-    if (text.length > 2 * 1024 * 1024) throw new ValidationError("CSV import", ["the file is larger than 2 MB"]);
-    const table = parseCsv(text);
-    if (table.length > 10001) throw new ValidationError("CSV import", ["more than 10,000 rows"]);
-    const header = (table[0] ?? []).map((h) => h.trim());
-    const missing = [...record.key_columns, ...record.value_columns].filter((c) => !header.includes(c));
-    if (missing.length) throw new ValidationError("CSV import", [`the header row has no column named ${missing.join(", ")} (it has: ${header.join(", ") || "nothing"})`]);
-    const rejected: CsvImportReport["rejected"] = [];
-    const candidates: SourceRow[] = [];
-    const DECIMAL_WITH_COMMAS = /^-?\d{1,3}(,\d{3})+(\.\d+)?$|^-?\d+(\.\d+)?$/;
-    table.slice(1).forEach((cells, i) => {
-      const line = i + 2;
-      if (cells.length === 1 && cells[0]!.trim() === "") return; // blank line
-      if (cells.length !== header.length) return void rejected.push({ row: line, reason: `has ${cells.length} cells; the header has ${header.length}` });
-      const cell = (c: string): string => cells[header.indexOf(c)]!.trim();
-      const key: Record<string, string> = {};
-      for (const c of record.key_columns) {
-        if (!cell(c)) return void rejected.push({ row: line, reason: `the key ${c} is empty` });
-        key[c] = cell(c);
-      }
-      const values: Record<string, string> = {};
-      for (const c of record.value_columns) {
-        const v = cell(c);
-        if (/^[=@]/.test(v)) return void rejected.push({ row: line, reason: `${c} is a formula with no computed result (${v.slice(0, 40)}); it is never read as zero or blank` });
-        if (!v) return void rejected.push({ row: line, reason: `${c} is empty; it is never read as zero` });
-        values[c] = DECIMAL_WITH_COMMAS.test(v) ? v.replace(/,/g, "") : v;
-      }
-      candidates.push({ row: line, key, values });
-    });
-    const keyOf = (r: SourceRow): string => JSON.stringify(record.key_columns.map((c) => r.key[c]));
-    const counts = new Map<string, number>();
-    for (const r of candidates) counts.set(keyOf(r), (counts.get(keyOf(r)) ?? 0) + 1);
-    const rows = candidates.filter((r) => {
-      if (counts.get(keyOf(r))! > 1) {
-        rejected.push({ row: r.row, reason: `the key ${record.key_columns.map((c) => r.key[c]).join(" / ")} appears more than once; ambiguous rows are not used for lookups` });
-        return false;
-      }
-      return true;
-    });
-    rejected.sort((a, b) => a.row - b.row);
+    const preview = previewCsv(record, input.text ?? "");
+    if (preview.problems.length) throw new ValidationError("CSV import", preview.problems);
+    const { rows, rejected, rows_read: rowsRead } = preview;
     if (!rows.length) throw new ValidationError("CSV import", ["no usable row: nothing was imported", ...rejected.slice(0, 5).map((r) => `row ${r.row}: ${r.reason}`)]);
     return tx(this.db, () => {
       const snapshot = this.importSnapshot(sourceId, rows, actor);
-      const report: CsvImportReport = { file_name: input.file_name.slice(0, 200), rows_read: table.length - 1, rows_imported: rows.length, rejected };
+      const report: CsvImportReport = { file_name: input.file_name.slice(0, 200), rows_read: rowsRead, rows_imported: rows.length, rejected };
       run(this.db, "INSERT INTO source_import_reports (snapshot_id, source_id, file_name, report_json, created_at) VALUES (?,?,?,?,?)", snapshot.snapshot_id, sourceId, report.file_name, json(report), ts(this.clock.now()));
       return { snapshot, report };
     });

@@ -14,8 +14,8 @@ import { FORMAT_ADAPTERS } from "../formats/adapters.ts";
 import type { LedgerEvent } from "../ledger/ledger.ts";
 import { REASON_WORDS } from "../learning/decision.ts";
 import { CATALOGUE } from "../policy/catalogue.ts";
-import type { Safe } from "./html.ts";
-import { empty, html, label, outcomeWord, postButton, unavailable, verdictBadge } from "./html.ts";
+import type { ButtonKind, Safe } from "./html.ts";
+import { empty, html, label, linkButton, nextStep, outcomeWord, postButton, stat, unavailable, verdictBadge } from "./html.ts";
 import { diffTable, templateFields } from "./manage.ts";
 import { templateOf } from "../policy/templates.ts";
 import { MAX_PAUSE_DAYS } from "../policy/rules.ts";
@@ -48,8 +48,8 @@ export class Pages {
     return this.app.projects.displayName(id);
   }
 
-  private post(action: string, button: string, fields: Record<string, string> = {}, primary = false): Safe {
-    return postButton(this.csrf, action, button, fields, primary);
+  private post(action: string, button: string, fields: Record<string, string> = {}, kind: ButtonKind = false): Safe {
+    return postButton(this.csrf, action, button, fields, kind);
   }
 
   private token(): Safe {
@@ -111,8 +111,27 @@ export class Pages {
     const coverage = this.app.gateway.coverage(projectId);
     const sources = this.app.projects.listSources();
     const notices = this.app.learning.notices(projectId).slice(0, 3);
+    const unchecked = versions.filter((v) => !runs.some((r) => r.artifact.artifact_id === v.artifact_id && r.artifact.content_hash === v.content_hash));
+    const asks = this.app.learning.inbox(projectId).length;
+    const openFixes = this.app.fixes.list({ project_id: projectId, status: "open" }).length;
+    const needsChanges = versions.filter((v) => runs.find((r) => r.artifact.artifact_id === v.artifact_id && r.artifact.content_hash === v.content_hash)?.verdict === "needs_changes").length;
+    // One suggestion at a time: the most useful next act for this project's state.
+    const guide = !versions.length
+      ? nextStep("Add your first document", "Upload or paste a quote (Markdown or plain text). Nothing is checked until you ask.", html`${p.is_demo ? "" : linkButton(`/start?project=${projectId}`, "Add a document", "primary")} ${linkButton(`/import?project=${projectId}`, "Import several")}`)
+      : unchecked.length
+        ? nextStep(`Check ${unchecked.length} document${unchecked.length === 1 ? "" : "s"} not yet checked`, "Each document's newest version is checked against every rule that applies here.", html`${postButton(this.csrf, `/app/projects/${projectId}/check-all`, `Check ${unchecked.length === 1 ? "it" : "them"} now`, {}, "primary")}`)
+        : !inScope.length
+          ? nextStep("Add your first rule", "No rule applies here yet, so every check is trivially Ready. Say what must always be true of these quotes.", html`${linkButton(`/projects/${projectId}/rules/new`, "Add a correction", "primary")}`)
+          : asks
+            ? nextStep(`${asks} question${asks === 1 ? "" : "s"} need${asks === 1 ? "s" : ""} you`, "Learning could not settle these by itself.", linkButton(`/projects/${projectId}/learning`, "Answer them", "primary"))
+            : needsChanges
+              ? nextStep(`${needsChanges} document${needsChanges === 1 ? " needs" : "s need"} changes`, "Fix them in the tool you use, then check the new version here. Open a check to see exactly where.", html``)
+              : html``;
     const body = html`
-      <p class="muted">Sales proposals${p.facts.customer_name ? ` - Customer: ${p.facts.customer_name}` : ""}</p>
+      <div class="project-head"><p class="lead">Sales proposals${p.facts.customer_name ? ` - Customer: ${p.facts.customer_name}` : ""}</p>
+        <div class="actions"><a class="btn primary" href="#check">Check a file</a>${linkButton(`/projects/${projectId}/rules/new`, "Add a correction")}${p.is_demo ? "" : linkButton(`/import?project=${projectId}`, "Import")}</div></div>
+      <div class="stats">${stat(versions.length, "documents")}${stat(inScope.length, "rules apply", `/projects/${projectId}/rules`)}${stat(needsChanges, "need changes")}${stat(asks, "need you", `/projects/${projectId}/learning`)}${openFixes ? stat(openFixes, "proposed changes") : ""}</div>
+      ${guide}
       ${notices.map((n) => {
         // The person's words are shown live from the signal (they are never copied into the notice, so they can be deleted).
         const said = (this.app.db.prepare("SELECT s.text FROM learning_decisions d JOIN signals s ON s.signal_id = d.signal_id WHERE d.decision_id = ?").get(n.decision_id) as { text: string | null } | undefined)?.text;
@@ -122,13 +141,13 @@ export class Pages {
       ${versions.length ? html`<table><tbody>${versions.map((v) => {
         const run = runs.find((r) => r.artifact.artifact_id === v.artifact_id);
         const current = run && run.artifact.content_hash === v.content_hash;
-        return html`<tr><td>${v.name}${v.is_demo ? label("DEMO", "demo-label") : ""}</td><td>${current ? verdictBadge(run.verdict) : verdictBadge(null)}${run && !current ? html` <span class="muted">a newer version has not been checked</span>` : ""}</td><td>version ${v.version_seq}, seen ${this.t(v.observed_at)}</td><td>${run ? html`<a href="/runs/${run.run_id}">open check</a>` : ""}</td></tr>`;
-      })}</tbody></table>` : empty("No files have been checked in this project yet.")}
+        return html`<tr><td>${v.name}${v.is_demo ? label("DEMO", "demo-label") : ""}</td><td>${current ? verdictBadge(run.verdict) : verdictBadge(null)}${run && !current ? html` <span class="muted">a newer version has not been checked</span>` : ""}</td><td>version ${v.version_seq}, seen ${this.t(v.observed_at)}</td><td>${run ? html`<a href="/runs/${run.run_id}">Open check</a>` : ""}</td></tr>`;
+      })}</tbody></table>` : empty("No documents yet. Use \"Check a file\" below, the guided start, or Import.")}
       ${(() => {
         const open = this.app.fixes.list({ project_id: projectId, status: "open" });
         return open.length ? html`<div class="card" role="status"><strong>${open.length} proposed change(s) wait for you.</strong> ${open.slice(0, 5).map((f) => html`<a href="/fixes/${f.fix_id}">${f.summary}</a> `)}</div>` : "";
       })()}
-      <details ${versions.length ? "" : html`open`}><summary><strong>Check a file</strong></summary>
+      <details id="check" ${versions.length ? "" : html`open`}><summary>Check a file</summary>
         <form method="post" action="/app/projects/${projectId}/check" enctype="multipart/form-data"><input type="hidden" name="_csrf" value="${this.csrf}">
           <label>Upload a file <input type="file" name="file"></label>
           <p class="muted">Or type it in:</p>
@@ -230,13 +249,13 @@ export class Pages {
         ${r.authority?.auto_paused ? html`<tr><th>Paused itself</th><td>${this.t(r.authority.auto_paused.at)} (${r.authority.auto_paused.reason.replace(/_/g, " ")}). It is a note only until a person resumes or retires it.</td></tr>` : ""}
       </tbody></table>
       <p>
-        ${r.status === "candidate" ? html`${this.post(`/app/rules/${ruleId}/approve`, "Approve and turn on", { back }, true)} ${this.post(`/app/rules/${ruleId}/approve`, "Approve on trial (note only)", { trial: "1", back })} ${this.post(`/app/rules/${ruleId}/reject`, "Reject", { back })}` : ""}
-        ${r.status === "active" || r.status === "trial" ? this.post(`/app/rules/${ruleId}/retire`, r.authority?.kind === "delegated_learning" ? "Undo" : "Retire", { back }) : ""}
+        ${r.status === "candidate" ? html`${this.post(`/app/rules/${ruleId}/approve`, "Approve and turn on", { back }, true)} ${this.post(`/app/rules/${ruleId}/approve`, "Approve on trial (note only)", { trial: "1", back })} ${this.post(`/app/rules/${ruleId}/reject`, "Reject", { back }, "danger")}` : ""}
+        ${r.status === "active" || r.status === "trial" ? this.post(`/app/rules/${ruleId}/retire`, r.authority?.kind === "delegated_learning" ? "Undo" : "Retire", { back }, "danger") : ""}
         ${r.authority?.kind === "delegated_learning" && (r.status === "active" || r.status === "trial") ? this.post(`/app/rules/${ruleId}/keep`, "Keep (make it person-approved)", { back }) : ""}
         ${owning && r.authority ? html`<a href="/projects/${owning}/learning/timeline/${ruleId}">Timeline</a>` : ""}
         ${r.status === "suspended" ? this.post(`/app/rules/${ruleId}/resume`, "Resume now", { back }, true) : ""}
         ${r.authority?.auto_paused && r.status === "trial" ? this.post(`/app/rules/${ruleId}/resume-auto`, "Resume (can block again)", { back }, true) : ""}
-        ${decisionId && open && r.authority?.kind === "delegated_learning" ? this.post(`/app/decisions/${decisionId}/suppress`, "Don't learn this", { back }) : ""}
+        ${decisionId && open && r.authority?.kind === "delegated_learning" ? this.post(`/app/decisions/${decisionId}/suppress`, "Don't learn this", { back }, "danger") : ""}
       </p>
       ${(r.status === "active" || r.status === "trial") && !r.locked ? html`<details><summary>Pause until a date</summary>
         <form method="post" action="/app/rules/${ruleId}/pause">${this.token()}<input type="hidden" name="back" value="${back}">
@@ -259,8 +278,8 @@ export class Pages {
         <label><input type="radio" name="kind" value="negative" checked> the rule should block it</label><label><input type="radio" name="kind" value="positive"> the rule should allow it</label>
         <button type="submit">Add example</button></form>` : ""}
       <h2>Exceptions (${exceptions.length})</h2>
-      ${exceptions.length ? html`<table><thead><tr><th>Document</th><th>Why</th><th>Status</th><th></th></tr></thead><tbody>${exceptions.map((e) => html`<tr><td>${this.app.checks.artifact(e.artifact_id).name}</td><td>${e.reason}<div class="muted">asked by ${this.who(e.requested_by)}, ${this.t(e.requested_at)}, for ${e.days} day(s)</div></td><td>${e.status}${e.expires_at ? ` until ${this.t(e.expires_at)}` : ""}</td><td>${e.status === "requested" ? html`${this.post(`/app/exceptions/${e.exception_id}/grant`, "Grant", { back })} ${this.post(`/app/exceptions/${e.exception_id}/reject`, "Reject", { back })}` : e.status === "granted" ? this.post(`/app/exceptions/${e.exception_id}/revoke`, "Revoke", { back }) : ""}</td></tr>`)}</tbody></table>` : empty("No exceptions. Ask for one from a check where this rule reported a problem.")}
-      ${signalText?.text ? html`<details><summary>Delete the original wording</summary><p>The words are removed everywhere they are kept. This rule stays and will say "original wording deleted". History still verifies.</p>${this.post(`/app/signals/${signalId}/delete-text`, "Delete the wording", { back })}</details>` : ""}
+      ${exceptions.length ? html`<table><thead><tr><th>Document</th><th>Why</th><th>Status</th><th></th></tr></thead><tbody>${exceptions.map((e) => html`<tr><td>${this.app.checks.artifact(e.artifact_id).name}</td><td>${e.reason}<div class="muted">asked by ${this.who(e.requested_by)}, ${this.t(e.requested_at)}, for ${e.days} day(s)</div></td><td>${e.status}${e.expires_at ? ` until ${this.t(e.expires_at)}` : ""}</td><td>${e.status === "requested" ? html`${this.post(`/app/exceptions/${e.exception_id}/grant`, "Grant", { back })} ${this.post(`/app/exceptions/${e.exception_id}/reject`, "Reject", { back }, "danger")}` : e.status === "granted" ? this.post(`/app/exceptions/${e.exception_id}/revoke`, "Revoke", { back }, "danger") : ""}</td></tr>`)}</tbody></table>` : empty("No exceptions. Ask for one from a check where this rule reported a problem.")}
+      ${signalText?.text ? html`<details><summary>Delete the original wording</summary><p>The words are removed everywhere they are kept. This rule stays and will say "original wording deleted". History still verifies.</p>${this.post(`/app/signals/${signalId}/delete-text`, "Delete the wording", { back }, "danger")}</details>` : ""}
       <h2>How often it was evaluated</h2>
       <p>${Object.keys(counts).length ? Object.entries(counts).map(([o, n]) => `${outcomeWord(o)}: ${n}`).join(" - ") : "Never evaluated yet."} <span class="muted">Plain counts. They do not show that the rule made any work better.</span></p>
       <h2>History</h2>
@@ -386,10 +405,10 @@ export class Pages {
       <h2>Needs you (${q.needs_you.length})</h2>
       ${q.needs_you.length ? q.needs_you.map((i) => {
         const rule = i.rule_id ? this.app.rules.get(i.rule_id) : null;
-        const act = (action: string, text: string, primary = false): Safe => this.post(`/app/inbox/${i.inbox_id}/act`, text, { action, back: `/projects/${projectId}/learning` }, primary);
+        const act = (action: string, text: string, primary: ButtonKind = false): Safe => this.post(`/app/inbox/${i.inbox_id}/act`, text, { action, back: `/projects/${projectId}/learning` }, primary);
         const buttons = rule?.status === "candidate"
-          ? html`${act("approve", "Approve and turn on", true)} ${act("trial", "Try as a note")} ${act("reject", "Reject")} ${act("not_a_correction", "Not a correction")} ${i.signal_id ? act("suppress", "Don't learn this") : ""}`
-          : i.kind === "paused_learned_rule" && rule?.status === "trial" ? html`${act("resume", "Resume", true)} ${act("retire", "Retire")}`
+          ? html`${act("approve", "Approve and turn on", true)} ${act("trial", "Try as a note")} ${act("reject", "Reject", "danger")} ${act("not_a_correction", "Not a correction")} ${i.signal_id ? act("suppress", "Don't learn this", "danger") : ""}`
+          : i.kind === "paused_learned_rule" && rule?.status === "trial" ? html`${act("resume", "Resume", true)} ${act("retire", "Retire", "danger")}`
           : html`${act("dismiss", "Dismiss")} <a href="/projects/${projectId}/rules/new">Add it as a correction yourself</a>`;
         return html`<div class="card"><div>${i.question}</div>${i.detail.text ? html`<div class="muted">"${String(i.detail.text)}"</div>` : ""}<div class="muted">${i.kind.replace(/_/g, " ")} - ${this.t(i.opened_at)}</div>${rule ? html`<div><a href="/rules/${rule.rule_id}?project=${projectId}">${rule.title}</a> (${STATUS_WORDS[rule.status]})</div>` : ""}<div class="actions">${buttons}</div></div>`;
       }) : empty("Nothing is waiting for you.")}
@@ -513,7 +532,7 @@ export class Pages {
         <tr><th>Receipt</th><td>${receipt ? `${receipt.status}; expires ${this.t(receipt.expires_at)}; grants permission: no` : "none"}</td></tr>
       </tbody></table>
       <p>
-        ${a.status === "awaiting_approval" ? html`${this.post(`/app/actions/${actionId}/approve`, "Approve", { back }, true)} ${this.post(`/app/actions/${actionId}/reject`, "Reject", { back })}` : ""}
+        ${a.status === "awaiting_approval" ? html`${this.post(`/app/actions/${actionId}/approve`, "Approve", { back }, true)} ${this.post(`/app/actions/${actionId}/reject`, "Reject", { back }, "danger")}` : ""}
         ${a.status === "approved" ? this.post(`/app/actions/${actionId}/execute`, adapter?.capability.simulated ? "Release now (SIMULATED)" : `Release now: copy the checked version to the release folder`, { back }, true) : ""}
       </p>
       ${a.status === "paused_newer_version" ? html`<div class="card" role="alert"><strong>A newer version of this document exists.</strong> Which version do you intend to release?

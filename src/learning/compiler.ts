@@ -160,6 +160,25 @@ export function compileCorrection(input: CompileInput): Compiled {
   return finish(input, base(input, "add_requirement"), matched.template, null, matched.note);
 }
 
+/**
+ * Read ONE sentence typed by a person in the app as a request for one of the plain
+ * templates - the same fixed patterns the learning compiler uses, nothing more.
+ * Returns why not when it cannot (never a guess). Used by the guided start; it does
+ * not involve learning, capture or any policy.
+ */
+export function sentenceTemplate(text: string): { template: TemplateInput; note: string } | { template: null; why: string } {
+  const t = (text ?? "").trim();
+  if (!t) return { template: null, why: "Type one sentence." };
+  if (PERMISSION.test(t)) return { template: null, why: "It asks to change who may approve or send. That is a setting, not a check." };
+  if (WEAKEN.test(t)) return { template: null, why: "It asks to switch a check off or loosen it. Checks can only be added here." };
+  if (findMarkers(t).one_off.length) return { template: null, why: "It reads as a one-off (\"this time\", \"just this once\"). A rule applies every time." };
+  const mentioned = CURRENCIES.filter((c) => new RegExp(`(^|[^A-Za-z])${c}([^A-Za-z]|$)`).test(t));
+  if (mentioned.length > 1 && CURRENCY_CONTEXT.test(t)) return { template: null, why: `It names more than one currency (${mentioned.join(", ")}); say which one.` };
+  if (mentioned.length === 1 && CURRENCY_CONTEXT.test(t)) return { template: { template: "currency", currency: mentioned[0]! }, note: `"${mentioned[0]}" is from your words.` };
+  const m = matchPattern(t);
+  return m ?? { template: null, why: "This build cannot turn that sentence into an exact check." };
+}
+
 const QUOTED = /["\u201c]([^"\u201c\u201d]{2,120})["\u201d]/;
 const NEGATIVE = /\b(never|must not|mustn't|do not|don't|should not|shouldn't|avoid|no longer)\b/i;
 const POSITIVE = /\b(always|must|should|needs? to|has to|have to|make sure|every)\b/i;
