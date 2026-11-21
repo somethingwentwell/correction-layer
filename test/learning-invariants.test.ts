@@ -128,7 +128,8 @@ test("global hard gates cannot be removed or weakened by learned corrections: ru
     assert.throws(() => app.rules.approveAndActivate(learned.rule_id, actor), /done by a person/);
     assert.throws(() => app.policies.set({ project_id: project.project_id, mode: "auto_low_risk", learn_from: [s.priya.id] }, actor), /done by a person/);
   }
-  assert.throws(() => app.learning.autoPause("rul_ORGGATE01", "direct_contradiction"), /Not implemented/, "there is no automatic way to move a rule away from enforcement");
+  // The only automatic move away from enforcement refuses anything a person approved, locked or made workspace-wide.
+  assert.equal(app.learning.autoPause("rul_ORGGATE01", "direct_contradiction").paused, false, "automatic pause cannot touch a person-approved, locked gate");
   assert.equal(app.rules.get("rul_ORGGATE01").status, "active");
   // The pipeline's only writes on policy, across this whole test, were candidates and one delegated activation.
   const byLearning = app.ledger.all().filter((e) => e.type.startsWith("rule.") && e.actor.kind !== "human").map((e) => e.type);
@@ -254,9 +255,15 @@ test("AT-L12 retries are not support, a duplicate adds nothing, and a contradict
   assert.equal(contradiction.outcome, "inbox");
   assert.ok(contradiction.reasons.includes("contradicts_learned_rule"));
   assert.deepEqual(contradiction.evaluation.contradicts_learned, [learned.rule_id]);
-  assert.equal(app.rules.get(learned.rule_id).status, "active", "Phase 1 has no automatic pause: the learned rule keeps enforcing until a person decides");
-  assert.equal(app.rules.listAll().filter((r) => r.status === "active").length, 1);
-  assert.ok(app.learning.queue(project.project_id).needs_you.some((i) => i.kind === "contradiction"));
+  // AT-L15: the contradicted rule was learned and never confirmed, so it moves to note only (shadow);
+  // the new statement is NOT turned on by itself; a person decides which holds.
+  const paused = app.rules.get(learned.rule_id);
+  assert.equal(paused.status, "trial");
+  assert.equal(paused.authority?.auto_paused?.reason, "direct_contradiction");
+  assert.ok(contradiction.side_effects.some((e: any) => e.effect === "auto_pause_learned_rule" && e.rule_id === learned.rule_id));
+  assert.equal(app.rules.listAll().filter((r) => r.status === "active").length, 0);
+  const asked = app.learning.queue(project.project_id).needs_you.map((i) => i.kind);
+  assert.ok(asked.includes("contradiction") && asked.includes("paused_learned_rule"));
   // A wider scope is a separate question: the narrow rule is not widened.
   const other = scenario("auto_low_risk", { name: "Wide (TEST)" });
   draftAndCorrect(other, "Quotes must always be in SGD. That goes for every customer.");

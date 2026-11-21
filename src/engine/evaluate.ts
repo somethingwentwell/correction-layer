@@ -127,11 +127,13 @@ export function evaluate(input: EngineInput): EngineOutput {
   const rules = [...input.rules].sort((a, b) => (a.content.rule_id < b.content.rule_id ? -1 : a.content.rule_id > b.content.rule_id ? 1 : 0));
   const uses = new Map<string, SourceUse>();
 
-  // Statically unsatisfiable pairs are both `conflict`; neither wins (docs/04 §6).
+  // Statically unsatisfiable pairs of MUST-PASS rules are both `conflict`; neither wins (docs/04 §6). A note-only
+  // rule (trial, shadow, warn) cannot make blocking unsatisfiable, so it yields: it is evaluated and shown as a note.
   const conflicted = new Set<string>();
+  const blocks = (r: EngineRule): boolean => effectiveEnforcement(r.content, r.status) === "block";
   for (let i = 0; i < rules.length; i++) {
     for (let j = i + 1; j < rules.length; j++) {
-      if (relate(rules[i]!.content, rules[j]!.content) === "conflict") {
+      if (blocks(rules[i]!) && blocks(rules[j]!) && relate(rules[i]!.content, rules[j]!.content) === "conflict") {
         conflicted.add(rules[i]!.content.rule_id);
         conflicted.add(rules[j]!.content.rule_id);
       }

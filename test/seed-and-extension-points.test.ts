@@ -30,14 +30,10 @@ test("DEMO seed: produced by the real pipeline, labelled DEMO everywhere, and on
   assert.ok(!tables.some((t) => /metric|score|effectiveness|kpi/.test(t)));
 });
 
-test("Phase 2 extension points are explicit: each throws a typed NotImplementedYet naming its contract - never a silent success", () => {
+test("remaining extension points are explicit: each throws a typed NotImplementedYet naming its contract - never a silent success", () => {
   const s = scenario("auto_low_risk");
   const points: Array<[string, () => unknown]> = [
     ["context.resolveByMarker", () => s.app.projects.resolveByMarker("/some/folder")],
-    ["learning.autoPause", () => s.app.learning.autoPause("rul_X000001", "disputes")],
-    ["learning.markAsCorrection", () => s.app.learning.markAsCorrection("cap_X000001", s.marcus)],
-    ["learning.suppress", () => s.app.learning.suppress("dec_X000001", s.marcus)],
-    ["learning.deleteSignalText", () => s.app.learning.deleteSignalText("sig_X000001", s.marcus)],
     ["formats.docx.parse", () => FORMAT_ADAPTERS.find((a) => a.capability.adapter_id === "docx-core")!.parse({ bytes: new Uint8Array(), name: "x.docx", work_type: "sales_proposal" })],
     ["formats.pdf.parse", () => FORMAT_ADAPTERS.find((a) => a.capability.adapter_id === "pdf-digital")!.parse({ bytes: new Uint8Array(), name: "x.pdf", work_type: "sales_proposal" })],
   ];
@@ -65,13 +61,11 @@ const PHASE_2: Array<[string, string]> = [
   ["AT-L3 (backfill)", "adapter backfill from a runtime transcript, marked and capped at the inbox"],
   ["AT-L6", "naming unsupported assistants as NOT CAPTURED from a registry of known runtimes (labels exist; the registry does not)"],
   ["AT-L11", "recurrence: three independent episodes of the same hand edit produce a suggestion (needs edit diff compilation and folder watch)"],
-  ["AT-L15", "learning.autoPause: contradiction, two disputes, example regression, conflict with an approved rule; Resume"],
-  ["AT-L17 (deletion)", "learning.deleteSignalText: wording gone, ledger still verifies, rule shows \"original wording deleted\""],
-  ["AT-L19", "learning.markAsCorrection: a missed correction recovered by its author within the review window"],
   ["AT-O5 (content)", "CheckService.compare content_diff: changed cells and passages before and after"],
   ["AT-O7", "re-run as recorded: replay a stored run from its inputs and report mismatches or purged inputs"],
   ["AT-E10 / AT-E11 / AT-E12", "offline matrix, clock-jump hold on receipts, backup and restore"],
   ["AT-I5 / AT-I6", "two workspaces on one machine; translator outbound-request canary (no AI translator exists in Phase 1)"],
   ["AT-U1 to AT-U6, AT-R3", "usability tests with people; not automatable here"],
 ];
+// AT-L15 "example regression after an upgrade" has no trigger yet: no reader/engine upgrade path exists (see AT-G8).
 for (const [id, contract] of PHASE_2) test.todo(`${id}: ${contract}`);

@@ -4,10 +4,13 @@
  * queue shows where and why.
  *
  * Invariants this module is shaped around:
- *  - ADD ONLY. Its single write on policy is "add a requirement" (a candidate rule,
- *    then `RuleService.activateDelegated`). It has no code path that pauses,
- *    retires, narrows or excepts any rule, changes a permission, edits an artifact
- *    or a source, approves, or requests an action.
+ *  - ADD ONLY. Its single automatic write on policy is "add a requirement" (a
+ *    candidate rule, then `RuleService.activateDelegated`). The one automatic move
+ *    away from enforcement is `RuleService.autoPause`, which refuses every rule
+ *    except one that was learned and never confirmed (ADR-016). Everything else in
+ *    this module that retires, rejects, approves or suppresses is a person's act
+ *    (`requireHuman`). It never changes a permission, edits an artifact or a
+ *    source, or requests an action.
  *  - Effectively-once. Processing is keyed by `capture_id`: redelivery or
  *    re-processing creates no second signal, candidate or rule.
  *  - Evidence, not instructions. Agent output, tool output and unattested text are
@@ -19,7 +22,7 @@
  */
 import { assertValid } from "../contracts/schemas.ts";
 import { digestOf } from "../domain/canonical.ts";
-import { NotFound, NotImplementedYet, ValidationError } from "../domain/errors.ts";
+import { Conflict, NotFound, PermissionDenied, ValidationError } from "../domain/errors.ts";
 import type { IdGen } from "../domain/ids.ts";
 import { SYS } from "../domain/ids.ts";
 import type { Clock } from "../domain/time.ts";
@@ -38,7 +41,8 @@ import { requireHuman } from "../policy/rules.ts";
 import type { Db } from "../store/db.ts";
 import { all, get, json, parse, run, tx } from "../store/db.ts";
 import type { CheckService, ObservedVersion } from "../work/check.ts";
-import { classify, compileCorrection, detect } from "./compiler.ts";
+import type { Classified, Detection } from "./compiler.ts";
+import { classify, compileCorrection, detect, findMarkers } from "./compiler.ts";
 import { REASON_WORDS, decide } from "./decision.ts";
 import type { LearningPolicyService } from "./policy.ts";
 
@@ -107,6 +111,14 @@ export class LearningPipeline {
       this.processStream(streamId);
     });
     this.checks.onNewVersion((version) => this.onArtifactVersion(version));
+    // Every automatic pause becomes a question for a person, with Resume.
+    this.rules.onAutoPause((ruleId, trigger, detail, eventId) => {
+      const rule = this.rules.get(ruleId);
+      this.openInbox({
+        project_id: rule.scope.project_id ?? null, kind: "paused_learned_rule", dedup_key: `paused:${ruleId}:${eventId}`, signal_id: null, decision_id: rule.authority?.decision_id ?? null, rule_id: ruleId,
+        question: `"${rule.statement}" paused itself and is now a note only (${trigger.replace(/_/g, " ")}). ${detail} Resume it, or retire it.`, detail: { trigger, detail }, caused_by: [eventId],
+      });
+    });
   }
 
   // ------------------------------------------------------------ the processing stage
@@ -160,6 +172,7 @@ export class LearningPipeline {
   /** Retry everything that is waiting: held streams, failed events. Called on a timer and on demand. */
   tick(): void {
     for (const s of all<{ stream_id: string }>(this.db, "SELECT stream_id FROM capture_streams WHERE workspace_id = ? AND processed_through < cursor", this.workspaceId)) this.processStream(s.stream_id);
+    this.purgeReviewText();
   }
 
   private setStage(captureId: string, stage: string, disposition: string): void {
@@ -192,14 +205,19 @@ export class LearningPipeline {
       run(this.db, "UPDATE capture_events SET stage = 'captured', disposition = 'not_a_signal', content_state = 'held_for_review' WHERE capture_id = ?", e.capture_id);
       return;
     }
+    const stream = get<any>(this.db, "SELECT author_id FROM capture_streams WHERE stream_id = ?", e.stream_id)!;
+    this.signalAndCompile(e, classified, detection, captureComplete, classified.trust === "user_direct" ? stream.author_id : null, policy, { late: null, caused_by: [] });
+  }
+
+  /** Stages 2 to 5 for one identified event: record the signal, compile, test, decide, apply. */
+  private signalAndCompile(e: any, classified: Classified, detection: Detection, captureComplete: boolean, authorId: string | null, policy: LearningPolicy, opts: { late: boolean | null; caused_by: string[] }): string {
     const stream = get<any>(this.db, "SELECT author_id, session_id, adapter_id FROM capture_streams WHERE stream_id = ?", e.stream_id)!;
-    const authorId: string | null = classified.trust === "user_direct" ? stream.author_id : null;
     // What the statement was about: its own artifact, else the assistant output it replies to.
     const anchorEvent = e.artifact_id && e.content_hash ? e
       : get<any>(this.db, "SELECT artifact_id, content_hash FROM capture_events WHERE stream_id = ? AND source_seq < ? AND kind IN ('agent_output','edit_observed') AND artifact_id IS NOT NULL AND content_hash IS NOT NULL ORDER BY source_seq DESC LIMIT 1", e.stream_id, e.source_seq);
     const anchorOk = anchorEvent && get<any>(this.db, "SELECT project_id FROM artifacts WHERE artifact_id = ?", anchorEvent.artifact_id)?.project_id === e.project_id;
     const anchor = anchorOk ? { artifact_id: anchorEvent.artifact_id as string, content_hash: anchorEvent.content_hash as string, basis: e.artifact_id ? (e.kind === "edit_observed" ? "diff_target" : "app_selection") : "last_agent_output" } : null;
-    const late = this.clock.now().getTime() - parseTs(e.occurred_at).getTime() > policy.capture.late_after_hours * 3600 * 1000;
+    const late = opts.late ?? this.clock.now().getTime() - parseTs(e.occurred_at).getTime() > policy.capture.late_after_hours * 3600 * 1000;
     const signalId = this.ids("sig");
     const episodeId = `epi_${digestOf([e.stream_id, anchor?.artifact_id ?? "none"]).slice(7, 23).toUpperCase()}`;
     const record = {
@@ -215,7 +233,7 @@ export class LearningPipeline {
     assertValid("learning-signal", record, "learning signal");
     const detected = this.ledger.append({
       type: "learning.signal_detected", project_id: e.project_id, actor: { kind: "system", id: SYS.detector }, subject: { kind: "signal", id: signalId },
-      refs: { signal_id: signalId, learning_policy_id: policy.learning_policy_id, stream_id: e.stream_id, capture_id: e.capture_id, ...(anchor ? { artifact_id: anchor.artifact_id, content_hash: anchor.content_hash } : {}) },
+      refs: { signal_id: signalId, learning_policy_id: policy.learning_policy_id, stream_id: e.stream_id, capture_id: e.capture_id, ...(anchor ? { artifact_id: anchor.artifact_id, content_hash: anchor.content_hash } : {}) }, caused_by: opts.caused_by,
       summary: `A ${detection.type.replace(/_/g, " ")} was identified in a captured ${e.kind.replace(/_/g, " ")} (${classified.trust.replace(/_/g, " ")}).`,
       payload: { type: detection.type, trust: classified.trust, surface: classified.surface, markers: detection.markers, delivery: e.delivery, late }, classification: "evidence",
     });
@@ -259,6 +277,7 @@ export class LearningPipeline {
       this.ids("evl"), signalId, e.project_id, savedRuleId, savedRuleId ? correctionId : null, json({ descriptor, note: compiled.note, duplicate_of: duplicateOf }), compiled.fingerprint, "identified",
       anchor?.artifact_id ?? null, anchor?.content_hash ?? null, lastEvent.event_id, addDays(ts(this.clock.now()), policy.limits.candidate_expiry_days), ts(this.clock.now()));
     this.decideAndApply(signalId);
+    return signalId;
   }
 
   // ------------------------------------------------------------ evidence
@@ -360,9 +379,10 @@ export class LearningPipeline {
         { requested_level: input.candidate.widening_requested, rule_id: rule?.rule_id ?? null });
     }
     if (outcome === "declined") sideEffects.push({ effect: "offer_exception_request", detail: a.note });
+    const directFromListed = input.signals.some((x) => x.trust === "user_direct" && x.author_id !== null && policy.learn_from.includes(x.author_id));
+    const toPause = directFromListed && rule ? (input.evaluation?.contradicts_learned ?? []).filter((id) => this.rules.get(id).status === "active") : [];
+    for (const id of toPause) sideEffects.push({ effect: "auto_pause_learned_rule", rule_id: id, detail: "contradicted by a direct statement of a listed person" });
     if (a.artifact_flag) sideEffects.push({ effect: "risk_flag_on_artifact", detail: `Instruction-like text was found in ${a.artifact_flag} and ignored.` });
-    // NOTE: `auto_pause_learned_rule` is a Phase 2 effect (extension point learning.autoPause). Until then a
-    // contradicted learned rule keeps enforcing and the contradiction is put to a person.
     const resultingStatus = input.candidate?.rule_id ? (RESULTING_STATUS[outcome] ?? null) : null;
     const rationale = this.rationale(outcome, words, rule, signal, policy, input.evaluation);
     const record = {
@@ -395,6 +415,11 @@ export class LearningPipeline {
     for (const p of pendingInbox) {
       this.openInbox({ inbox_id: p.inboxId, project_id: signal.project_id, kind: p.kind, dedup_key: p.key, question: p.question, detail: p.detail, signal_id: signal.signal_id, decision_id: decisionId, rule_id: rule?.rule_id ?? null, caused_by: [decided.event_id] });
     }
+    // Automatic pause on a direct contradiction (docs/12 §9): a listed person said something that cannot be met together
+    // with a rule that was learned and never confirmed. That rule moves to note only; the new one is NOT turned on.
+    for (const learned of toPause) {
+      this.rules.autoPause(learned, "direct_contradiction", `${this.projects.displayName(signal.author_id)} asked for something that cannot be met together with it: "${rule!.statement}"`, [decided.event_id]);
+    }
     if (activates && input.evaluation) {
       // Attach the real examples, then ask the rule service - which re-verifies the whole grant.
       const ev = input.evaluation;
@@ -415,7 +440,9 @@ export class LearningPipeline {
 
   private rationale(outcome: DecisionOutcome, words: string[], rule: { statement: string } | null, signal: any, policy: LearningPolicy, ev: DecisionEvaluation | null): string {
     const project = this.projects.get(signal.project_id).name;
-    const said = signal.text ? ` Because ${this.projects.displayName(signal.author_id)} said: "${signal.text}"` : "";
+    // The person's words are NOT copied into the immutable decision record, so they can be deleted later (docs/12 §12).
+    // Screens show them from the signal while they exist.
+    const said = signal.author_id ? ` Because ${this.projects.displayName(signal.author_id)} said so directly.` : "";
     if (outcome === "auto_activate" || outcome === "auto_shadow") {
       return `Learned for ${project}: ${rule!.statement}${said} It catches the version that was corrected, passes the corrected version, and flags none of the ${ev!.heldout.artifacts} other document(s) in this project. Low-risk kind (exact check, this project only, adds a requirement). ${outcome === "auto_activate" ? "On now" : "On as a note only"} under the learning setting ${this.projects.displayName(policy.set_by.id)} chose. No person clicked; Undo is available.`;
     }
@@ -603,24 +630,208 @@ export class LearningPipeline {
     };
   }
 
-  // ------------------------------------------------------------ Phase 2 extension points (explicit, never silent)
-  /** docs/12 §9 "Automatic pause" (AT-L15). */
-  autoPause(_ruleId: string, _trigger: "direct_contradiction" | "disputes" | "example_regression" | "conflict_with_approved_rule"): never {
-    throw new NotImplementedYet("learning.autoPause", "moving an unconfirmed learned rule to shadow on contradiction, disputes, example regression or conflict");
+  // ------------------------------------------------------------ automatic pause, disputes (docs/12 §9, AT-L15)
+  /**
+   * The learning-side entry to the automatic pause. It is narrow by construction:
+   * `RuleService.autoPause` refuses any rule that a person approved or kept, any
+   * locked, workspace-level or imported rule, and any rule that is not on.
+   */
+  autoPause(ruleId: string, trigger: "direct_contradiction" | "disputes" | "example_regression" | "conflict_with_approved_rule", detail = "Paused automatically."): { paused: boolean; reason: string } {
+    return this.rules.autoPause(ruleId, trigger, detail);
   }
 
-  /** docs/12 §10 "Meaning: missed" (AT-L19). */
-  markAsCorrection(_captureId: string, _actor: Actor): never {
-    throw new NotImplementedYet("learning.markAsCorrection", "a person marking one of their own captured messages as a correction");
+  /** "This finding is wrong", by a person. Two on distinct documents pause an unconfirmed learned rule. */
+  disputeFinding(input: { run_id: string; rule_id: string; reason: string }, actor: Actor): { disputes: number; paused: boolean; note: string } {
+    requireHuman(actor, "Disputing a finding");
+    const runRecord = this.checks.getRun(input.run_id);
+    const result = runRecord.results.find((r) => r.rule_id === input.rule_id);
+    if (!result || result.outcome !== "fail") throw new ValidationError("dispute", ["only a rule that reported a problem in this check can be disputed"]);
+    const reason = (input.reason ?? "").trim().slice(0, 500) || "this finding is wrong";
+    const projectId = runRecord.context.project_id!;
+    return tx(this.db, () => {
+      const now = ts(this.clock.now());
+      run(this.db, "INSERT INTO finding_disputes (dispute_id, project_id, rule_id, run_id, artifact_id, finding_id, disputed_by, reason, at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT (rule_id, artifact_id, disputed_by) DO NOTHING",
+        this.ids("dsp"), projectId, input.rule_id, input.run_id, runRecord.artifact.artifact_id, result.findings[0]?.finding_id ?? null, actor.id, reason, now);
+      const recorded = this.ledger.append({
+        type: "feedback.recorded", project_id: projectId, actor, subject: { kind: "rule", id: input.rule_id }, refs: { rule_id: input.rule_id, run_id: input.run_id, artifact_id: runRecord.artifact.artifact_id },
+        caused_by: this.ledger.byRef("run_id", input.run_id).filter((e) => e.type === "run.completed").map((e) => e.event_id), summary: `${actor.display_name ?? actor.id} said a finding of "${result.title}" is wrong.`, payload: { kind: "finding_dispute", reason },
+      });
+      const disputes = get<{ n: number }>(this.db, "SELECT COUNT(DISTINCT artifact_id) AS n FROM finding_disputes WHERE rule_id = ? AND project_id = ?", input.rule_id, projectId)!.n;
+      const threshold = Number((this.policies.current(projectId)?.auto_pause as { disputes_distinct_artifacts?: number } | undefined)?.disputes_distinct_artifacts ?? 2);
+      if (disputes < threshold) return { disputes, paused: false, note: `Recorded. ${disputes} of ${threshold} documents disputed.` };
+      const out = this.rules.autoPause(input.rule_id, "disputes", `"This finding is wrong" was said about ${disputes} different documents.`, [recorded.event_id]);
+      return { disputes, paused: out.paused, note: out.paused ? "The rule is now a note only; a person can resume it." : `Recorded; the rule is unchanged: ${out.reason}.` };
+    });
   }
 
-  /** docs/12 §9 "Suppress" (suppression records are read by the decision already). */
-  suppress(_decisionId: string, _actor: Actor): never {
-    throw new NotImplementedYet("learning.suppress", "\"Don't learn this\": retiring the rule and recording a suppression");
+  // ------------------------------------------------------------ "this was a correction" (docs/12 §10, AT-L19)
+  /** A person's own captured messages that were not seen as corrections, while their text is kept for review. Only the author sees them. */
+  reviewMine(projectId: string, actor: Actor): Array<{ capture_id: string; text: string; occurred_at: string; delete_after: string }> {
+    const policy = this.policies.current(projectId);
+    const days = policy?.capture.non_signal_review_days ?? 14;
+    return all<any>(this.db, `SELECT e.capture_id, e.content_text, e.occurred_at, e.received_at FROM capture_events e JOIN capture_streams s ON s.stream_id = e.stream_id
+      WHERE e.project_id = ? AND s.author_id = ? AND e.kind = 'user_turn' AND e.disposition = 'not_a_signal' AND e.content_text IS NOT NULL ORDER BY e.received_at DESC`, projectId, actor.id)
+      .map((r) => ({ capture_id: r.capture_id, text: r.content_text, occurred_at: r.occurred_at, delete_after: addDays(r.received_at, days) }))
+      .filter((r) => r.delete_after > ts(this.clock.now()));
   }
 
-  /** docs/12 §12 "Deletion" (AT-L17, third part). */
-  deleteSignalText(_signalId: string, _actor: Actor): never {
-    throw new NotImplementedYet("learning.deleteSignalText", "deleting a signal's wording while keeping the ledger verifiable");
+  /**
+   * The author marks one of their own captured messages as a correction. It becomes
+   * a `user_direct` signal from the app and goes through the same stages - tests,
+   * decision, policy limits - as any other.
+   */
+  markAsCorrection(captureId: string, actor: Actor): { signal_id: string; outcome: string } {
+    requireHuman(actor, "Marking a message as a correction");
+    const e = get<any>(this.db, "SELECT * FROM capture_events WHERE capture_id = ? AND workspace_id = ?", captureId, this.workspaceId);
+    if (!e) throw new NotFound("captured message", captureId);
+    const stream = get<any>(this.db, "SELECT author_id FROM capture_streams WHERE stream_id = ?", e.stream_id)!;
+    if (stream.author_id !== actor.id) throw new PermissionDenied("only the person who wrote a message can mark it as a correction", "not_the_author");
+    if (e.kind !== "user_turn" || e.role !== "user") throw new ValidationError("correction", ["only a message a person typed can be marked; assistant and tool output never can"]);
+    if (get(this.db, "SELECT 1 FROM signals WHERE capture_id = ?", captureId) || e.disposition !== "not_a_signal") throw new Conflict("already_handled", "this message was already handled as a correction or set aside for another reason");
+    if (e.content_text === null) throw new Conflict("text_not_kept", "the text of this message is no longer kept, so it cannot be used");
+    const policy = this.policies.current(e.project_id);
+    if (!policy || policy.mode === "off" || !this.policies.consents(e.project_id, "app")) throw new ValidationError("correction", ["learning from the app is off for this project"]);
+    if (addDays(e.received_at, policy.capture.non_signal_review_days) <= ts(this.clock.now())) throw new Conflict("review_window_over", "the review window for this message has ended");
+    return tx(this.db, () => {
+      const marked = this.ledger.append({
+        type: "correction.recorded", project_id: e.project_id, actor, subject: { kind: "capture", id: captureId }, refs: { capture_id: captureId, stream_id: e.stream_id },
+        summary: `${actor.display_name ?? actor.id} marked one of their own captured messages: "this was a correction".`, payload: { channel: "review_mine" }, classification: "meta",
+      });
+      const markers = findMarkers(e.content_text);
+      const gaps = get<{ n: number }>(this.db, "SELECT COUNT(*) AS n FROM capture_gaps WHERE stream_id = ? AND closed_at IS NULL AND acknowledged_at IS NULL", e.stream_id)!.n;
+      run(this.db, "UPDATE capture_events SET content_state = 'present' WHERE capture_id = ?", captureId);
+      const signalId = this.signalAndCompile(e, { trust: "user_direct", surface: "app" }, { type: markers.standing.length ? "standing_instruction" : "direct_correction", markers }, gaps === 0, actor.id, policy, { late: false, caused_by: [marked.event_id] });
+      const outcome = get<{ outcome: string }>(this.db, "SELECT outcome FROM learning_decisions WHERE signal_id = ? ORDER BY rowid DESC LIMIT 1", signalId)?.outcome ?? "identified";
+      return { signal_id: signalId, outcome };
+    });
+  }
+
+  /** Captured text that was not a correction is kept only for the review window, then removed (docs/12 §12). */
+  purgeReviewText(): number {
+    let purged = 0;
+    for (const p of all<{ project_id: string }>(this.db, "SELECT DISTINCT project_id FROM capture_events WHERE workspace_id = ? AND disposition = 'not_a_signal' AND content_text IS NOT NULL AND project_id IS NOT NULL", this.workspaceId)) {
+      const days = this.policies.current(p.project_id)?.capture.non_signal_review_days ?? 14;
+      const cutoff = addDays(ts(this.clock.now()), -days);
+      purged += run(this.db, "UPDATE capture_events SET content_text = NULL, content_state = 'purged' WHERE project_id = ? AND disposition = 'not_a_signal' AND content_text IS NOT NULL AND received_at <= ?", p.project_id, cutoff).changes;
+    }
+    return purged;
+  }
+
+  // ------------------------------------------------------------ suppression, deletion (docs/12 §9, §12; AT-L17)
+  /** "Don't learn this": the rule (if any) is retired or rejected and the same candidate is never raised again in this project. */
+  suppress(decisionId: string, actor: Actor): { suppression_id: string; rule_id: string | null } {
+    requireHuman(actor, "Suppressing a learned correction");
+    const d = get<any>(this.db, "SELECT * FROM learning_decisions WHERE decision_id = ? AND project_id IS NOT NULL", decisionId);
+    if (!d) throw new NotFound("learning decision", decisionId);
+    const candidate = get<any>(this.db, "SELECT * FROM learning_candidates WHERE signal_id = ?", d.signal_id);
+    if (!candidate?.fingerprint) throw new ValidationError("suppress", ["this was not turned into a rule, so there is nothing to suppress; dismiss it instead"]);
+    return tx(this.db, () => {
+      const now = ts(this.clock.now());
+      const suppressionId = get<{ suppression_id: string }>(this.db, "SELECT suppression_id FROM suppressions WHERE project_id = ? AND fingerprint = ?", d.project_id, candidate.fingerprint)?.suppression_id ?? this.ids("sup");
+      run(this.db, "INSERT INTO suppressions (suppression_id, project_id, fingerprint, created_by, created_at) VALUES (?,?,?,?,?) ON CONFLICT (project_id, fingerprint) DO UPDATE SET removed_at = NULL, created_by = excluded.created_by, created_at = excluded.created_at",
+        suppressionId, d.project_id, candidate.fingerprint, actor.id, now);
+      this.ledger.append({
+        type: "learning.suppression_added", project_id: d.project_id, actor, subject: { kind: "suppression", id: suppressionId }, refs: { decision_id: decisionId, signal_id: d.signal_id, ...(candidate.rule_id ? { rule_id: candidate.rule_id } : {}) },
+        caused_by: this.ledger.byRef("decision_id", decisionId).slice(0, 1).map((e) => e.event_id), summary: `${actor.display_name ?? actor.id} said: don't learn this. The same correction will not be raised again in this project.`, payload: { fingerprint: candidate.fingerprint },
+      });
+      const ruleId: string | null = candidate.rule_id ?? null;
+      if (ruleId) {
+        const rule = this.rules.get(ruleId);
+        if (rule.status === "candidate") this.rules.reject(ruleId, actor, "don't learn this");
+        else if (rule.status === "active" || rule.status === "trial") this.rules.retire(ruleId, actor, "don't learn this");
+      }
+      for (const i of all<{ inbox_id: string }>(this.db, "SELECT inbox_id FROM inbox_items WHERE signal_id = ? AND status = 'open'", d.signal_id)) this.resolveInbox(i.inbox_id, actor, "don't learn this");
+      return { suppression_id: suppressionId, rule_id: ruleId };
+    });
+  }
+
+  /**
+   * A person deletes a signal's wording. The words are removed from every mutable
+   * record that held them; immutable records (decisions, ledger) never contained
+   * them, so history still verifies. Rules derived from it stay and show "original
+   * wording deleted".
+   */
+  deleteSignalText(signalId: string, actor: Actor): void {
+    requireHuman(actor, "Deleting the wording of a correction");
+    const sig = get<any>(this.db, "SELECT * FROM signals WHERE signal_id = ? AND workspace_id = ?", signalId, this.workspaceId);
+    if (!sig) throw new NotFound("signal", signalId);
+    const roles = parse<string[]>(get<{ roles_json: string }>(this.db, "SELECT roles_json FROM principals WHERE principal_id = ?", actor.id)?.roles_json ?? "[]");
+    if (sig.author_id && sig.author_id !== actor.id && !roles.includes("owner")) throw new PermissionDenied("only the author or the workspace owner can delete this wording", "not_entitled");
+    tx(this.db, () => {
+      const now = ts(this.clock.now());
+      const record = parse<any>(sig.record_json);
+      if (record.content) record.content.text = null;
+      run(this.db, "UPDATE signals SET text = NULL, record_json = ?, text_deleted_at = ?, text_deleted_by = ? WHERE signal_id = ?", json(record), now, actor.id, signalId);
+      run(this.db, "UPDATE corrections SET text = NULL WHERE signal_id = ?", signalId);
+      if (sig.capture_id) run(this.db, "UPDATE capture_events SET content_text = NULL, content_state = 'purged' WHERE capture_id = ?", sig.capture_id);
+      for (const i of all<any>(this.db, "SELECT inbox_id, detail_json FROM inbox_items WHERE signal_id = ?", signalId)) {
+        const detail = parse<Record<string, unknown>>(i.detail_json);
+        if ("text" in detail) detail.text = null;
+        run(this.db, "UPDATE inbox_items SET detail_json = ? WHERE inbox_id = ?", json(detail), i.inbox_id);
+      }
+      this.ledger.append({
+        type: "redaction.applied", project_id: sig.project_id, actor, subject: { kind: "signal", id: signalId }, refs: { signal_id: signalId, ...(sig.capture_id ? { capture_id: sig.capture_id } : {}) },
+        summary: `${actor.display_name ?? actor.id} deleted the original wording of a correction. Rules made from it stay and say "original wording deleted".`, payload: { removed: ["signal text", "correction text", "captured text", "inbox detail"] },
+      });
+    });
+  }
+
+  // ------------------------------------------------------------ acting on an inbox question (UX-13)
+  /**
+   * The controls on a "Needs you" item. Each is a person's act on the rule or the
+   * question; approving here is the same individual approval as on the rule page,
+   * with the real examples the learning evaluation found attached first.
+   */
+  actOnInbox(inboxId: string, actor: Actor, action: "approve" | "trial" | "reject" | "resume" | "retire" | "not_a_correction" | "suppress" | "dismiss"): InboxItem {
+    requireHuman(actor, "Answering a learning inbox item");
+    const item = this.toInbox(get<any>(this.db, "SELECT * FROM inbox_items WHERE inbox_id = ? AND workspace_id = ?", inboxId, this.workspaceId) ?? (() => { throw new NotFound("inbox item", inboxId); })());
+    if (item.status !== "open") throw new Conflict("already_answered", "this question was already answered");
+    const decisionId = get<{ decision_id: string | null }>(this.db, "SELECT decision_id FROM inbox_items WHERE inbox_id = ?", inboxId)!.decision_id;
+    return tx(this.db, () => {
+      const rule = item.rule_id ? this.rules.get(item.rule_id) : null;
+      const needRule = (statuses: string[]): NonNullable<typeof rule> => {
+        if (!rule || !statuses.includes(rule.status)) throw new ValidationError("inbox", [`this question has no rule that can be ${action === "trial" ? "tried" : action}d now`]);
+        return rule;
+      };
+      switch (action) {
+        case "approve":
+        case "trial": {
+          const r = needRule(["candidate"]);
+          this.attachRealExamples(r.rule_id);
+          this.rules.approveAndActivate(r.rule_id, actor, { trial: action === "trial" });
+          break;
+        }
+        case "reject":
+          this.rules.reject(needRule(["candidate"]).rule_id, actor, "rejected from the learning inbox");
+          break;
+        case "resume":
+          this.rules.resumeAutoPaused(needRule(["trial"]).rule_id, actor);
+          break;
+        case "retire":
+          this.rules.retire(needRule(["active", "trial"]).rule_id, actor, "retired from the learning inbox");
+          break;
+        case "not_a_correction":
+          if (rule?.status === "candidate") this.rules.reject(rule.rule_id, actor, "not a correction");
+          break;
+        case "suppress":
+          if (!decisionId) throw new ValidationError("inbox", ["there is no learning decision to suppress"]);
+          this.suppress(decisionId, actor);
+          return this.toInbox(get<any>(this.db, "SELECT * FROM inbox_items WHERE inbox_id = ?", inboxId));
+        case "dismiss":
+          break;
+      }
+      const words: Record<string, string> = { approve: "approved and turned on", trial: "approved on trial (note only)", reject: "rejected", resume: "resumed", retire: "retired", not_a_correction: "not a correction", dismiss: "dismissed" };
+      return this.resolveInbox(inboxId, actor, words[action]!);
+    });
+  }
+
+  /** Attach the real blocking and allowing examples the latest learning evaluation found (stored versions only). */
+  private attachRealExamples(ruleId: string): void {
+    const d = get<{ record_json: string }>(this.db, "SELECT d.record_json FROM learning_decisions d JOIN learning_candidates c ON c.signal_id = d.signal_id WHERE c.rule_id = ? ORDER BY d.rowid DESC LIMIT 1", ruleId);
+    const ev = d ? (parse<any>(d.record_json).evaluation as DecisionEvaluation | null) : null;
+    if (!ev) return;
+    const now = ts(this.clock.now());
+    if (ev.trigger_case?.result === "fail") this.rules.addCase(ruleId, { kind: "negative", description: "The version the correction was about (real, from the signal)", artifact_hash: ev.trigger_case.artifact_hash, expect: "fail", last_result: "fail", last_run_at: now });
+    for (const c of ev.real_passing_cases.filter((x) => x.result === "pass")) this.rules.addCase(ruleId, { kind: "positive", description: "The corrected version (real, from the same episode)", artifact_hash: c.artifact_hash, expect: "pass", last_result: "pass", last_run_at: now });
   }
 }

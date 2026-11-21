@@ -114,6 +114,7 @@ export class RuleService {
   private clock: Clock;
   private ids: IdGen;
   private workspaceId: string;
+  private autoPauseListeners: Array<(ruleId: string, trigger: AutoPauseTrigger, detail: string, eventId: string) => void> = [];
 
   constructor(deps: { db: Db; ledger: Ledger; clock: Clock; ids: IdGen; workspaceId: string }) {
     this.db = deps.db;
@@ -121,6 +122,11 @@ export class RuleService {
     this.clock = deps.clock;
     this.ids = deps.ids;
     this.workspaceId = deps.workspaceId;
+  }
+
+  /** The learning pipeline listens so that every automatic pause opens a question for a person. */
+  onAutoPause(listener: (ruleId: string, trigger: AutoPauseTrigger, detail: string, eventId: string) => void): void {
+    this.autoPauseListeners.push(listener);
   }
 
   // ------------------------------------------------------------ policy revision
@@ -281,6 +287,11 @@ export class RuleService {
         summary: `Rule turned on${target === "trial" ? " on trial (note only)" : ""}: ${rule.title}. Rules revision is now ${rev}.`,
         payload: { status: target, authority: "individual_approval", policy_rev: rev }, classification: "rule_text",
       });
+      // A learned, unconfirmed rule that cannot be met together with a rule a person just approved yields (docs/12 §11.2).
+      if (target === "active") {
+        const { status: _s, authority: _a, approval: _p, ...content } = this.get(ruleId);
+        for (const learned of this.analyse(content).contradicts_learned) this.autoPause(learned, "conflict_with_approved_rule", `It cannot be met together with "${rule.title}", which ${actor.display_name ?? actor.id} approved.`, [approved.event_id]);
+      }
       return this.get(ruleId);
     });
   }
@@ -473,7 +484,7 @@ export class RuleService {
       if (rule.status !== "active" && rule.status !== "trial") throw new InvariantViolation("rule_lifecycle", `only a rule that is on can be paused; this one is ${rule.status}`);
       if (rule.locked) throw new InvariantViolation("locked_rule", "a locked rule cannot be paused from a project");
       const now = ts(this.clock.now());
-      run(this.db, "INSERT INTO rule_suspensions (suspension_id, rule_id, suspended_by, suspended_at, until, reason, previous_status) VALUES (?,?,?,?,?,?,?)", this.ids("sup"), ruleId, actor.id, now, until, reason.trim(), rule.status);
+      run(this.db, "INSERT INTO rule_suspensions (suspension_id, rule_id, suspended_by, suspended_at, until, reason, previous_status) VALUES (?,?,?,?,?,?,?)", this.ids("pau"), ruleId, actor.id, now, until, reason.trim(), rule.status);
       const rev = this.bumpPolicyRev(`rule ${ruleId} paused until ${until}`);
       this.ledger.append({
         type: "rule.suspended", project_id: this.projectOf(rule), actor, subject: { kind: "rule", id: ruleId }, refs: { rule_id: ruleId, rule_revision: rule.revision },
@@ -539,13 +550,14 @@ export class RuleService {
       if (autoPause && autoPause.enabled === false) return refuse("automatic pause is switched off in the learning setting");
       const now = ts(this.clock.now());
       const rev = this.bumpPolicyRev(`rule ${ruleId} paused automatically (${trigger})`);
-      this.ledger.append({
+      const pausedEvent = this.ledger.append({
         type: "rule.auto_paused", project_id: this.projectOf(rule), actor: { kind: "system", id: SYS.learning, ...(a.delegated_by ? { on_behalf_of: a.delegated_by } : {}) }, subject: { kind: "rule", id: ruleId },
         refs: { rule_id: ruleId, rule_revision: rule.revision, ...(a.decision_id ? { decision_id: a.decision_id } : {}) }, caused_by: [...causedBy, ...this.lastEventId(ruleId)].slice(0, 2),
         summary: `${rule.title} moved to note only, automatically (${trigger.replace(/_/g, " ")}): ${detail} It was learned and never confirmed. Resume is available. Rules revision is now ${rev}.`,
         payload: { trigger, detail, paused_from: "active", status: "trial", policy_rev: rev }, classification: "rule_text",
       });
       this.setState(ruleId, "trial", { authority: { ...a, auto_paused: { at: now, reason: trigger, paused_from: "active" } } });
+      for (const l of this.autoPauseListeners) l(ruleId, trigger, detail, pausedEvent.event_id);
       return { paused: true, reason: detail };
     });
   }

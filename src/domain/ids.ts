@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 export const ID_PREFIXES = [
   "ws", "prj", "fld", "area", "usr", "agt", "ses", "cor", "rul", "case", "src", "snap", "map", "art", "run",
   "trc", "fnd", "fix", "chg", "att", "exc", "rcp", "act", "apr", "adp", "evt", "lrn", "str", "cap", "sig",
-  "epi", "evl", "dec", "inb", "sys", "ntc", "exe", "sup",
+  "epi", "evl", "dec", "inb", "sys", "ntc", "exe", "sup", "pau", "dsp",
 ] as const;
 export type IdPrefix = (typeof ID_PREFIXES)[number];
 
