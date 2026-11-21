@@ -65,7 +65,7 @@ export class Unavailable extends ClError {
 export class NotImplementedYet extends Unavailable {
   contract: string;
   constructor(contract: string, message: string) {
-    super(contract, `Not implemented in the Phase 1 scaffold: ${message}`, { contract, phase: "phase-2" });
+    super(contract, `Not implemented in this build: ${message}`, { contract, phase: "later" });
     this.contract = contract;
   }
 }

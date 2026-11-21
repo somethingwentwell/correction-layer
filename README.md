@@ -2,7 +2,7 @@
 
 **Turn the corrections you give once into checks that are applied whenever that kind of work is checked or sent through it: proposals, spreadsheets, PDFs, records. No Git, no terminal, no JSON required.**
 
-> **Status: design, plus a Phase 1 framework scaffold (2026-11-21).** The documents, schemas and examples in this repository are a specification: every schema and example file is a *proposed* contract, and the example files are not the output of running software. Alongside them there is now a **local-first framework scaffold** (`src/`, `test/`) that builds, starts and passes baseline tests. It is **not the finished product**: one person, one machine, a narrow set of check kinds and formats, a simulated capture adapter, and a simulated release route. Nothing is sent or paid. See [Implementation status](#implementation-status-phase-1-scaffold) and [HANDOFF.md](HANDOFF.md). Nothing here has been measured; performance figures are stated goals.
+> **Status: design, plus a local MVP implementation (Phase 1 framework + Phase 2 functions, 2026-11-21).** The documents, schemas and examples in this repository are a specification: every schema and example file is a *proposed* contract, and the example files are not the output of running software. Alongside them there is a **local-first implementation** (`src/`, `test/`) that builds, starts and passes its tests. It is **not the finished product**: one person, one machine, Markdown/plain-text quotes only, a command-line capture adapter but no connected assistant, and release either simulated or copied to a local folder you choose. Nothing is sent or paid, and no AI model is used. See [Implementation status](#implementation-status-phase-1-and-phase-2), [HANDOFF.md](HANDOFF.md) and [PHASE2_COVERAGE.md](PHASE2_COVERAGE.md). Nothing here has been measured; performance figures are stated goals.
 
 ## The idea in one minute
 
@@ -109,35 +109,33 @@ Observability is a product capability with its own screens and data model, not a
 - Not able to see apps or assistants that are not connected to it, and never a way around an app's own permissions.
 - Not a system that learns anything it likes. It can only add checks; it cannot switch one off, grant an exception, or change who may approve or send.
 
-## Implementation status (Phase 1 scaffold)
+## Implementation status (Phase 1 and Phase 2)
 
-The design documents above stay the source of truth, and their "nothing is implemented" banners describe the design as written. What exists in code today is deliberately narrower, and [HANDOFF.md](HANDOFF.md) lists exactly what is real, what is simulated, and what is left for Phase 2.
+The design documents above stay the source of truth, and their "nothing is implemented" banners describe the design as written. What exists in code today is deliberately narrower: [HANDOFF.md](HANDOFF.md) lists exactly what is real and simulated, and [PHASE2_COVERAGE.md](PHASE2_COVERAGE.md) lists what Phase 2 added, which acceptance tests now pass, and what is still deferred.
 
-Requirements: Node.js 24 or newer (the scaffold uses Node's built-in SQLite and runs TypeScript directly). No runtime dependencies; `npm install` only fetches the TypeScript compiler for type checking and building.
+Requirements: Node.js 24 or newer (built-in SQLite; TypeScript runs directly). No runtime dependencies; `npm install` only fetches the TypeScript compiler.
 
 ```sh
 npm install            # TypeScript toolchain only
-npm run typecheck      # strict type check of src/ and test/
-npm run build          # compile to dist/
-npm test               # baseline tests (Phase 2 contracts are listed as "todo", not as passing)
-npm run check:design   # the design-fixture checker (python3 tools/check_repo.py)
+npm run verify         # type check, build, tests (deferred contracts are "todo", never passing), design checker
 
 cp .env.example .env   # optional; no secrets are needed
 npm run dev            # start from source with reload (loopback only, port 4319)
 npm start              # start the built service (after npm run build)
+npm run cli -- capture say --adapter adp_... --outbox ./outbox.jsonl "Quotes must always be in SGD."
 ```
 
-Then open `http://127.0.0.1:4319/` (app) or `http://127.0.0.1:4319/healthz` (health). To look around with fictional, clearly labelled DEMO data, start with `CL_SEED_DEMO=1` or run `npm run seed:demo` once against an empty store.
+Then open `http://127.0.0.1:4319/`. To look around with fictional, clearly labelled DEMO data, start with `CL_SEED_DEMO=1` or run `npm run seed:demo` once against an empty store.
 
-| Real in this scaffold | Simulated or unavailable (and labelled so in the product) |
-|-----------------------|-----------------------------------------------------------|
-| Versioned SQLite workspace store with insert-only revisions, runs and a hash-chained ledger ("History check") | Word, Excel and PDF reading: reported as *Couldn't verify*, never as a pass |
-| Deterministic rule selection by scope index; a pure check engine; six check kinds evaluated | Nine check kinds declared but not evaluated: their rules report *Couldn't verify* |
-| Markdown / plain-text sales quotes with labelled values and one pricing table | Capture from a real assistant runtime: the event adapter is a simulated one with a real durable outbox |
-| Durable capture intake: acknowledgements, idempotency, ordering, replay, gaps, dead letters, consent, per-event project binding | Folder watching, client pairing and app sign-in |
-| Signal detection with English markers; a narrow deterministic compiler (currency rules); the deterministic learning decision | Compiling free-form corrections; automatic pause; "this was a correction"; suppression |
-| Receipts bound to version, rules in scope, action and sources; approval by a person; a gateway that re-verifies every binding | The release route records a release and copies nothing. Send and pay adapters do not exist |
-| The app shell: every designed screen is a route that renders from the services | Document preview, content diff, filters, effectiveness beyond plain counts |
+| Real | Simulated, partial or unavailable (and labelled so in the product) |
+|------|---------------------------------------------------------------------|
+| Projects, folders, facts, trusted sources with CSV import (bad rows reported, never read as zero) | Word, Excel and PDF documents: *Couldn't verify*. XLSX sources: export to CSV |
+| A correction editor with plain options, a dry run on your documents, overlapping rules shown before saving, real examples, change, pause with an end date, exceptions | Folder markers, moved/copied folders, folder watching |
+| Ten check kinds evaluated deterministically; rules selected by scope index, never by search | Attestation and spreadsheet check kinds; AI opinions |
+| Learning under a policy you set: 7 English correction patterns, tests on real versions, automatic activation only when low-risk, automatic pause of learned unconfirmed rules, inbox actions, "this was a correction", deleting wording | Free-form understanding, other languages, any AI model |
+| Durable capture: acknowledgements, replay, duplicates, gaps (acknowledge as lost), dead letters (retry), a command-line adapter over loopback HTTP, transcript backfill capped at the inbox | No assistant, chat app, email or office app is connected: each is named NOT CAPTURED |
+| Content diff of passages and values, re-run as recorded, a correction's journey by stored references, proposed changes kept apart from applied changes | Document preview with highlighted findings |
+| Receipts, approval by a person, a gateway that re-verifies every binding; release to a local folder you choose (exactly the checked bytes, never overwriting), with a newer-version choice | Send and pay do not exist. Release is simulated unless you choose a folder |
 
 ## Checking this repository
 

@@ -57,7 +57,7 @@ async function main(argv: string[]): Promise<number> {
       console.log(seeded.seeded ? `DEMO data loaded (project ${seeded.project_id}). It is fictional and labelled DEMO.` : `DEMO data not loaded: ${seeded.reason}.`);
     }
     const running = await startServer(app, { host: config.host, port: config.port });
-    console.log(`Correction Layer (Phase 1 scaffold) is running at ${running.url}`);
+    console.log(`Correction Layer (Phase 2 local MVP) is running at ${running.url}`);
     console.log(`  store:  ${config.dbPath} (schema version ${app.schemaVersion})`);
     console.log(`  health: ${running.url}/healthz`);
     const stop = (): void => {

@@ -2,7 +2,7 @@
   "name": "correction-layer",
   "version": "0.1.0",
   "private": true,
-  "description": "Correction Layer - Phase 1 local-first MVP framework scaffold (not the finished product)",
+  "description": "Correction Layer - Phase 2 local-first MVP (one person, one machine; not the finished product)",
   "type": "module",
   "engines": {
     "node": ">=24.0.0"

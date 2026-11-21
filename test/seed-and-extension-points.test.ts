@@ -46,18 +46,17 @@ test("remaining extension points are explicit: each throws a typed NotImplemente
 });
 
 // ---------------------------------------------------------------------------------------------
-// Contracts NOT implemented in Phase 1. Each `todo` names the acceptance test and the function
-// contract (see HANDOFF.md, "Next functions"). They are reported as todo - not as passing.
+// Contracts NOT implemented after Phase 2. Each `todo` names the acceptance test and the function
+// contract (see HANDOFF.md and PHASE2_COVERAGE.md). They are reported as todo - not as passing.
 // ---------------------------------------------------------------------------------------------
 const PHASE_2: Array<[string, string]> = [
-  ["AT-G4", "rules.createCandidate shows a structural duplicate BEFORE a candidate can be created (analysis exists: RuleService.analyse; the UX-7b flow does not)"],
   ["AT-G8", "engine/adapter upgrade is staged against stored rule examples; changed outcomes hold the upgrade and queue the rule"],
   ["AT-C4 / AT-C5 / AT-C7 / AT-C8", "context.resolveByMarker: renamed, moved and copied files and folders; foreign markers; the one-time question (ProjectService.resolveByMarker)"],
   ["AT-C6 (second half)", "\"check as which project?\" answered and remembered per lineage"],
   ["AT-F1 (container) / AT-F2 / AT-F3 / AT-F4 / AT-F5", "formats.docx.parse: container inspection, locators, mapping mismatch, embedded workbooks, tracked changes"],
   ["AT-L11", "recurrence: three independent episodes of the same hand edit produce a suggestion (needs edit diff compilation and folder watch)"],
   ["AT-E10 / AT-E11 / AT-E12", "offline matrix, clock-jump hold on receipts, backup and restore"],
-  ["AT-I5 / AT-I6", "two workspaces on one machine; translator outbound-request canary (no AI translator exists in Phase 1)"],
+  ["AT-I5 / AT-I6", "two workspaces on one machine; translator outbound-request canary (no AI translator exists in this build)"],
   ["AT-U1 to AT-U6, AT-R3", "usability tests with people; not automatable here"],
 ];
 // AT-F7 for XLSX: CSV is implemented; spreadsheet (XLSX) import needs a spreadsheet reader (see AT-F1 to AT-F5).

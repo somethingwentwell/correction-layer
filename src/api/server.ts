@@ -159,7 +159,7 @@ export function buildRoutes(app: App, csrf: string): Route[] {
   // ------------------------------------------------------------ health
   add("json", "GET", "/healthz", () => {
     const head = app.db.prepare("SELECT COALESCE(MAX(seq), 0) AS seq FROM events").get() as { seq: number };
-    return { status: "ok", service: "correction-layer", phase: "phase-1-scaffold", workspace_id: app.workspaceId, schema_version: app.schemaVersion, ledger_head_seq: head.seq, policy_rev: app.rules.policyRev(), time: ts(app.clock.now()) };
+    return { status: "ok", service: "correction-layer", phase: "phase-2-local-mvp", workspace_id: app.workspaceId, schema_version: app.schemaVersion, ledger_head_seq: head.seq, policy_rev: app.rules.policyRev(), time: ts(app.clock.now()) };
   });
   add("json", "GET", "/api/v1/capabilities", () => ({
     enforcement_tier: "advisory",
