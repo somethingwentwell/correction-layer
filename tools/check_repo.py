@@ -40,7 +40,11 @@ import sys
 from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SKIP_DIRS = {".git", "__pycache__"}
+SKIP_DIRS = {".git", "__pycache__",
+             # Implementation toolchain output (Phase 1 scaffold); never design fixtures.
+             "node_modules", "dist", "coverage", ".data"}
+# Toolchain configuration at the repository root: JSON, but not example files.
+SKIP_ROOT_FILES = {"package.json", "package-lock.json", "tsconfig.json", "tsconfig.build.json"}
 errors = []
 
 
@@ -52,7 +56,7 @@ def walk(ext):
     for base, dirs, files in os.walk(ROOT):
         dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS)
         for f in sorted(files):
-            if f.endswith(ext):
+            if f.endswith(ext) and not (base == ROOT and f in SKIP_ROOT_FILES):
                 yield os.path.join(base, f)
 
 

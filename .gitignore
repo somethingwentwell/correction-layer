@@ -1,7 +1,20 @@
-# Nothing generated belongs in this design repository.
+# Design-repo hygiene (kept from the spec-only commits)
 __pycache__/
 *.pyc
 .DS_Store
 *.log
 *.jsonl
 .env
+
+# Phase 1 implementation (Node / TypeScript)
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Local workspace stores never belong in the repository (ADR-001).
+.data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite

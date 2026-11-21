@@ -2,7 +2,7 @@
 
 **Turn the corrections you give once into checks that are applied whenever that kind of work is checked or sent through it: proposals, spreadsheets, PDFs, records. No Git, no terminal, no JSON required.**
 
-> **Status: design only (2026-11-20).** This repository is a specification. There is **no working enforcement implementation yet**: no app, no checker, no gateway. Every schema and example file here is a *proposed* contract, not the output of running software. Nothing here has been measured; performance figures are stated goals.
+> **Status: design, plus a Phase 1 framework scaffold (2026-11-21).** The documents, schemas and examples in this repository are a specification: every schema and example file is a *proposed* contract, and the example files are not the output of running software. Alongside them there is now a **local-first framework scaffold** (`src/`, `test/`) that builds, starts and passes baseline tests. It is **not the finished product**: one person, one machine, a narrow set of check kinds and formats, a simulated capture adapter, and a simulated release route. Nothing is sent or paid. See [Implementation status](#implementation-status-phase-1-scaffold) and [HANDOFF.md](HANDOFF.md). Nothing here has been measured; performance figures are stated goals.
 
 ## The idea in one minute
 
@@ -109,9 +109,39 @@ Observability is a product capability with its own screens and data model, not a
 - Not able to see apps or assistants that are not connected to it, and never a way around an app's own permissions.
 - Not a system that learns anything it likes. It can only add checks; it cannot switch one off, grant an exception, or change who may approve or send.
 
+## Implementation status (Phase 1 scaffold)
+
+The design documents above stay the source of truth, and their "nothing is implemented" banners describe the design as written. What exists in code today is deliberately narrower, and [HANDOFF.md](HANDOFF.md) lists exactly what is real, what is simulated, and what is left for Phase 2.
+
+Requirements: Node.js 24 or newer (the scaffold uses Node's built-in SQLite and runs TypeScript directly). No runtime dependencies; `npm install` only fetches the TypeScript compiler for type checking and building.
+
+```sh
+npm install            # TypeScript toolchain only
+npm run typecheck      # strict type check of src/ and test/
+npm run build          # compile to dist/
+npm test               # baseline tests (Phase 2 contracts are listed as "todo", not as passing)
+npm run check:design   # the design-fixture checker (python3 tools/check_repo.py)
+
+cp .env.example .env   # optional; no secrets are needed
+npm run dev            # start from source with reload (loopback only, port 4319)
+npm start              # start the built service (after npm run build)
+```
+
+Then open `http://127.0.0.1:4319/` (app) or `http://127.0.0.1:4319/healthz` (health). To look around with fictional, clearly labelled DEMO data, start with `CL_SEED_DEMO=1` or run `npm run seed:demo` once against an empty store.
+
+| Real in this scaffold | Simulated or unavailable (and labelled so in the product) |
+|-----------------------|-----------------------------------------------------------|
+| Versioned SQLite workspace store with insert-only revisions, runs and a hash-chained ledger ("History check") | Word, Excel and PDF reading: reported as *Couldn't verify*, never as a pass |
+| Deterministic rule selection by scope index; a pure check engine; six check kinds evaluated | Nine check kinds declared but not evaluated: their rules report *Couldn't verify* |
+| Markdown / plain-text sales quotes with labelled values and one pricing table | Capture from a real assistant runtime: the event adapter is a simulated one with a real durable outbox |
+| Durable capture intake: acknowledgements, idempotency, ordering, replay, gaps, dead letters, consent, per-event project binding | Folder watching, client pairing and app sign-in |
+| Signal detection with English markers; a narrow deterministic compiler (currency rules); the deterministic learning decision | Compiling free-form corrections; automatic pause; "this was a correction"; suppression |
+| Receipts bound to version, rules in scope, action and sources; approval by a person; a gateway that re-verifies every binding | The release route records a release and copies nothing. Send and pay adapters do not exist |
+| The app shell: every designed screen is a route that renders from the services | Document preview, content diff, filters, effectiveness beyond plain counts |
+
 ## Checking this repository
 
-The repository contains one small, dependency-free maintenance script. It is not part of the product; it only keeps the design documents honest.
+The repository contains one small, dependency-free maintenance script. It is not part of the product; it only keeps the design documents honest. (It skips the implementation's toolchain files and output: `node_modules/`, `dist/`, and the root `package*.json` / `tsconfig*.json`.)
 
 ```sh
 python3 tools/check_repo.py
@@ -123,8 +153,11 @@ It verifies that internal links and anchors resolve, that every JSON file and ev
 
 ```text
 README.md
+HANDOFF.md   what the Phase 1 scaffold implements, and what Phase 2 must complete
 docs/        design documents (start with 01 and 02)
 examples/    worked examples with proposed fixture files
-schemas/     proposed JSON Schemas (draft 2020-12 subset)
-tools/       check_repo.py - consistency checks for this repository only
+schemas/     proposed JSON Schemas (draft 2020-12 subset); also the scaffold's wire contracts
+src/         Phase 1 framework scaffold (TypeScript, runs on Node 24)
+test/        baseline tests for the scaffold
+tools/       check_repo.py - consistency checks for the design documents only
 ```
