@@ -58,8 +58,6 @@ const PHASE_2: Array<[string, string]> = [
   ["AT-C9 / AT-E1", "newer-version pause with the approver choosing a version; a real release-folder adapter that copies the checked bytes"],
   ["AT-F1 (container) / AT-F2 / AT-F3 / AT-F4 / AT-F5", "formats.docx.parse: container inspection, locators, mapping mismatch, embedded workbooks, tracked changes"],
   ["AT-F7", "ProjectService.importSnapshot from CSV/XLSX files, rejecting formula cells without cached results"],
-  ["AT-L3 (backfill)", "adapter backfill from a runtime transcript, marked and capped at the inbox"],
-  ["AT-L6", "naming unsupported assistants as NOT CAPTURED from a registry of known runtimes (labels exist; the registry does not)"],
   ["AT-L11", "recurrence: three independent episodes of the same hand edit produce a suggestion (needs edit diff compilation and folder watch)"],
   ["AT-O5 (content)", "CheckService.compare content_diff: changed cells and passages before and after"],
   ["AT-O7", "re-run as recorded: replay a stored run from its inputs and report mismatches or purged inputs"],

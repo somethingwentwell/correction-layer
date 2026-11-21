@@ -36,6 +36,8 @@ import type { Ledger } from "../ledger/ledger.ts";
 import { requireHuman } from "../policy/rules.ts";
 import type { Db } from "../store/db.ts";
 import { all, get, json, parse, run, tx } from "../store/db.ts";
+import type { SurfaceLabel } from "./registry.ts";
+import { KNOWN_RUNTIMES } from "./registry.ts";
 
 export const GAP_TIMEOUT_SECONDS = 60;
 export const STALE_AFTER_SECONDS = 300;
@@ -79,7 +81,7 @@ export interface StreamState {
   processed_through: number;
   adapter_last_seq: number;
   final_seq: number | null;
-  gaps: Array<{ from_seq: number; to_seq: number; detected_at: string; closed_at: string | null; cause: string }>;
+  gaps: Array<{ from_seq: number; to_seq: number; detected_at: string; closed_at: string | null; cause: string; acknowledged_by: string | null; acknowledged_at: string | null }>;
   dead_letters: Array<{ source_seq: number; stage: string; reason: string; at: string }>;
   duplicates_dropped: number;
   held_out_of_order: number;
@@ -285,7 +287,12 @@ export class CaptureIntake {
       this.deadLetter(streamId, -arrival, captureId, "intake", seq === null ? "missing_source_seq" : "wrong_stream", raw);
       return log("schema_invalid", "dead_letter");
     }
-    const seen = get<{ content_digest: string }>(this.db, "SELECT content_digest FROM capture_received WHERE stream_id = ? AND source_seq = ?", streamId, seq);
+    const seen = get<{ content_digest: string; result: string }>(this.db, "SELECT content_digest, result FROM capture_received WHERE stream_id = ? AND source_seq = ?", streamId, seq);
+    if (seen?.result === "acknowledged_lost") {
+      // A person already acknowledged this event as lost and the stream moved past it: set aside visibly, never processed.
+      this.deadLetter(streamId, seq, captureId, "intake", "arrived after a person acknowledged it as lost", raw);
+      return log("ok", "dead_letter");
+    }
     if (seen) {
       if (seen.content_digest === digest) {
         run(this.db, "UPDATE capture_streams SET duplicates_dropped = duplicates_dropped + 1 WHERE stream_id = ?", streamId);
@@ -440,6 +447,8 @@ export class CaptureIntake {
     for (const gap of all<any>(this.db, "SELECT from_seq, to_seq FROM capture_gaps WHERE stream_id = ? AND closed_at IS NULL", streamId)) {
       if (s.cursor >= gap.to_seq) {
         run(this.db, "UPDATE capture_gaps SET closed_at = ? WHERE stream_id = ? AND from_seq = ? AND to_seq = ?", now, streamId, gap.from_seq, gap.to_seq);
+        // A gap a person acknowledged as lost closes without claiming that nothing was lost.
+        if (get(this.db, "SELECT 1 FROM capture_gaps WHERE stream_id = ? AND from_seq = ? AND to_seq = ? AND acknowledged_at IS NOT NULL", streamId, gap.from_seq, gap.to_seq)) continue;
         this.ledger.append({
           type: "capture.gap_closed", project_id: s.project_id, actor: { kind: "system", id: SYS.intake }, subject: { kind: "capture_stream", id: streamId }, refs: { stream_id: streamId, adapter_id: s.adapter_id },
           caused_by: this.ledger.byRef("stream_id", streamId).filter((e) => e.type === "capture.gap_detected").slice(-1).map((e) => e.event_id),
@@ -464,7 +473,7 @@ export class CaptureIntake {
   stream(streamId: string): StreamState {
     const s = get<any>(this.db, "SELECT * FROM capture_streams WHERE stream_id = ? AND workspace_id = ?", streamId, this.workspaceId);
     if (!s) throw new NotFound("capture stream", streamId);
-    const gaps = all<any>(this.db, "SELECT from_seq, to_seq, detected_at, closed_at, cause FROM capture_gaps WHERE stream_id = ? ORDER BY from_seq", streamId);
+    const gaps = all<any>(this.db, "SELECT from_seq, to_seq, detected_at, closed_at, cause, acknowledged_by, acknowledged_at FROM capture_gaps WHERE stream_id = ? ORDER BY from_seq", streamId);
     const dead = all<any>(this.db, "SELECT source_seq, stage, reason, at FROM capture_dead_letters WHERE stream_id = ? AND resolved_at IS NULL ORDER BY at", streamId);
     const now = this.clock.now().getTime();
     const openGap = gaps.find((g) => g.closed_at === null);
@@ -474,6 +483,10 @@ export class CaptureIntake {
     if (revoked) [health, reason] = ["disconnected", "The adapter was revoked."];
     else if (s.integrity_flag) [health, reason] = ["degraded", `Integrity warning: ${s.integrity_flag}.`];
     else if (dead.length) [health, reason] = ["degraded", `${dead.length} event${dead.length === 1 ? "" : "s"} could not be read.`];
+    else if (gaps.some((g) => g.acknowledged_at)) {
+      const lost = gaps.filter((g) => g.acknowledged_at);
+      [health, reason] = ["gap", `${lost.map((g) => `Events ${g.from_seq} to ${g.to_seq}`).join("; ")} were lost; ${this.projects.displayName(lost[0]!.acknowledged_by)} acknowledged it. Corrections made then were not seen, and nothing after them turns on by itself.`];
+    }
     else if (openGap && (s.status === "closed_incomplete" || now - parseTs(openGap.detected_at).getTime() > GAP_TIMEOUT_SECONDS * 1000)) [health, reason] = ["gap", `Events ${openGap.from_seq} to ${openGap.to_seq} are missing. Corrections made then may not have been seen.`];
     else if (openGap || s.cursor < s.adapter_last_seq) [health, reason] = ["lagging", "The adapter has more than has been delivered so far."];
     else if (s.status === "open" && now - parseTs(s.last_heard_at).getTime() > STALE_AFTER_SECONDS * 1000) [health, reason] = ["stale", "A session is open and nothing has been heard from the adapter recently."];
@@ -498,7 +511,53 @@ export class CaptureIntake {
     return get<{ n: number }>(this.db, "SELECT COALESCE(SUM(count), 0) AS n FROM capture_consent_blocked WHERE project_key = ?", projectId)!.n;
   }
 
-  /** A person sets a dead letter aside for good ("Discard"). Retrying after an update is a Phase 2 extension. */
+  /**
+   * A person acknowledges that missing events will not arrive (the adapter lost
+   * them). The gap stays visible and the episode stays "capture incomplete" - it
+   * only stops processing from waiting for events that will never come.
+   */
+  acknowledgeGap(streamId: string, fromSeq: number, actor: Actor): void {
+    requireHuman(actor, "Acknowledging a capture gap");
+    tx(this.db, () => {
+      const gap = get<any>(this.db, "SELECT g.*, s.project_id, s.adapter_id FROM capture_gaps g JOIN capture_streams s ON s.stream_id = g.stream_id WHERE g.stream_id = ? AND g.from_seq = ? AND g.closed_at IS NULL AND s.workspace_id = ?", streamId, fromSeq, this.workspaceId);
+      if (!gap) throw new NotFound("open capture gap", `${streamId}#${fromSeq}`);
+      if (gap.acknowledged_at) return;
+      const now = ts(this.clock.now());
+      run(this.db, "UPDATE capture_gaps SET acknowledged_by = ?, acknowledged_at = ? WHERE stream_id = ? AND from_seq = ? AND to_seq = ?", actor.id, now, streamId, gap.from_seq, gap.to_seq);
+      // The missing positions are recorded as lost so the cursor can pass them and held events can be admitted, in order.
+      for (let seq = gap.from_seq; seq <= gap.to_seq; seq++) {
+        run(this.db, "INSERT INTO capture_received (stream_id, source_seq, capture_id, content_digest, result, received_at) VALUES (?,?,'','','acknowledged_lost',?) ON CONFLICT (stream_id, source_seq) DO NOTHING", streamId, seq, now);
+      }
+      this.ledger.append({
+        type: "capture.health_changed", project_id: gap.project_id, actor, subject: { kind: "capture_stream", id: streamId }, refs: { stream_id: streamId, adapter_id: gap.adapter_id },
+        caused_by: this.ledger.byRef("stream_id", streamId).filter((e) => e.type === "capture.gap_detected").slice(-1).map((e) => e.event_id),
+        summary: `${actor.display_name ?? actor.id} acknowledged events ${gap.from_seq} to ${gap.to_seq} as lost. The gap stays visible; nothing from that episode turns on by itself.`, payload: { health: "gap", reason: "acknowledged_lost", from_seq: gap.from_seq, to_seq: gap.to_seq },
+      });
+      this.advance(streamId);
+      this.trackGaps(streamId);
+    });
+    for (const listener of this.afterAdvance) listener(streamId);
+  }
+
+  /**
+   * Every place a correction might be made, with exactly one label, generated from
+   * the adapters actually paired and the project's learning consent (AT-L6). Known
+   * apps without an adapter are named NOT CAPTURED.
+   */
+  surfaceLabels(projectId: string): SurfaceLabel[] {
+    const on = (surface: Surface): boolean => this.policies.consents(projectId, surface);
+    const out: SurfaceLabel[] = [];
+    out.push({ name: "This app (correction box and \"this was a correction\")", label: on("app") ? "CAPTURED" : "NOT CAPTURED", simulated: false, surface: "app", adapter_id: null, detail: on("app") ? "can lead to an automatic rule within the learning setting" : "learning is off for this project" });
+    for (const a of this.adapters().filter((x) => x.kind !== "app_native")) {
+      const captured = !a.revoked && on("attested_user_turn");
+      out.push({ name: a.label, label: captured ? "CAPTURED" : "NOT CAPTURED", simulated: a.simulated, surface: "attested_user_turn", adapter_id: a.adapter_id, detail: a.revoked ? "the adapter was revoked" : captured ? "durable outbox, acknowledgements, replay" : "learning for attested assistant messages is off in this project" });
+    }
+    out.push({ name: "Corrections an assistant passes on by itself", label: on("assistant_relay") ? "RELAYED" : "NOT CAPTURED", simulated: false, surface: "assistant_relay", adapter_id: null, detail: on("assistant_relay") ? "best effort, never the person's own words; always asks you" : "learning is off for relayed corrections" });
+    for (const k of KNOWN_RUNTIMES) out.push({ name: k.name, label: "NOT CAPTURED", simulated: false, surface: null, adapter_id: null, detail: k.note });
+    return out;
+  }
+
+  /** A person sets a dead letter aside for good ("Discard"). Processing failures can be retried instead (LearningPipeline.retryDeadLetter). */
   discardDeadLetter(streamId: string, seq: number, actor: Actor): void {
     requireHuman(actor, "Discarding an unreadable event");
     run(this.db, "UPDATE capture_dead_letters SET resolved_at = ? WHERE stream_id = ? AND source_seq = ?", ts(this.clock.now()), streamId, seq);

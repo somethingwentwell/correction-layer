@@ -135,9 +135,10 @@ export class LearningPipeline {
       const s = get<any>(this.db, "SELECT cursor, processed_through, adapter_last_seq, status FROM capture_streams WHERE stream_id = ?", streamId);
       if (!s) throw new NotFound("capture stream", streamId);
       if (s.processed_through >= s.cursor) return { processed, held: false, failed: false };
-      const openGap = get<any>(this.db, "SELECT detected_at FROM capture_gaps WHERE stream_id = ? AND closed_at IS NULL ORDER BY detected_at LIMIT 1", streamId);
+      const openGap = get<any>(this.db, "SELECT detected_at, acknowledged_at FROM capture_gaps WHERE stream_id = ? AND closed_at IS NULL ORDER BY detected_at LIMIT 1", streamId);
       const behind = !!openGap || s.cursor < s.adapter_last_seq;
-      const timedOut = s.status !== "open" || (!!openGap && this.clock.now().getTime() - parseTs(openGap.detected_at).getTime() > GAP_TIMEOUT_SECONDS * 1000);
+      // A gap a person acknowledged as lost is not waited for; the episode still counts as incomplete.
+      const timedOut = s.status !== "open" || !!openGap?.acknowledged_at || (!!openGap && this.clock.now().getTime() - parseTs(openGap.detected_at).getTime() > GAP_TIMEOUT_SECONDS * 1000);
       if (behind && !timedOut) return { processed, held: true, failed: false };
       const seq = s.processed_through + 1;
       const event = get<any>(this.db, "SELECT * FROM capture_events WHERE stream_id = ? AND source_seq = ?", streamId, seq);
@@ -145,7 +146,9 @@ export class LearningPipeline {
         tx(this.db, () => {
           if (event) {
             this.beforeProcess?.(event.capture_id);
-            this.processEvent(event, !behind);
+            // Events after a range a person acknowledged as lost belong to an incomplete episode: never automatic.
+            const afterLoss = !!get(this.db, "SELECT 1 FROM capture_gaps WHERE stream_id = ? AND acknowledged_at IS NOT NULL AND from_seq <= ?", streamId, seq);
+            this.processEvent(event, !behind && !afterLoss);
           }
           run(this.db, "UPDATE capture_streams SET processed_through = ? WHERE stream_id = ?", seq, streamId);
         });
@@ -664,6 +667,35 @@ export class LearningPipeline {
     });
   }
 
+  /**
+   * A person retries an event whose processing failed (after a fix or an update).
+   * Effectively-once still holds: the signal is keyed by the capture id. A failure
+   * again leaves it set aside, visibly.
+   */
+  retryDeadLetter(streamId: string, seq: number, actor: Actor): { retried: boolean; error: string | null } {
+    requireHuman(actor, "Retrying an event that could not be processed");
+    const dl = get<any>(this.db, "SELECT * FROM capture_dead_letters WHERE stream_id = ? AND source_seq = ? AND stage = 'processing' AND resolved_at IS NULL", streamId, seq);
+    if (!dl) throw new NotFound("event set aside during processing", `${streamId}#${seq}`);
+    const e = get<any>(this.db, "SELECT * FROM capture_events WHERE capture_id = ?", dl.capture_id);
+    if (!e) throw new NotFound("captured event", dl.capture_id);
+    try {
+      tx(this.db, () => {
+        this.beforeProcess?.(e.capture_id);
+        this.processEvent(e, !get(this.db, "SELECT 1 FROM capture_gaps WHERE stream_id = ? AND (closed_at IS NULL OR (acknowledged_at IS NOT NULL AND from_seq <= ?))", streamId, seq));
+        run(this.db, "UPDATE capture_dead_letters SET resolved_at = ? WHERE stream_id = ? AND source_seq = ? AND stage = 'processing'", ts(this.clock.now()), streamId, seq);
+        this.ledger.append({
+          type: "capture.health_changed", project_id: e.project_id, actor, subject: { kind: "capture_stream", id: streamId }, refs: { stream_id: streamId, capture_id: e.capture_id },
+          summary: `${actor.display_name ?? actor.id} retried an event that could not be processed; it was processed this time.`, payload: { health: "healthy", reason: "dead_letter_retried", source_seq: seq },
+        });
+      });
+      return { retried: true, error: null };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      run(this.db, "UPDATE capture_dead_letters SET attempts = attempts + 1, reason = ?, at = ? WHERE stream_id = ? AND source_seq = ? AND stage = 'processing'", message, ts(this.clock.now()), streamId, seq);
+      return { retried: false, error: message };
+    }
+  }
+
   // ------------------------------------------------------------ "this was a correction" (docs/12 §10, AT-L19)
   /** A person's own captured messages that were not seen as corrections, while their text is kept for review. Only the author sees them. */
   reviewMine(projectId: string, actor: Actor): Array<{ capture_id: string; text: string; occurred_at: string; delete_after: string }> {
@@ -698,7 +730,7 @@ export class LearningPipeline {
         summary: `${actor.display_name ?? actor.id} marked one of their own captured messages: "this was a correction".`, payload: { channel: "review_mine" }, classification: "meta",
       });
       const markers = findMarkers(e.content_text);
-      const gaps = get<{ n: number }>(this.db, "SELECT COUNT(*) AS n FROM capture_gaps WHERE stream_id = ? AND closed_at IS NULL AND acknowledged_at IS NULL", e.stream_id)!.n;
+      const gaps = get<{ n: number }>(this.db, "SELECT COUNT(*) AS n FROM capture_gaps WHERE stream_id = ? AND (closed_at IS NULL OR (acknowledged_at IS NOT NULL AND from_seq <= ?))", e.stream_id, e.source_seq)!.n;
       run(this.db, "UPDATE capture_events SET content_state = 'present' WHERE capture_id = ?", captureId);
       const signalId = this.signalAndCompile(e, { trust: "user_direct", surface: "app" }, { type: markers.standing.length ? "standing_instruction" : "direct_correction", markers }, gaps === 0, actor.id, policy, { late: false, caused_by: [marked.event_id] });
       const outcome = get<{ outcome: string }>(this.db, "SELECT outcome FROM learning_decisions WHERE signal_id = ? ORDER BY rowid DESC LIMIT 1", signalId)?.outcome ?? "identified";
