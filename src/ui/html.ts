@@ -51,26 +51,36 @@ export function label(text: string, cls = ""): Safe {
 export function unavailable(title: string, detail: string): Safe {
   return html`<div class="unavailable" role="note"><strong>Not available in this build:</strong> ${title}. <span>${detail}</span></div>`;
 }
+/** A one-button form for an act of the local person: same-origin POST with the form token. */
+export function postButton(csrf: string, action: string, button: string, fields: Record<string, string> = {}, primary = false): Safe {
+  return html`<form class="inline" method="post" action="${action}"><input type="hidden" name="_csrf" value="${csrf}">${Object.entries(fields).map(([k, v]) => html`<input type="hidden" name="${k}" value="${v}">`)}<button type="submit" class="${primary ? "primary" : ""}">${button}</button></form>`;
+}
+
 export function empty(text: string): Safe {
   return html`<p class="empty">${text}</p>`;
 }
 
-export function layout(o: { title: string; body: Safe; project?: { project_id: string; name: string; is_demo: boolean } | null; demo: boolean; workspace: string; flash?: string | null }): string {
+export function layout(o: { title: string; body: Safe; project?: { project_id: string; name: string; is_demo: boolean } | null; demo: boolean; workspace: string; flash?: string | null; path?: string }): string {
   const p = o.project;
+  const link = (href: string, text: string): Safe => {
+    const current = o.path === href || (href !== `/projects/${p?.project_id}` && !!o.path?.startsWith(href + "/"));
+    return html`<a href="${href}" ${current ? html`aria-current="page"` : ""}>${text}</a>`;
+  };
   const nav = p
-    ? html`<nav aria-label="Project"><a href="/projects/${p.project_id}">Home</a><a href="/projects/${p.project_id}/rules">Rules</a><a href="/projects/${p.project_id}/learning">Learning</a><a href="/projects/${p.project_id}/capture">Capture health</a><a href="/projects/${p.project_id}/activity">Activity</a><a href="/projects/${p.project_id}/coverage">Coverage</a><a href="/projects/${p.project_id}/effectiveness">Effectiveness</a></nav>`
+    ? html`<nav aria-label="Project">${link(`/projects/${p.project_id}`, "Home")}${link(`/projects/${p.project_id}/rules`, "Rules")}${link(`/projects/${p.project_id}/learning`, "Learning")}${link(`/projects/${p.project_id}/capture`, "Capture health")}${link(`/projects/${p.project_id}/activity`, "Activity")}${link(`/projects/${p.project_id}/coverage`, "Coverage")}${link(`/projects/${p.project_id}/settings`, "Settings")}${link(`/projects/${p.project_id}/effectiveness`, "Counts")}</nav>`
     : html``;
   return html`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${o.title} - Correction Layer</title><link rel="stylesheet" href="/assets/app.css"></head>
 <body>
-<header><a class="brand" href="/">Correction Layer</a><span class="ws">${o.workspace}</span><a href="/history">History check</a></header>
+<a class="skip" href="#main">Skip to content</a>
+<header><a class="brand" href="/">Correction Layer</a><span class="ws">${o.workspace}</span><a href="/">All projects</a><a href="/history">History check</a></header>
 ${o.demo ? html`<div class="demo" role="note"><strong>DEMO DATA.</strong> Projects, people, documents and rules marked DEMO are fictional and illustrative. Nothing shown is a measurement, and no rule here was shown to make work "better".</div>` : ""}
-<div class="phase" role="note">Phase 1 framework scaffold: one person, one machine. Checks are advisory; the only gated route is a SIMULATED release. Nothing is sent or paid.</div>
+<div class="phase" role="note">Local MVP (Phase 2): one person, one machine. Checks are advisory; the only gated route is release (simulated, or a local folder you choose). Nothing is sent or paid. No AI model is used.</div>
 ${p ? html`<div class="crumb"><a href="/">All projects</a> / <strong>${p.name}</strong>${p.is_demo ? label("DEMO", "demo-label") : ""}</div>` : ""}
 ${nav}
 ${o.flash ? html`<div class="flash" role="status">${o.flash}</div>` : ""}
-<main><h1>${o.title}</h1>${o.body}</main>
+<main id="main" tabindex="-1"><h1>${o.title}</h1>${o.body}</main>
 <footer>Local-first. Times are shown in the workspace timezone; stored times are UTC.</footer>
 </body></html>`.value;
 }
@@ -93,4 +103,9 @@ form.inline{display:inline}button{font:inherit;padding:.25rem .7rem;border:1px s
 input[type=text],textarea,select{font:inherit;padding:.3rem;border:1px solid var(--line);border-radius:4px;width:100%;max-width:40rem}textarea{min-height:9rem;font-family:ui-monospace,monospace}
 fieldset{border:1px solid var(--line);border-radius:6px;margin:.8rem 0}label{display:block;margin:.35rem 0}.timeline td:first-child{white-space:nowrap}.word{font-weight:700;letter-spacing:.03em}
 footer{border-top:1px solid var(--line);padding:.6rem 1.2rem;color:var(--muted);font-size:.85em}
+.skip{position:absolute;left:-999px;top:0;background:#fff;padding:.4rem .8rem;border:2px solid var(--fg)}.skip:focus{left:.5rem;z-index:10}
+nav a[aria-current=page]{font-weight:700;text-decoration:none;border-bottom:2px solid var(--fg)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--link);outline-offset:2px}
+.error{border-color:var(--bad);background:#fff5f5}caption{text-align:left;color:var(--muted);padding:.3rem 0}del{background:#fde8e8;text-decoration:line-through}ins{background:#e6f4ea;text-decoration:none}
+details{margin:.6rem 0}summary{cursor:pointer}.actions form{margin:0 .3rem .3rem 0}label.inline{display:inline}input[type=number],input[type=date],input[type=file]{font:inherit;padding:.3rem}
 `;

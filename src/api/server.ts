@@ -28,10 +28,12 @@ import { isId } from "../domain/ids.ts";
 import { ts } from "../domain/time.ts";
 import type { Actor, LearningMode } from "../domain/types.ts";
 import { FORMAT_ADAPTERS } from "../formats/adapters.ts";
+import { KNOWN_RUNTIMES } from "../capture/registry.ts";
 import { CATALOGUE } from "../policy/catalogue.ts";
 import { CSS, html, layout } from "../ui/html.ts";
 import type { Page } from "../ui/pages.ts";
 import { Pages } from "../ui/pages.ts";
+import { ManagePages, templateValues } from "../ui/manage.ts";
 
 const MAX_BODY = 6 * 1024 * 1024;
 const BRIEF_BUDGET = 50;
@@ -64,7 +66,37 @@ export interface RunningServer {
   close(): Promise<void>;
 }
 
-function readBody(req: IncomingMessage): Promise<string> {
+/** One uploaded file from a multipart form. The service reads uploaded bytes only - never a path on disk. */
+export interface Upload {
+  filename: string;
+  bytes: Uint8Array;
+}
+
+/** Minimal multipart/form-data parser (RFC 7578) for the app's upload forms. Total: malformed parts are ignored. */
+export function parseMultipart(body: Buffer, contentType: string): Record<string, string | Upload> {
+  const m = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType);
+  if (!m) throw new ValidationError("request", ["the upload has no boundary"]);
+  const boundary = Buffer.from(`--${(m[1] ?? m[2])!.trim()}`);
+  const out: Record<string, string | Upload> = {};
+  let start = body.indexOf(boundary);
+  while (start >= 0) {
+    const next = body.indexOf(boundary, start + boundary.length);
+    if (next < 0) break;
+    const part = body.subarray(start + boundary.length + 2, next - 2); // skip CRLF after boundary, before next
+    const split = part.indexOf("\r\n\r\n");
+    if (split > 0) {
+      const head = part.subarray(0, split).toString("utf8");
+      const data = part.subarray(split + 4);
+      const name = /name="([^"]*)"/i.exec(head)?.[1];
+      const filename = /filename="([^"]*)"/i.exec(head)?.[1];
+      if (name) out[name] = filename !== undefined ? { filename: filename.split(/[\\/]/).pop()!, bytes: new Uint8Array(data) } : data.toString("utf8");
+    }
+    start = next;
+  }
+  return out;
+}
+
+function readBody(req: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     let size = 0;
     const chunks: Buffer[] = [];
@@ -75,7 +107,7 @@ function readBody(req: IncomingMessage): Promise<string> {
         req.destroy();
       } else chunks.push(chunk);
     });
-    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    req.on("end", () => resolve(Buffer.concat(chunks)));
     req.on("error", reject);
   });
 }
@@ -88,6 +120,7 @@ export function buildRoutes(app: App, csrf: string): Route[] {
     routes.push({ method, pattern, keys, handler, kind });
   };
   const pages = new Pages(app, csrf);
+  const manage = new ManagePages(app, csrf);
 
   /** Every caller of /api/v1 is a client. A client can never be a person, whatever it sends. */
   const client = (c: Ctx): Actor => {
@@ -134,6 +167,8 @@ export function buildRoutes(app: App, csrf: string): Route[] {
     formats: FORMAT_ADAPTERS.map((a) => ({ adapter_id: a.capability.adapter_id, accepts: a.capability.accepts, availability: a.capability.availability, fixture_only: a.capability.fixture_only })),
     action_adapters: app.gateway.adapterList().map((a) => ({ adapter_id: a.capability.adapter_id, kind: a.capability.kind, action_types: a.capability.action_types, availability: a.capability.availability, simulated: a.capability.simulated })),
     capture_adapters: app.intake.adapters().map((a) => ({ adapter_id: a.adapter_id, kind: a.kind, simulated: a.simulated, revoked: a.revoked })),
+    capture_not_connected: KNOWN_RUNTIMES.map((k) => ({ runtime_id: k.runtime_id, name: k.name, label: "NOT CAPTURED", note: k.note })),
+    ai_model: "none: no model is called; nothing is sent to any outside service",
     human_only_operations: HUMAN_ONLY_OPERATIONS,
     client_pairing: "unavailable",
   }));
@@ -237,7 +272,12 @@ export function buildRoutes(app: App, csrf: string): Route[] {
   add("page", "GET", "/", () => pages.home());
   add("page", "GET", "/onboarding", () => pages.onboarding());
   add("page", "GET", "/projects/:id", (c) => pages.project(c.params.id!));
-  add("page", "GET", "/projects/:id/rules", (c) => pages.rules(c.params.id!, c.url.searchParams.get("action") ?? "release"));
+  add("page", "GET", "/projects/:id/rules", (c) => pages.rules(c.params.id!, c.url.searchParams.get("action") ?? "release", { q: c.url.searchParams.get("q") ?? "", status: c.url.searchParams.get("status") ?? "" }));
+  add("page", "GET", "/projects/:id/rules/new", (c) => manage.ruleEditor(c.params.id!, Object.fromEntries(c.url.searchParams)));
+  add("page", "GET", "/projects/:id/settings", (c) => manage.projectSettings(c.params.id!));
+  add("page", "GET", "/sources/:id", (c) => manage.source(c.params.id!, c.url.searchParams.get("back")));
+  add("page", "GET", "/runs/:id/rerun", (c) => manage.rerun(c.params.id!));
+  add("page", "GET", "/fixes/:id", (c) => manage.fix(c.params.id!));
   add("page", "GET", "/projects/:id/activity", (c) => pages.activity(c.params.id!));
   add("page", "GET", "/projects/:id/learning", (c) => pages.learning(c.params.id!));
   add("page", "GET", "/projects/:id/learning/settings", (c) => pages.learningSettings(c.params.id!));
@@ -251,20 +291,82 @@ export function buildRoutes(app: App, csrf: string): Route[] {
   add("page", "GET", "/traces/:id", (c) => pages.trace(c.params.id!));
   add("page", "GET", "/compare", (c) => pages.compare(c.url.searchParams.get("before") ?? "", c.url.searchParams.get("after") ?? ""));
   add("page", "GET", "/actions/:id", (c) => pages.action(c.params.id!));
-  add("page", "GET", "/corrections/:id", (c) => pages.correction(c.params.id!));
+  add("page", "GET", "/corrections/:id", (c) => manage.journey(c.params.id!));
   add("page", "GET", "/history", () => pages.history());
 
   // ------------------------------------------------------------ app surface: acts of the local person
   const me = (): Actor => app.localUser;
   const back = (c: Ctx, fallback: string): string => (typeof c.body.back === "string" && /^\/(?![\/\\])[^\\]*$/.test(c.body.back) ? c.body.back : fallback); // local paths only: no open redirect
+  const str = (v: unknown): string => (typeof v === "string" ? v : "");
+  const upload = (v: unknown): Upload | null => (v && typeof v === "object" && "bytes" in (v as object) && (v as Upload).bytes.length > 0 ? (v as Upload) : null);
+  const flash = (path: string, message: string): string => `${path}${path.includes("?") ? "&" : "?"}flash=${encodeURIComponent(message)}`;
   add("form", "POST", "/app/projects", (c) => {
-    const p = app.projects.createProject({ name: String(c.body.name ?? ""), default_work_type: String(c.body.default_work_type ?? "sales_proposal"), folder: String(c.body.folder ?? "") || undefined, facts: c.body.customer_name ? { customer_name: String(c.body.customer_name) } : {} }, me());
+    const p = app.projects.createProject({ name: str(c.body.name), default_work_type: str(c.body.default_work_type) || "sales_proposal", folder: str(c.body.folder) || undefined, facts: str(c.body.customer_name).trim() ? { customer_name: str(c.body.customer_name) } : {} }, me());
     app.gateway.setActionPolicy(p.project_id, "release", "self", me());
-    return `/projects/${p.project_id}`;
+    return flash(`/projects/${p.project_id}`, "Project created. Check a first file below.");
   });
   add("form", "POST", "/app/projects/:id/check", (c) => {
-    const out = app.checks.check({ project_id: c.params.id!, name: String(c.body.name ?? ""), bytes: new TextEncoder().encode(String(c.body.content ?? "")), action: { type: String(c.body.action ?? "release") }, actor: me() });
+    const file = upload(c.body.file);
+    const name = file ? file.filename : str(c.body.name).trim();
+    const bytes = file ? file.bytes : new TextEncoder().encode(str(c.body.content));
+    if (!name || bytes.length === 0) throw new ValidationError("check", ["choose a file, or give a file name and its content"]);
+    const out = app.checks.check({ project_id: c.params.id!, name, bytes, action: { type: str(c.body.action) || "release" }, actor: me() });
     return out.review_url ?? `/projects/${c.params.id}`;
+  });
+  add("form", "POST", "/app/projects/:id/facts", (c) => (app.projects.setFact(c.params.id!, str(c.body.key), str(c.body.value), me()), flash(`/projects/${c.params.id}/settings`, "Fact confirmed. Outstanding receipts in this project need a fresh check.")));
+  add("form", "POST", "/app/projects/:id/folders", (c) => (app.projects.registerFolder(c.params.id!, str(c.body.folder), me()), flash(`/projects/${c.params.id}/settings`, "Folder connected.")));
+  add("form", "POST", "/app/projects/:id/sources", (c) => {
+    const cols = (v: unknown): string[] => str(v).split(",").map((x) => x.trim()).filter(Boolean);
+    const days = Number(str(c.body.max_age_days) || 30);
+    if (!str(c.body.name).trim() || !cols(c.body.key_columns).length || !cols(c.body.value_columns).length || !Number.isInteger(days) || days < 1 || days > 365) throw new ValidationError("trusted source", ["name, key columns, value columns and a freshness window of 1 to 365 days are required"]);
+    const id = app.projects.registerSource({ name: str(c.body.name).trim(), key_columns: cols(c.body.key_columns), value_columns: cols(c.body.value_columns), max_age_days: days }, me());
+    return flash(`/sources/${id}?back=${encodeURIComponent(`/projects/${c.params.id}/settings`)}`, "Registered. Import a first version (CSV) below.");
+  });
+  // The correction editor (UX-7): save a candidate; overlapping rules must have been seen.
+  add("form", "POST", "/app/projects/:id/rules", (c) => {
+    const rule = app.authoring.create({ project_id: c.params.id!, template: { template: str(c.body.template), ...templateValues(c.body) }, artifact_id: str(c.body.artifact_id) || null, enforcement: c.body.enforcement === "warn" ? "warn" : "block", words: str(c.body.words) }, me(), ([] as string[]).concat(c.body.acknowledged ?? []));
+    return flash(`/rules/${rule.rule_id}?project=${c.params.id}`, "Saved as a candidate (off). Add a real example it blocks and one it allows, then turn it on.");
+  });
+  add("form", "POST", "/app/rules/:id/examples", (c) => {
+    const [artifactId, hash] = str(c.body.version).split("|");
+    app.authoring.addExample(c.params.id!, { artifact_id: artifactId ?? "", content_hash: hash ?? "", kind: c.body.kind === "positive" ? "positive" : "negative" }, me());
+    return flash(back(c, `/rules/${c.params.id}`), "Example added.");
+  });
+  add("form", "POST", "/app/rules/:id/change", (c) => (app.authoring.revise(c.params.id!, { template: { template: str(c.body.template), ...templateValues(c.body) } }, me(), { trial: c.body.trial === "1" }), flash(back(c, `/rules/${c.params.id}`), "Changed: a new revision is in force.")));
+  add("form", "POST", "/app/rules/:id/pause", (c) => (app.rules.suspend(c.params.id!, me(), str(c.body.until), str(c.body.reason)), flash(back(c, `/rules/${c.params.id}`), `Paused until ${str(c.body.until)}.`)));
+  add("form", "POST", "/app/rules/:id/resume", (c) => (app.rules.resume(c.params.id!, me()), flash(back(c, `/rules/${c.params.id}`), "Resumed.")));
+  add("form", "POST", "/app/rules/:id/resume-auto", (c) => (app.rules.resumeAutoPaused(c.params.id!, me()), flash(back(c, `/rules/${c.params.id}`), "Resumed: it can block again.")));
+  add("form", "POST", "/app/exceptions", (c) => {
+    const r = app.checks.getRun(str(c.body.run_id));
+    app.exceptions.request({ project_id: r.context.project_id!, rule_id: str(c.body.rule_id), artifact_id: r.artifact.artifact_id, reason: str(c.body.reason), days: Number(c.body.days) }, me());
+    return flash(`/rules/${str(c.body.rule_id)}?project=${r.context.project_id}`, "Exception requested. It changes nothing until the rule's owner grants it (below).");
+  });
+  for (const act of ["grant", "reject", "revoke"] as const) add("form", "POST", `/app/exceptions/:id/${act}`, (c) => (app.exceptions[act](c.params.id!, me()), flash(back(c, "/"), `Exception ${act === "grant" ? "granted" : act === "reject" ? "rejected" : "revoked"}.`)));
+  add("form", "POST", "/app/runs/:id/dispute", (c) => {
+    const out = app.learning.disputeFinding({ run_id: c.params.id!, rule_id: str(c.body.rule_id), reason: str(c.body.reason) }, me());
+    return flash(`/runs/${c.params.id}`, out.note);
+  });
+  add("form", "POST", "/app/inbox/:id/act", (c) => {
+    const action = str(c.body.action) as Parameters<typeof app.learning.actOnInbox>[2];
+    if (!["approve", "trial", "reject", "resume", "retire", "not_a_correction", "suppress", "dismiss"].includes(action)) throw new ValidationError("inbox", ["unknown action"]);
+    app.learning.actOnInbox(c.params.id!, me(), action);
+    return flash(back(c, "/"), "Done.");
+  });
+  add("form", "POST", "/app/captures/:id/mark", (c) => {
+    const out = app.learning.markAsCorrection(c.params.id!, me());
+    return flash(back(c, "/"), `Marked as a correction. Learning decided: ${out.outcome.replace(/_/g, " ")}.`);
+  });
+  add("form", "POST", "/app/signals/:id/delete-text", (c) => (app.learning.deleteSignalText(c.params.id!, me()), flash(back(c, "/"), "The original wording was deleted.")));
+  add("form", "POST", "/app/decisions/:id/suppress", (c) => (app.learning.suppress(c.params.id!, me()), flash(back(c, "/"), "It will not be learned again in this project.")));
+  add("form", "POST", "/app/capture/adapters", (c) => {
+    const a = app.intake.pairAdapter({ kind: "runtime_hook", label: (str(c.body.label).trim() || "Command-line outbox").slice(0, 80) + " (command line; no assistant attached)", simulated: false, attests_user_turns: true, durable_outbox: true, supports_replay: true, supports_backfill: true }, me());
+    return flash(back(c, "/"), `Paired. Use --adapter ${a.adapter_id} on the command line.`);
+  });
+  add("form", "POST", "/app/capture/adapters/:id/revoke", (c) => (app.intake.revokeAdapter(c.params.id!, me()), flash(back(c, "/"), "Revoked: it can no longer deliver.")));
+  add("form", "POST", "/app/capture/:stream/gaps/:from/acknowledge", (c) => (app.intake.acknowledgeGap(c.params.stream!, Number(c.params.from), me()), flash(back(c, "/"), "Acknowledged as lost. The gap stays visible.")));
+  add("form", "POST", "/app/capture/:stream/dead-letters/:seq/retry", (c) => {
+    const out = app.learning.retryDeadLetter(c.params.stream!, Number(c.params.seq), me());
+    return flash(back(c, "/"), out.retried ? "Processed." : `Still failing: ${out.error}`);
   });
   add("form", "POST", "/app/projects/:id/corrections", (c) => {
     const out = app.learning.appCorrection({ project_id: c.params.id!, text: String(c.body.text ?? "") }, me());
@@ -310,18 +412,31 @@ export function buildRoutes(app: App, csrf: string): Route[] {
     return `/projects/${c.params.id}/settings?flash=${encodeURIComponent(folder ? "Releases from this project now copy the checked file to that folder." : "Releases are simulated again (recorded only).")}`;
   });
   add("form", "POST", "/app/sources/:id/import", (c) => {
-    const { report } = app.projects.importCsv(c.params.id!, { file_name: String(c.body.file_name ?? "pasted.csv"), text: String(c.body.csv ?? "") }, me());
-    return back(c, `/sources/${c.params.id}`) + `?flash=${encodeURIComponent(`Imported ${report.rows_imported} row(s); ${report.rejected.length} row(s) could not be used (listed below).`)}`;
+    const file = upload(c.body.file);
+    const { report } = app.projects.importCsv(c.params.id!, { file_name: file?.filename ?? "pasted.csv", text: file ? new TextDecoder().decode(file.bytes) : str(c.body.csv) }, me());
+    return flash(`/sources/${c.params.id}`, `Imported ${report.rows_imported} row(s); ${report.rejected.length} row(s) could not be used (listed below).`);
   });
   add("form", "POST", "/app/capture/:stream/dead-letters/:seq/discard", (c) => (app.intake.discardDeadLetter(c.params.stream!, Number(c.params.seq), me()), back(c, "/")));
   return routes;
 }
 
-function render(app: App, page: Page, flash: string | null): string {
+function render(app: App, page: Page, flash: string | null, path?: string): string {
   const ws = app.projects.workspace();
   const demo = ws.is_demo || !!(app.db.prepare("SELECT 1 FROM projects WHERE is_demo = 1 LIMIT 1").get());
-  return layout({ title: page.title, body: page.body, project: page.project ?? null, demo, workspace: ws.name, flash });
+  return layout({ title: page.title, body: page.body, project: page.project ?? null, demo, workspace: ws.name, flash, ...(path ? { path } : {}) });
 }
+
+/** What a person can do next, for each kind of refusal (AT-U5 spirit: never a dead end). */
+const NEXT_STEP: Record<string, string> = {
+  validation_failed: "Correct what is named above and send the form again.",
+  overlapping_rules: "Open the rules listed, then save again confirming you have seen them - or change the new rule.",
+  app_surface_only: "Reload the page and use the form again (the form token changes when the service restarts).",
+  human_only: "This is done by a person in the app.",
+  not_found: "Go back to All projects and open it from there.",
+  invariant_violation: "Nothing was changed. Read the reason above; the page you came from shows what is possible next.",
+  stale_proposal: "The document changed since the proposal was made. Open the document's latest check and propose again.",
+  unavailable: "This build does not provide it. Nothing was sent, paid or released.",
+};
 
 export function createHttpServer(app: App, csrf: string = randomBytes(24).toString("hex")): { server: Server; csrf: string } {
   const routes = buildRoutes(app, csrf);
@@ -351,7 +466,8 @@ async function handle(app: App, routes: Route[], csrf: string, req: IncomingMess
     }
     let body: Record<string, any> = {};
     if (req.method === "POST") {
-      const text = await readBody(req);
+      const raw = await readBody(req);
+      const text = raw.toString("utf8");
       if (route.kind === "json") {
         if (text.trim()) {
           try {
@@ -362,10 +478,14 @@ async function handle(app: App, routes: Route[], csrf: string, req: IncomingMess
           if (body === null || typeof body !== "object" || Array.isArray(body)) throw new ValidationError("request", ["the body must be a JSON object"]);
         }
       } else {
-        const form = new URLSearchParams(text);
-        for (const key of new Set(form.keys())) {
-          const values = form.getAll(key);
-          body[key] = values.length > 1 ? values : values[0];
+        const type = String(req.headers["content-type"] ?? "");
+        if (type.startsWith("multipart/form-data")) body = parseMultipart(raw, type);
+        else {
+          const form = new URLSearchParams(text);
+          for (const key of new Set(form.keys())) {
+            const values = form.getAll(key);
+            body[key] = values.length > 1 ? values : values[0];
+          }
         }
         // App-surface acts: same-origin form posts carrying the per-process token.
         const origin = req.headers.origin;
@@ -378,14 +498,22 @@ async function handle(app: App, routes: Route[], csrf: string, req: IncomingMess
     const result = route.handler({ req, res, url, params, body });
     if (route.kind === "json") return send(200, "application/json; charset=utf-8", JSON.stringify(result));
     if (route.kind === "form") return send(303, "text/plain; charset=utf-8", "See other", { location: String(result) });
-    return send(200, "text/html; charset=utf-8", render(app, result as Page, url.searchParams.get("flash")));
+    return send(200, "text/html; charset=utf-8", render(app, result as Page, url.searchParams.get("flash"), url.pathname));
   } catch (error) {
     const known = error instanceof ClError;
     const status = known ? error.status : 500;
     if (!known) console.error("[correction-layer] unexpected error:", error);
     const payload = known ? error.toJSON() : { error: { code: "internal_error", message: "The service could not complete the request. Nothing was approved, sent or released.", details: null } };
     if (wantsJson) return send(status, "application/json; charset=utf-8", JSON.stringify(payload));
-    const page: Page = { title: status === 404 ? "Not found" : status === 501 ? "Not available in this build" : "This could not be done", body: html`<div class="card"><p>${(payload.error as any).message}</p><p class="muted mono">${(payload.error as any).code}</p><p><a href="/">Back to all projects</a></p></div>` };
+    const code = String((payload.error as any).code);
+    const problems: string[] = (payload.error as any).details?.problems ?? [];
+    const overlaps: Array<{ rule_id: string; title: string; statement: string }> = [...((payload.error as any).details?.duplicates ?? []), ...((payload.error as any).details?.conflicts ?? [])];
+    const referer = req.headers.referer && URL.canParse(req.headers.referer) && new URL(req.headers.referer).host === req.headers.host ? new URL(req.headers.referer).pathname + new URL(req.headers.referer).search : "/";
+    const page: Page = {
+      title: status === 404 ? "Not found" : status === 501 ? "Not available in this build" : "This could not be done",
+      body: html`<div class="card error" role="alert"><p><strong>${(payload.error as any).message}</strong></p>${problems.length > 1 ? html`<ul>${problems.map((x) => html`<li>${x}</li>`)}</ul>` : ""}${overlaps.length ? html`<ul>${overlaps.map((o) => html`<li><a href="/rules/${o.rule_id}">${o.title}</a>: ${o.statement}</li>`)}</ul>` : ""}
+        <p>What you can do: ${NEXT_STEP[code] ?? "Go back and try again. Nothing was approved, sent or released by this request."}</p><p class="muted mono">${code}</p><p><a href="${referer}">Go back</a> - <a href="/">All projects</a></p></div>`,
+    };
     try {
       return send(status, "text/html; charset=utf-8", render(app, page, null));
     } catch {

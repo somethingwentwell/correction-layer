@@ -70,13 +70,19 @@ test("every designed screen has a route that renders from real data (UI shell)",
     [`/projects/${projectId}/coverage`, /GATED[\s\S]*SIMULATED[\s\S]*NOT COVERED/],
     [`/projects/${projectId}/effectiveness`, /Not available in this build[\s\S]*Plain counts|plain counts/],
     ["/history", /History verifies/],
+    [`/projects/${projectId}/settings`, /Project facts[\s\S]*Folders[\s\S]*Where "release" goes[\s\S]*Trusted sources/],
+    [`/projects/${projectId}/rules/new`, /Step 1 of 3[\s\S]*All amounts must be in one currency/],
+    [`/projects/${projectId}/rules/new?template=currency&currency=EUR&preview=1`, /Step 3 of 3[\s\S]*must be in EUR[\s\S]*dry run[\s\S]*I have seen/],
+    [`/sources/${app.projects.listSources()[0]!.source_id}`, /Import a new version \(CSV\)[\s\S]*Current version/],
+    [`/runs/${runs[0]!.run_id}/rerun`, /Re-run as recorded[\s\S]*Identical/],
+    [`/corrections/${rule.origin.correction_id}`, /Journey of a correction[\s\S]*SAID|Journey of a correction[\s\S]*IDENTIFIED[\s\S]*ON[\s\S]*CHECKED/],
   ];
   for (const [path, expected] of routes) {
     const { status, text } = await page(path);
     assert.equal(status, 200, path);
     assert.match(text, expected, path);
     assert.match(text, /DEMO DATA\./, `${path}: demo data is labelled on every screen`);
-    assert.match(text, /Phase 1 framework scaffold/, path);
+    assert.match(text, /Local MVP \(Phase 2\)[\s\S]*Nothing is sent or paid/, path);
   }
   const missing = await page("/projects/prj_DOESNOTEXIST");
   assert.equal(missing.status, 404);
