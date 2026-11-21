@@ -309,7 +309,7 @@ export interface Receipt {
 
 export type ActionStatus =
   | "awaiting_approval" | "approved" | "executing" | "executed" | "blocked" | "rejected"
-  | "paused_newer_version" | "failed" | "outcome_unknown";
+  | "paused_newer_version" | "failed" | "outcome_unknown" | "cancelled";
 
 // ---------------------------------------------------------------- capture
 export const CAPTURE_KINDS = [

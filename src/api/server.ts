@@ -23,7 +23,7 @@ import { randomBytes } from "node:crypto";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 import type { App } from "../app.ts";
-import { ClError, NotFound, NotImplementedYet, PermissionDenied, ValidationError } from "../domain/errors.ts";
+import { ClError, NotFound, PermissionDenied, ValidationError } from "../domain/errors.ts";
 import { isId } from "../domain/ids.ts";
 import { ts } from "../domain/time.ts";
 import type { Actor, LearningMode } from "../domain/types.ts";
@@ -172,8 +172,32 @@ export function buildRoutes(app: App, csrf: string): Route[] {
     const located = artifact.kind === "path" && typeof artifact.value === "string" && typeof c.body.project_id !== "string" ? { path: artifact.value } : where(c);
     return app.checks.check({ ...located, name, bytes, action: { type, ...(c.body.action?.params ? { params: c.body.action.params } : {}) }, actor: client(c), ...(isId(c.body.session_id, "ses") ? { session_id: c.body.session_id } : {}) });
   });
-  add("json", "POST", "/api/v1/report_change", () => {
-    throw new NotImplementedYet("api.report_change", "declaring who produced a new version and which fix proposal it applied");
+  const contentOf = (c: Ctx): { name: string; bytes: Uint8Array } => {
+    const artifact = c.body.artifact ?? {};
+    const name = typeof artifact.name === "string" ? artifact.name : typeof artifact.value === "string" ? String(artifact.value).split(/[\\/]/).pop()! : "";
+    const bytes = typeof artifact.content_base64 === "string" ? new Uint8Array(Buffer.from(artifact.content_base64, "base64")) : typeof artifact.content_text === "string" ? new TextEncoder().encode(artifact.content_text) : null;
+    if (!name || !bytes) throw new ValidationError("artifact", ["artifact: a name and content_text or content_base64 are required (the service does not read files from disk)"]);
+    return { name, bytes };
+  };
+  /**
+   * An assistant declares that it produced a new version (on behalf of a named
+   * person, unverified). It becomes a version attributed to the assistant - never
+   * to a person - and is checked like any other version.
+   */
+  add("json", "POST", "/api/v1/report_change", (c) => {
+    const context = app.projects.resolve(where(c));
+    if (context.status !== "resolved" || !context.project_id) throw new ValidationError("report_change", ["the change cannot be tied to a registered project"]);
+    const { name, bytes } = contentOf(c);
+    const v = app.checks.observe({ project_id: context.project_id, name, bytes, declared_by: client(c) });
+    return { enforcement_tier: "advisory", artifact_id: v.artifact_id, version_seq: v.version_seq, content_hash: v.content_hash, new_version: v.is_new_version, attribution: "declared_by_assistant", note: "Recorded as a change declared by an assistant, not by a person. Check it before anything goes out." };
+  });
+  /** An assistant proposes the next content of a document. A proposal only: a person applies it in the app. */
+  add("json", "POST", "/api/v1/propose_change", (c) => {
+    const context = app.projects.resolve(where(c));
+    if (context.status !== "resolved" || !context.project_id) throw new ValidationError("propose_change", ["the proposal cannot be tied to a registered project"]);
+    const { name, bytes } = contentOf(c);
+    const p = app.fixes.proposeContent({ project_id: context.project_id, name, bytes, summary: String(c.body.summary ?? ""), base_hash: typeof c.body.base_hash === "string" ? c.body.base_hash : null }, client(c));
+    return { enforcement_tier: "advisory", fix_id: p.fix_id, status: p.status, base_version_seq: p.base_version_seq, review_url: `/fixes/${p.fix_id}`, note: "A proposal only. Nothing changed. A person applies it in the app." };
   });
   add("json", "POST", "/api/v1/propose_correction", (c) => {
     const context = app.projects.resolve(where(c));
@@ -260,6 +284,35 @@ export function buildRoutes(app: App, csrf: string): Route[] {
   add("form", "POST", "/app/actions/:id/approve", (c) => (app.gateway.approve(c.params.id!, me()), `/actions/${c.params.id}`));
   add("form", "POST", "/app/actions/:id/reject", (c) => (app.gateway.reject(c.params.id!, me(), "rejected in the app"), `/actions/${c.params.id}`));
   add("form", "POST", "/app/actions/:id/execute", (c) => (app.gateway.execute(c.params.id!, me()), `/actions/${c.params.id}`));
+  // Proposed changes: applying is a person's act; it creates the next version and rechecks it.
+  add("form", "POST", "/app/fixes/:id/apply", (c) => {
+    const out = app.fixes.apply(c.params.id!, me());
+    const action = String(c.body.action ?? "check_only");
+    const recheck = app.checks.recheckLatest(out.version.artifact_id, { type: action }, me(), `rechecked after applying proposal ${c.params.id}`);
+    return `${recheck.review_url ?? `/fixes/${c.params.id}`}?flash=${encodeURIComponent(`Applied: version ${out.version.version_seq} was created by you and checked again.`)}`;
+  });
+  add("form", "POST", "/app/fixes/:id/dismiss", (c) => (app.fixes.dismiss(c.params.id!, me()), back(c, `/fixes/${c.params.id}`)));
+  add("form", "POST", "/app/runs/:id/propose-fixes", (c) => {
+    const made = app.fixes.proposeFromRun(c.params.id!);
+    return `/runs/${c.params.id}?flash=${encodeURIComponent(made.length ? `${made.length} change(s) proposed. Nothing was changed: review and apply them yourself.` : "No change can be proposed exactly for these findings; someone fixes them in the tool they use.")}`;
+  });
+  // The gateway asked which version is intended (AT-C9).
+  add("form", "POST", "/app/actions/:id/choose-version", (c) => {
+    const choice = c.body.choice === "newer_version" ? "newer_version" : "approved_version";
+    const a = app.gateway.chooseVersion(c.params.id!, choice, me());
+    if (choice === "approved_version") return `/actions/${c.params.id}`;
+    const recheck = app.checks.recheckLatest(a.artifact_id, { type: a.type }, me(), "the person chose the newer version");
+    return `${recheck.review_url ?? `/actions/${c.params.id}`}?flash=${encodeURIComponent("The newer version was checked. Request and approve it again if it is Ready.")}`;
+  });
+  add("form", "POST", "/app/projects/:id/release-folder", (c) => {
+    const folder = String(c.body.folder ?? "").trim();
+    app.gateway.setReleaseFolder(c.params.id!, folder ? folder : null, c.body.approval === "none_required" ? "none_required" : "self", me());
+    return `/projects/${c.params.id}/settings?flash=${encodeURIComponent(folder ? "Releases from this project now copy the checked file to that folder." : "Releases are simulated again (recorded only).")}`;
+  });
+  add("form", "POST", "/app/sources/:id/import", (c) => {
+    const { report } = app.projects.importCsv(c.params.id!, { file_name: String(c.body.file_name ?? "pasted.csv"), text: String(c.body.csv ?? "") }, me());
+    return back(c, `/sources/${c.params.id}`) + `?flash=${encodeURIComponent(`Imported ${report.rows_imported} row(s); ${report.rejected.length} row(s) could not be used (listed below).`)}`;
+  });
   add("form", "POST", "/app/capture/:stream/dead-letters/:seq/discard", (c) => (app.intake.discardDeadLetter(c.params.stream!, Number(c.params.seq), me()), back(c, "/")));
   return routes;
 }

@@ -113,7 +113,8 @@ test("AT-E6: every client response carries its enforcement tier; summaries begin
   assert.equal(rules.json.rules.length, 3);
   const caps = await api("/api/v1/capabilities");
   assert.equal(caps.json.client_pairing, "unavailable");
-  assert.ok(caps.json.action_adapters.every((a: any) => a.simulated || a.availability === "unavailable"), "no real action adapter exists in this build");
+  const real = caps.json.action_adapters.filter((a: any) => !a.simulated && a.availability === "available");
+  assert.deepEqual(real.map((a: any) => [a.adapter_id, a.action_types]), [["adp_RELEASEDIR", ["release"]]], "the only real action adapter copies checked bytes to a folder a person chose; nothing sends or pays");
   assert.equal((await api("/api/v1/ledger/verify")).json.ok, true);
 });
 
@@ -124,9 +125,7 @@ test("AT-E3 over HTTP: no client operation can approve, activate, set a learning
     assert.equal(res.status, 403, op);
     assert.equal(res.json.error.code, "human_only", op);
   }
-  const unsupported = await api("/api/v1/report_change", {});
-  assert.equal(unsupported.status, 501);
-  assert.deepEqual([unsupported.json.error.code, unsupported.json.error.details.contract], ["unavailable", "api.report_change"]);
+  assert.equal((await api("/api/v1/report_change", {})).status, 422, "a change needs a project and content");
   assert.equal((await api("/api/v1/does_not_exist", {})).status, 404);
   assert.equal((await fetch(server.url + "/api/v1/check", { method: "POST", body: "{not json" })).status, 422);
   // The app surface refuses requests without the form token (a client imitating a form post).
@@ -198,3 +197,16 @@ function seedQuote(currency: string): Uint8Array {
   const price = currency === "SGD" ? ["1,650.00", "400.00", "3,300.00", "800.00", "4,100.00"] : ["1,240.00", "300.00", "2,480.00", "600.00", "3,080.00"];
   return new TextEncoder().encode(`# Journey quote\n\nCustomer: Kestrel Dental Group\nQuote reference: KQ-TEST-1\nValid until: 12 January 2027\n\n| Item | Qty | Unit price | Amount |\n|---|---|---|---|\n| HX-200 Flow Sensor | 2 | ${currency} ${price[0]} | ${currency} ${price[2]} |\n| CAL-1Y Calibration Plan | 2 | ${currency} ${price[1]} | ${currency} ${price[3]} |\n| Total | | | ${currency} ${price[4]} |\n`);
 }
+
+test("report_change and propose_change: an assistant can declare a version or propose one; neither is ever attributed to a person or applied", async () => {
+  const reported = await api("/api/v1/report_change", { project_id: projectId, artifact: { name: "Api-Reported.md", content_text: new TextDecoder().decode(quote({ currency: "SGD" })) }, on_behalf_of: "usr_DEMOPRIYA" });
+  assert.equal(reported.status, 200);
+  assert.equal(reported.json.attribution, "declared_by_assistant");
+  const proposed = await api("/api/v1/propose_change", { project_id: projectId, artifact: { name: "Api-Reported.md", content_text: new TextDecoder().decode(quote({ currency: "SGD", extra: "Prices exclude GST" })) }, summary: "add the GST line" });
+  assert.equal(proposed.status, 200);
+  assert.match(proposed.json.note, /A proposal only/);
+  assert.equal(app.checks.versions(reported.json.artifact_id).length, 1, "a proposal is not a version");
+  assert.equal(app.fixes.get(proposed.json.fix_id).proposed_by.kind, "agent");
+  // Applying is an app act: a client imitating the form without the token is refused.
+  assert.equal((await form(`/app/fixes/${proposed.json.fix_id}/apply`, {}, null)).status, 403);
+});

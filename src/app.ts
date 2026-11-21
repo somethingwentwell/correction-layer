@@ -12,7 +12,8 @@ import type { Clock } from "./domain/time.ts";
 import { systemClock, ts } from "./domain/time.ts";
 import type { Actor } from "./domain/types.ts";
 import type { ActionAdapter } from "./gate/adapters.ts";
-import { DEFAULT_ACTION_ADAPTERS } from "./gate/adapters.ts";
+import { DEFAULT_ACTION_ADAPTERS, localReleaseFolder } from "./gate/adapters.ts";
+import { FixService } from "./work/fixes.ts";
 import { Gateway } from "./gate/gateway.ts";
 import type { Signer } from "./gate/signer.ts";
 import { ephemeralSigner, fileSigner } from "./gate/signer.ts";
@@ -56,6 +57,7 @@ export interface App {
   projects: ProjectService;
   gateway: Gateway;
   checks: CheckService;
+  fixes: FixService;
   policies: LearningPolicyService;
   intake: CaptureIntake;
   learning: LearningPipeline;
@@ -83,8 +85,9 @@ export function createApp(opts: AppOptions): App {
   const projects = new ProjectService({ db, ledger, clock, ids, rules, workspaceId });
   const signer = opts.signer ?? (opts.signingKeyPath ? fileSigner(opts.signingKeyPath, workspaceId) : ephemeralSigner(workspaceId));
   const exceptions = new ExceptionService({ db, ledger, clock, ids, rules, workspaceId });
-  const gateway = new Gateway({ db, ledger, clock, ids, rules, projects, signer, adapters: opts.actionAdapters ?? DEFAULT_ACTION_ADAPTERS, exceptions });
+  const gateway = new Gateway({ db, ledger, clock, ids, rules, projects, signer, adapters: opts.actionAdapters ?? [...DEFAULT_ACTION_ADAPTERS, localReleaseFolder((projectId) => get<{ folder: string }>(db, "SELECT folder FROM release_targets WHERE project_id = ?", projectId)?.folder ?? null)], exceptions });
   const checks = new CheckService({ db, ledger, clock, ids, rules, projects, gateway, exceptions, displayTz });
+  const fixes = new FixService({ db, ledger, clock, ids, checks, workspaceId });
   const authoring = new RuleAuthoring({ db, ledger, clock, ids, rules, projects, checks, workspaceId });
   const policies = new LearningPolicyService({ db, ledger, clock, ids, projects, workspaceId, displayTz });
   const intake = new CaptureIntake({ db, ledger, clock, ids, projects, policies, workspaceId });
@@ -102,7 +105,7 @@ export function createApp(opts: AppOptions): App {
   // Anything received but not yet processed before a restart is picked up again (effectively-once).
   learning.tick();
 
-  return { db, clock, workspaceId, displayTz, localUser, ledger, rules, exceptions, authoring, projects, gateway, checks, policies, intake, learning, schemaVersion: version, close: () => db.close() };
+  return { db, clock, workspaceId, displayTz, localUser, ledger, rules, exceptions, authoring, projects, gateway, checks, fixes, policies, intake, learning, schemaVersion: version, close: () => db.close() };
 }
 
 export function createAppFromConfig(config: Config, overrides: Partial<AppOptions> = {}): App {

@@ -31,6 +31,9 @@ import { requireHuman } from "../policy/rules.ts";
 import type { Db } from "../store/db.ts";
 import { all, get, json, parse, run, tx } from "../store/db.ts";
 import type { ActionAdapter } from "./adapters.ts";
+import { RELEASE_FOLDER_ADAPTER_ID, releaseFolderProblems } from "./adapters.ts";
+import { resolve as resolvePath } from "node:path";
+import { ValidationError } from "../domain/errors.ts";
 import type { Signer } from "./signer.ts";
 
 export const RECEIPT_LIFETIME_SECONDS = 24 * 3600;
@@ -108,6 +111,13 @@ export class Gateway {
 
   private adapterFor(type: string): ActionAdapter | undefined {
     return this.adapterList().find((a) => a.capability.action_types.includes(type));
+  }
+
+  /** The adapter a project's configured route uses for an action type, else the build's default for that type. */
+  routeFor(projectId: string, type: string): ActionAdapter | undefined {
+    const policy = get<{ adapter_id: string }>(this.db, "SELECT adapter_id FROM action_policies WHERE project_id = ? AND action_type = ?", projectId, type);
+    const bound = policy ? this.adapters.get(policy.adapter_id) : undefined;
+    return bound && bound.capability.action_types.includes(type) ? bound : this.adapterFor(type);
   }
 
   /** True when a gateway route exists that could act on a receipt for this action type. */
@@ -220,13 +230,42 @@ export class Gateway {
 
   // ------------------------------------------------------------ configuration
   /** Who must approve an action in a project is a recorded decision by a person. */
-  setActionPolicy(projectId: string, actionType: string, approvalPolicy: "named_role" | "self" | "none_required", actor: Actor): void {
+  setActionPolicy(projectId: string, actionType: string, approvalPolicy: "named_role" | "self" | "none_required", actor: Actor, adapterId?: string): void {
     requireHuman(actor, "Configuring an approval policy");
-    const adapter = this.adapterFor(actionType);
+    const adapter = adapterId ? this.adapters.get(adapterId) : this.adapterFor(actionType);
+    if (adapter && !adapter.capability.action_types.includes(actionType)) throw new ValidationError("route", [`${adapter.capability.label} does not perform "${actionType}"`]);
     if (!adapter || adapter.capability.availability !== "available") throw new Unavailable(`gate.adapter.${actionType}`, `No adapter is available for "${actionType}" in this build.`);
     this.projects.get(projectId);
     run(this.db, "INSERT INTO action_policies (project_id, action_type, adapter_id, approval_policy, set_by, set_at) VALUES (?,?,?,?,?,?) ON CONFLICT (project_id, action_type) DO UPDATE SET adapter_id = excluded.adapter_id, approval_policy = excluded.approval_policy, set_by = excluded.set_by, set_at = excluded.set_at",
       projectId, actionType, adapter.capability.adapter_id, approvalPolicy, actor.id, ts(this.clock.now()));
+  }
+
+  /** The local folder a person chose for releases from this project, if any. */
+  releaseFolder(projectId: string): { folder: string; set_by: string; set_at: string } | null {
+    return get<{ folder: string; set_by: string; set_at: string }>(this.db, "SELECT folder, set_by, set_at FROM release_targets WHERE project_id = ?", projectId) ?? null;
+  }
+
+  /**
+   * A person switches a project's release route to the local release folder (or
+   * back to the simulated route with `folder: null`). Outstanding receipts are
+   * unaffected; every execution still re-verifies its bindings and approval.
+   */
+  setReleaseFolder(projectId: string, folder: string | null, approvalPolicy: "self" | "named_role" | "none_required", actor: Actor): void {
+    requireHuman(actor, "Choosing a release folder");
+    this.projects.get(projectId);
+    tx(this.db, () => {
+      if (folder === null) {
+        run(this.db, "DELETE FROM release_targets WHERE project_id = ?", projectId);
+        this.setActionPolicy(projectId, "release", approvalPolicy, actor);
+        return;
+      }
+      // Never resolved against the service's working directory: only an absolute path a person typed is accepted.
+      const problems = releaseFolderProblems(folder.trim());
+      const canonical = resolvePath(folder.trim());
+      if (problems.length) throw new ValidationError("release folder", problems);
+      run(this.db, "INSERT INTO release_targets (project_id, folder, set_by, set_at) VALUES (?,?,?,?) ON CONFLICT (project_id) DO UPDATE SET folder = excluded.folder, set_by = excluded.set_by, set_at = excluded.set_at", projectId, canonical, actor.id, ts(this.clock.now()));
+      this.setActionPolicy(projectId, "release", approvalPolicy, actor, RELEASE_FOLDER_ADAPTER_ID);
+    });
   }
 
   /** Coverage labels generated from what is actually configured (ADR-005) - never aspirational. */
@@ -234,13 +273,14 @@ export class Gateway {
     const policies = new Map(all<any>(this.db, "SELECT action_type, adapter_id, approval_policy FROM action_policies WHERE project_id = ?", projectId).map((p) => [p.action_type as string, p]));
     const entries: CoverageEntry[] = [];
     for (const type of ["release", "send_external", "pay"]) {
-      const adapter = this.adapterFor(type);
+      const adapter = this.routeFor(projectId, type);
       const policy = policies.get(type);
       if (adapter && adapter.capability.availability === "available" && policy) {
         entries.push({
           action: type, label: "GATED", qualifier: adapter.capability.coverage_qualifier, adapter_id: adapter.capability.adapter_id, simulated: adapter.capability.simulated,
           needs: policy.approval_policy === "none_required" ? ["ready_check"] : ["ready_check", "approval"],
-          note: adapter.capability.simulated ? "SIMULATED adapter in this build: the gate logic is real, the release itself is only recorded." : "",
+          note: adapter.capability.simulated ? "SIMULATED adapter in this build: the gate logic is real, the release itself is only recorded."
+            : adapter.capability.adapter_id === RELEASE_FOLDER_ADAPTER_ID ? `Copies exactly the checked bytes to ${this.releaseFolder(projectId)?.folder ?? "(no folder)"}. Copying the file there by hand is not blocked.` : "",
         });
       } else {
         entries.push({
@@ -284,7 +324,7 @@ export class Gateway {
   requestAction(input: { receipt_id: string; type: string; params?: Record<string, unknown> }, actor: Actor): { request: ActionRequestView; deduplicated: boolean } {
     const receipt = this.getReceipt(input.receipt_id);
     const params = input.params ?? {};
-    const adapter = this.adapterFor(input.type);
+    const adapter = this.routeFor(receipt.project_id, input.type);
     const policy = get<any>(this.db, "SELECT adapter_id, approval_policy FROM action_policies WHERE project_id = ? AND action_type = ?", receipt.project_id, input.type);
     const refuse = (capability: string, reason: string): never => {
       this.ledger.append({
@@ -369,7 +409,13 @@ export class Gateway {
       const policy = get<any>(this.db, "SELECT adapter_id, approval_policy FROM action_policies WHERE project_id = ? AND action_type = ?", request.project_id, request.type);
       checks.push({ step: 1, check: "Request well formed; adapter enabled for this project", ok: !!adapter && adapter.capability.availability === "available" && policy?.adapter_id === request.adapter_id });
       try {
-        checks.push(...this.verifyBindings(receipt));
+        const bindings = this.verifyBindings(receipt);
+        // AT-C9: a person who was asked about a newer version and chose the approved one has answered step 5 - for that
+        // exact newer version only. Anything newer still pauses again.
+        const choice = parse<{ choice: string; latest_seq: number; by: string } | null>(get<{ v: string | null }>(this.db, "SELECT version_choice_json AS v FROM action_requests WHERE action_id = ?", actionId)?.v ?? null);
+        const latest = get<{ v: number }>(this.db, "SELECT MAX(version_seq) AS v FROM artifact_versions WHERE artifact_id = ?", receipt.artifact.artifact_id)?.v ?? 0;
+        checks.push(...bindings.map((c) => (c.step === 5 && !c.ok && choice?.choice === "approved_version" && choice.latest_seq === latest
+          ? { step: 5, check: c.check, ok: true, detail: `version ${latest} exists; ${this.projects.displayName(choice.by)} chose to release the approved version ${receipt.artifact.version_seq}` } : c)));
       } catch (error) {
         // Fail closed: a dependency that cannot answer is a failed binding, not a pass.
         checks.push({ step: 2, check: "Bindings could be verified", ok: false, detail: `a dependency failed: ${error instanceof Error ? error.message : String(error)}` });
@@ -416,7 +462,14 @@ export class Gateway {
     let outcome: { outcome: string; executed_content_hash: string; detail: string } | null = null;
     let failure: string | null = null;
     try {
-      outcome = adapterRef.adapter!.execute({ action_id: actionId, type: request.type, params: request.params, bytes: adapterRef.bytes!, content_hash: request.content_hash });
+      const art = get<{ name: string }>(this.db, "SELECT name FROM artifacts WHERE artifact_id = ?", request.artifact_id);
+      const receiptNow = this.getReceipt(request.receipt_id!);
+      outcome = adapterRef.adapter!.execute({ action_id: actionId, type: request.type, params: request.params, bytes: adapterRef.bytes!, content_hash: request.content_hash, project_id: request.project_id, artifact_name: art?.name ?? "document", version_seq: receiptNow.artifact.version_seq });
+      // AT-E1: whatever an adapter reports as executed must be exactly the checked bytes.
+      if (outcome.executed_content_hash !== request.content_hash) {
+        failure = `the adapter reported different bytes (${outcome.executed_content_hash}) than were checked`;
+        outcome = null;
+      }
     } catch (error) {
       failure = error instanceof Error ? error.message : String(error);
     }
@@ -440,6 +493,41 @@ export class Gateway {
         this.ledger.append({
           type: "action.failed", project_id: request.project_id, actor: { kind: "adapter", id: request.adapter_id }, subject: { kind: "action", id: actionId },
           refs: { action_id: actionId, adapter_id: request.adapter_id }, caused_by: [proceed], summary: `${request.type} failed visibly. Nothing is retried automatically.`, payload: { reason: failure },
+        });
+      }
+      return this.getAction(actionId);
+    });
+  }
+
+  /**
+   * AT-C9: the gateway paused because a newer version exists. A person says which
+   * version is intended:
+   *   - "approved_version": release exactly what was checked and approved; every
+   *     other binding is still re-verified at execution, and a yet newer version
+   *     pauses again.
+   *   - "newer_version": this request is cancelled; the newer version must be
+   *     checked (the caller runs that check) and requested and approved afresh.
+   */
+  chooseVersion(actionId: string, choice: "approved_version" | "newer_version", actor: Actor): ActionRequestView {
+    requireHuman(actor, "Choosing which version to release");
+    return tx(this.db, () => {
+      const request = this.getAction(actionId);
+      if (request.status !== "paused_newer_version") throw new Conflict("not_paused", `this request is ${request.status}, not waiting for a version choice`);
+      const receipt = this.getReceipt(request.receipt_id!);
+      const latest = get<{ v: number }>(this.db, "SELECT MAX(version_seq) AS v FROM artifact_versions WHERE artifact_id = ?", request.artifact_id)!.v;
+      const now = ts(this.clock.now());
+      const cause = this.ledger.byRef("action_id", actionId).slice(-1).map((e) => e.event_id);
+      if (choice === "approved_version") {
+        run(this.db, "UPDATE action_requests SET status = 'approved', status_reason = ?, version_choice_json = ? WHERE action_id = ?", `release version ${receipt.artifact.version_seq} as approved, not version ${latest}`, json({ choice, by: actor.id, at: now, latest_seq: latest }), actionId);
+        this.ledger.append({
+          type: "action.approved", project_id: request.project_id, actor, subject: { kind: "action", id: actionId }, refs: { action_id: actionId, receipt_id: receipt.receipt_id }, caused_by: cause,
+          summary: `${actor.display_name ?? actor.id} chose to release the approved version ${receipt.artifact.version_seq}, not the newer version ${latest}.`, payload: { version_choice: choice, approved_version: receipt.artifact.version_seq, newer_version: latest },
+        });
+      } else {
+        run(this.db, "UPDATE action_requests SET status = 'cancelled', status_reason = ?, version_choice_json = ? WHERE action_id = ?", `the newer version ${latest} is intended; it must be checked and approved`, json({ choice, by: actor.id, at: now, latest_seq: latest }), actionId);
+        this.ledger.append({
+          type: "action.rejected", project_id: request.project_id, actor, subject: { kind: "action", id: actionId }, refs: { action_id: actionId, receipt_id: receipt.receipt_id }, caused_by: cause,
+          summary: `${actor.display_name ?? actor.id} chose the newer version ${latest}. This request is cancelled; the newer version is checked again.`, payload: { version_choice: choice, newer_version: latest },
         });
       }
       return this.getAction(actionId);

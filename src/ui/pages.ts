@@ -264,7 +264,7 @@ export class Pages {
       ${list("Findings resolved after the change", c.resolved, "None.")}
       ${list("Findings introduced", c.introduced, "None.")}
       ${list("Findings still open", c.remaining, "None.")}
-      ${unavailable("the before/after view of each changed cell and passage", c.content_diff.reason)}`;
+      ${c.content_diff.available ? "" : unavailable("the before/after view of each changed cell and passage", c.content_diff.reason)}`;
     return { title: `Before and after: ${c.after.artifact.name}`, body, project: p };
   }
 

@@ -44,6 +44,40 @@ export interface Project {
 
 export const WORK_TYPES = Object.freeze(["sales_proposal"]);
 
+export interface CsvImportReport {
+  file_name: string;
+  rows_read: number;
+  rows_imported: number;
+  rejected: Array<{ row: number; reason: string }>;
+}
+
+/** RFC 4180 CSV: quoted fields, doubled quotes, CRLF or LF. Pure and total. */
+export function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let quoted = false;
+  const body = text.replace(/^\uFEFF/, "");
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i]!;
+    if (quoted) {
+      if (ch === '"' && body[i + 1] === '"') { field += '"'; i++; }
+      else if (ch === '"') quoted = false;
+      else field += ch;
+    } else if (ch === '"' && field === "") quoted = true;
+    else if (ch === ",") { row.push(field); field = ""; }
+    else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && body[i + 1] === "\n") i++;
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else field += ch;
+  }
+  if (field !== "" || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
 export class ProjectService {
   private db: Db;
   private ledger: Ledger;
@@ -215,6 +249,80 @@ export class ProjectService {
       if (previous) this.ledger.append({ type: "source.snapshot_superseded", project_id: null, actor: { kind: "system", id: "sys_SERVICE1" }, subject: { kind: "snapshot", id: previous.snapshot_id }, refs: { source_id: sourceId, snapshot_id: previous.snapshot_id }, caused_by: [imported.event_id], summary: "An earlier version of a trusted source was superseded." });
       return this.latestSnapshot(sourceId)!;
     });
+  }
+
+  /**
+   * Import a trusted-source version from CSV text (AT-F7). The service never opens
+   * a path: the person supplies the content (upload or paste). Rows that cannot be
+   * relied on are REPORTED and left out - never read as zero or blank:
+   *   - a value cell holding a formula ("=..." or "@...") with no computed result,
+   *   - an empty key or value cell, a malformed row, a key that appears twice.
+   * Nothing is imported when no row is usable. XLSX is not read in this build.
+   */
+  importCsv(sourceId: string, input: { file_name: string; text: string }, actor: Actor): { snapshot: SourceSnapshot; report: CsvImportReport } {
+    requireHuman(actor, "Importing a trusted-source version");
+    const src = get<any>(this.db, "SELECT record_json FROM sources WHERE source_id = ? AND workspace_id = ?", sourceId, this.workspaceId);
+    if (!src) throw new NotFound("source", sourceId);
+    const record = parse<{ key_columns: string[]; value_columns: string[] }>(src.record_json);
+    const text = input.text ?? "";
+    if (!text.trim()) throw new ValidationError("CSV import", ["the file is empty"]);
+    if (text.length > 2 * 1024 * 1024) throw new ValidationError("CSV import", ["the file is larger than 2 MB"]);
+    const table = parseCsv(text);
+    if (table.length > 10001) throw new ValidationError("CSV import", ["more than 10,000 rows"]);
+    const header = (table[0] ?? []).map((h) => h.trim());
+    const missing = [...record.key_columns, ...record.value_columns].filter((c) => !header.includes(c));
+    if (missing.length) throw new ValidationError("CSV import", [`the header row has no column named ${missing.join(", ")} (it has: ${header.join(", ") || "nothing"})`]);
+    const rejected: CsvImportReport["rejected"] = [];
+    const candidates: SourceRow[] = [];
+    const DECIMAL_WITH_COMMAS = /^-?\d{1,3}(,\d{3})+(\.\d+)?$|^-?\d+(\.\d+)?$/;
+    table.slice(1).forEach((cells, i) => {
+      const line = i + 2;
+      if (cells.length === 1 && cells[0]!.trim() === "") return; // blank line
+      if (cells.length !== header.length) return void rejected.push({ row: line, reason: `has ${cells.length} cells; the header has ${header.length}` });
+      const cell = (c: string): string => cells[header.indexOf(c)]!.trim();
+      const key: Record<string, string> = {};
+      for (const c of record.key_columns) {
+        if (!cell(c)) return void rejected.push({ row: line, reason: `the key ${c} is empty` });
+        key[c] = cell(c);
+      }
+      const values: Record<string, string> = {};
+      for (const c of record.value_columns) {
+        const v = cell(c);
+        if (/^[=@]/.test(v)) return void rejected.push({ row: line, reason: `${c} is a formula with no computed result (${v.slice(0, 40)}); it is never read as zero or blank` });
+        if (!v) return void rejected.push({ row: line, reason: `${c} is empty; it is never read as zero` });
+        values[c] = DECIMAL_WITH_COMMAS.test(v) ? v.replace(/,/g, "") : v;
+      }
+      candidates.push({ row: line, key, values });
+    });
+    const keyOf = (r: SourceRow): string => JSON.stringify(record.key_columns.map((c) => r.key[c]));
+    const counts = new Map<string, number>();
+    for (const r of candidates) counts.set(keyOf(r), (counts.get(keyOf(r)) ?? 0) + 1);
+    const rows = candidates.filter((r) => {
+      if (counts.get(keyOf(r))! > 1) {
+        rejected.push({ row: r.row, reason: `the key ${record.key_columns.map((c) => r.key[c]).join(" / ")} appears more than once; ambiguous rows are not used for lookups` });
+        return false;
+      }
+      return true;
+    });
+    rejected.sort((a, b) => a.row - b.row);
+    if (!rows.length) throw new ValidationError("CSV import", ["no usable row: nothing was imported", ...rejected.slice(0, 5).map((r) => `row ${r.row}: ${r.reason}`)]);
+    return tx(this.db, () => {
+      const snapshot = this.importSnapshot(sourceId, rows, actor);
+      const report: CsvImportReport = { file_name: input.file_name.slice(0, 200), rows_read: table.length - 1, rows_imported: rows.length, rejected };
+      run(this.db, "INSERT INTO source_import_reports (snapshot_id, source_id, file_name, report_json, created_at) VALUES (?,?,?,?,?)", snapshot.snapshot_id, sourceId, report.file_name, json(report), ts(this.clock.now()));
+      return { snapshot, report };
+    });
+  }
+
+  importReport(snapshotId: string): CsvImportReport | null {
+    return parse<CsvImportReport | null>(get<{ report_json: string }>(this.db, "SELECT report_json FROM source_import_reports WHERE snapshot_id = ?", snapshotId)?.report_json);
+  }
+
+  sourceRecord(sourceId: string): { source_id: string; name: string; owner: string; key_columns: string[]; value_columns: string[]; max_age_days: number } {
+    const row = get<any>(this.db, "SELECT source_id, name, owner, record_json FROM sources WHERE source_id = ? AND workspace_id = ?", sourceId, this.workspaceId);
+    if (!row) throw new NotFound("source", sourceId);
+    const rec = parse<any>(row.record_json);
+    return { source_id: row.source_id, name: row.name, owner: row.owner, key_columns: rec.key_columns, value_columns: rec.value_columns, max_age_days: rec.max_age_days };
   }
 
   latestSnapshot(sourceId: string): SourceSnapshot | null {

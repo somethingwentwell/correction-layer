@@ -52,18 +52,14 @@ test("remaining extension points are explicit: each throws a typed NotImplemente
 const PHASE_2: Array<[string, string]> = [
   ["AT-G4", "rules.createCandidate shows a structural duplicate BEFORE a candidate can be created (analysis exists: RuleService.analyse; the UX-7b flow does not)"],
   ["AT-G8", "engine/adapter upgrade is staged against stored rule examples; changed outcomes hold the upgrade and queue the rule"],
-  ["AT-C3", "pending action request survives assistant and service restart with a fresh hello (store side is covered; the session side is not)"],
   ["AT-C4 / AT-C5 / AT-C7 / AT-C8", "context.resolveByMarker: renamed, moved and copied files and folders; foreign markers; the one-time question (ProjectService.resolveByMarker)"],
   ["AT-C6 (second half)", "\"check as which project?\" answered and remembered per lineage"],
-  ["AT-C9 / AT-E1", "newer-version pause with the approver choosing a version; a real release-folder adapter that copies the checked bytes"],
   ["AT-F1 (container) / AT-F2 / AT-F3 / AT-F4 / AT-F5", "formats.docx.parse: container inspection, locators, mapping mismatch, embedded workbooks, tracked changes"],
-  ["AT-F7", "ProjectService.importSnapshot from CSV/XLSX files, rejecting formula cells without cached results"],
   ["AT-L11", "recurrence: three independent episodes of the same hand edit produce a suggestion (needs edit diff compilation and folder watch)"],
-  ["AT-O5 (content)", "CheckService.compare content_diff: changed cells and passages before and after"],
-  ["AT-O7", "re-run as recorded: replay a stored run from its inputs and report mismatches or purged inputs"],
   ["AT-E10 / AT-E11 / AT-E12", "offline matrix, clock-jump hold on receipts, backup and restore"],
   ["AT-I5 / AT-I6", "two workspaces on one machine; translator outbound-request canary (no AI translator exists in Phase 1)"],
   ["AT-U1 to AT-U6, AT-R3", "usability tests with people; not automatable here"],
 ];
+// AT-F7 for XLSX: CSV is implemented; spreadsheet (XLSX) import needs a spreadsheet reader (see AT-F1 to AT-F5).
 // AT-L15 "example regression after an upgrade" has no trigger yet: no reader/engine upgrade path exists (see AT-G8).
 for (const [id, contract] of PHASE_2) test.todo(`${id}: ${contract}`);

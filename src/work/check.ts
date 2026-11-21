@@ -26,6 +26,9 @@ import type { Ledger } from "../ledger/ledger.ts";
 import type { RuleService, Selection } from "../policy/rules.ts";
 import type { Db } from "../store/db.ts";
 import { all, get, json, parse, run, tx } from "../store/db.ts";
+import type { AppliedException } from "../engine/evaluate.ts";
+import type { ContentDiffResult } from "./diff.ts";
+import { diffArtifacts } from "./diff.ts";
 
 export interface ObservedVersion {
   artifact_id: string;
@@ -64,6 +67,15 @@ export interface CheckRequest {
   actor: Actor;
   trigger?: RunRecord["trigger"];
   session_id?: string;
+}
+
+export interface RerunReport {
+  run_id: string;
+  status: "identical" | "mismatch" | "purged" | "inputs_missing";
+  problems: Array<{ kind: "mismatch" | "purged" | "not_recorded" | "not_reproducible" | "unreadable"; detail: string }>;
+  results: Array<{ rule_id: string; title: string; recorded: string; now: string | null; same: boolean }>;
+  verdict: Verdict | null;
+  inputs_digest_matches: boolean;
 }
 
 export type VersionListener = (version: ObservedVersion) => void;
@@ -106,7 +118,7 @@ export class CheckService {
    * beside them. Lineage in Phase 1 is (project, file name); a known hash is the
    * same version. Attribution is explicit or "unknown editor" - never guessed.
    */
-  observe(input: { project_id: string; name: string; bytes: Uint8Array; declared_by?: Actor; is_demo?: boolean }): ObservedVersion {
+  observe(input: { project_id: string; name: string; bytes: Uint8Array; declared_by?: Actor; is_demo?: boolean; fix_id?: string }): ObservedVersion {
     const project = this.projects.get(input.project_id);
     const contentHash = sha256(input.bytes);
     const observed = tx(this.db, (): ObservedVersion => {
@@ -140,9 +152,9 @@ export class CheckService {
         const by = input.declared_by;
         this.ledger.append({
           type: "change.recorded", project_id: project.project_id, actor: by ?? { kind: "system", id: SYS.service }, subject: { kind: "artifact", id: artifact.artifact_id },
-          refs: { artifact_id: artifact.artifact_id, content_hash: contentHash, change_id: this.ids("chg") }, caused_by: [event.event_id],
-          summary: `${input.name} changed from version ${previous.version_seq} to ${seq}, ${by ? `declared by ${by.display_name ?? by.id}` : "by an unknown editor"}.`,
-          payload: { before_hash: previous.content_hash, after_hash: contentHash, attribution: by ? "declared" : "unknown_editor" },
+          refs: { artifact_id: artifact.artifact_id, content_hash: contentHash, change_id: this.ids("chg"), ...(input.fix_id ? { fix_id: input.fix_id } : {}) }, caused_by: [event.event_id],
+          summary: `${input.name} changed from version ${previous.version_seq} to ${seq}, ${by ? (by.kind === "human" ? `declared by ${by.display_name ?? by.id}` : `declared by ${by.display_name ?? by.id} (an assistant${by.on_behalf_of ? `, for ${by.on_behalf_of}` : ""}; not verified)`) : "by an unknown editor"}${input.fix_id ? `, applying proposal ${input.fix_id}` : ""}.`,
+          payload: { before_hash: previous.content_hash, after_hash: contentHash, attribution: by ? (by.kind === "human" ? "declared" : "declared_by_assistant") : "unknown_editor", ...(input.fix_id ? { applied_fix: input.fix_id } : {}) },
         });
       }
       return { artifact_id: artifact.artifact_id, name: input.name, project_id: project.project_id, version_seq: seq, content_hash: contentHash, normalized, parse_error: read.error?.message ?? null, is_new_version: true, event_id: event.event_id };
@@ -350,12 +362,83 @@ export class CheckService {
     };
   }
 
-  compare(beforeRunId: string, afterRunId: string): { before: RunRecord; after: RunRecord; same_artifact: boolean; resolved: Finding[]; introduced: Finding[]; remaining: Finding[]; content_diff: { available: false; reason: string } } {
+  /** The normalized form of one stored version (null if unreadable or unknown). */
+  normalizedOf(artifactId: string, contentHash: string): NormalizedArtifact | null {
+    return parse<NormalizedArtifact | null>(get<{ normalized_json: string | null }>(this.db, "SELECT normalized_json FROM artifact_versions WHERE artifact_id = ? AND content_hash = ?", artifactId, contentHash)?.normalized_json ?? null);
+  }
+
+  compare(beforeRunId: string, afterRunId: string): { before: RunRecord; after: RunRecord; same_artifact: boolean; resolved: Finding[]; introduced: Finding[]; remaining: Finding[]; content_diff: ContentDiffResult } {
     const [before, after] = [this.getRun(beforeRunId), this.getRun(afterRunId)];
     if (before.context.project_id !== after.context.project_id) throw new ClError("cross_project_compare", "runs of different projects cannot be compared", 409);
-    return {
-      before, after, same_artifact: before.artifact.artifact_id === after.artifact.artifact_id, ...this.diffFindings(before, after),
-      content_diff: { available: false, reason: "The cell-by-cell and passage-by-passage diff is not available in this build. Findings resolved and introduced are computed from the two checks." },
-    };
+    const findings = this.diffFindings(before, after);
+    const content_diff: ContentDiffResult = before.artifact.content_hash === after.artifact.content_hash
+      ? { available: true, passages: [], fields: [], unchanged_passages: this.normalizedOf(after.artifact.artifact_id, after.artifact.content_hash)?.content.blocks.length ?? 0, unread: [] }
+      : diffArtifacts(this.normalizedOf(before.artifact.artifact_id, before.artifact.content_hash), this.normalizedOf(after.artifact.artifact_id, after.artifact.content_hash), findings);
+    return { before, after, same_artifact: before.artifact.artifact_id === after.artifact.artifact_id, ...findings, content_diff };
+  }
+
+  /** Check the newest stored version of a document again (after a fix was applied, or when a person chose the newer version). */
+  recheckLatest(artifactId: string, action: ActionEnvelope, actor: Actor, reason: string): CheckResponse {
+    const a = this.artifact(artifactId);
+    const latest = this.versions(artifactId).at(-1);
+    if (!latest) throw new NotFound("artifact version", artifactId);
+    const bytes = get<{ bytes: Uint8Array }>(this.db, "SELECT bytes FROM blobs WHERE content_hash = ?", latest.content_hash)?.bytes;
+    if (!bytes) throw new ClError("bytes_not_stored", "the bytes of the newest version are no longer stored; check the file again", 409);
+    return this.check({ project_id: a.project_id, name: a.name, bytes: new Uint8Array(bytes), action, actor, trigger: { kind: "auto_recheck", reason } });
+  }
+
+  /**
+   * Re-run as recorded (AT-O7): rebuild the engine input from what was stored for
+   * the run - the checked bytes (by hash), the rule revisions (by id, revision and
+   * digest), the source snapshots, the exceptions and the project facts - and
+   * evaluate again at the recorded time. Read-only. Anything altered is a mismatch;
+   * anything no longer stored is reported as purged; nothing is guessed.
+   */
+  rerun(runId: string): RerunReport {
+    const original = this.getRun(runId);
+    const problems: RerunReport["problems"] = [];
+    const inputs = get<any>(this.db, "SELECT * FROM run_inputs WHERE run_id = ?", runId);
+    if (!inputs) return { run_id: runId, status: "inputs_missing", problems: [{ kind: "not_recorded", detail: "This check was made before re-run support; its inputs were not recorded." }], results: [], verdict: null, inputs_digest_matches: false };
+    const blob = get<{ bytes: Uint8Array }>(this.db, "SELECT bytes FROM blobs WHERE content_hash = ?", original.artifact.content_hash);
+    if (!blob) problems.push({ kind: "purged", detail: "The checked bytes are no longer stored." });
+    else if (sha256(blob.bytes) !== original.artifact.content_hash) problems.push({ kind: "mismatch", detail: "The stored bytes no longer hash to the recorded content hash." });
+    if (original.action.params_digest) problems.push({ kind: "not_reproducible", detail: "The action parameters were kept only as a digest." });
+    const rules: Array<{ content: RuleRevisionContent; status: RunRecord["results"][number]["rule_status"]; content_digest: string }> = [];
+    for (const [ruleId, revision, digest, status] of parse<Array<[string, number, string, string]>>(inputs.rules_json)) {
+      const row = get<{ content_json: string; content_digest: string }>(this.db, "SELECT content_json, content_digest FROM rule_revisions WHERE rule_id = ? AND revision = ?", ruleId, revision);
+      if (!row) { problems.push({ kind: "purged", detail: `Rule ${ruleId} revision ${revision} is no longer stored.` }); continue; }
+      const content = parse<RuleRevisionContent>(row.content_json);
+      if (row.content_digest !== digest || digestOf({ ...content, cases: [] }) !== digest) problems.push({ kind: "mismatch", detail: `Rule ${ruleId} revision ${revision} no longer matches its recorded digest.` });
+      rules.push({ content, status: status as never, content_digest: digest });
+    }
+    const sources: SourceSnapshot[] = [];
+    for (const snapshotId of parse<string[]>(inputs.snapshot_ids_json)) {
+      const row = get<any>(this.db, "SELECT * FROM source_snapshots WHERE snapshot_id = ?", snapshotId);
+      if (!row) { problems.push({ kind: "purged", detail: `Trusted-source snapshot ${snapshotId} is no longer stored.` }); continue; }
+      const rows = parse<SourceSnapshot["rows"]>(row.rows_json);
+      if (digestOf(rows) !== row.content_hash) problems.push({ kind: "mismatch", detail: `Trusted-source snapshot ${snapshotId} no longer matches its recorded hash.` });
+      sources.push({ source_id: row.source_id, snapshot_id: row.snapshot_id, imported_at: row.imported_at, confirmed_at: row.confirmed_at, superseded: false, rows });
+    }
+    const exceptions = parse<AppliedException[]>(inputs.exceptions_json);
+    const facts = parse<Record<string, string>>(inputs.facts_json);
+    if (!blob || problems.some((p) => p.kind === "purged" && /bytes/.test(p.detail))) return { run_id: runId, status: "purged", problems, results: [], verdict: null, inputs_digest_matches: false };
+    const versionRow = get<any>(this.db, "SELECT version_seq, size_bytes, observed_at FROM artifact_versions WHERE artifact_id = ? AND content_hash = ?", original.artifact.artifact_id, original.artifact.content_hash);
+    const read = readArtifact(new Uint8Array(blob.bytes), original.artifact.name, original.context.work_type);
+    if (!read.parsed) {
+      return { run_id: runId, status: problems.length ? "mismatch" : "identical", problems: [...problems, { kind: "unreadable", detail: `The file could not be read, then or now: ${read.error?.message}` }], results: [], verdict: original.verdict === "could_not_verify" ? "could_not_verify" : null, inputs_digest_matches: false };
+    }
+    if (read.parsed.parser.id !== original.artifact.parser.id || read.parsed.parser.version !== original.artifact.parser.version) problems.push({ kind: "mismatch", detail: `The reader changed since the check (${original.artifact.parser.id} ${original.artifact.parser.version} -> ${read.parsed.parser.id} ${read.parsed.parser.version}).` });
+    const artifact: NormalizedArtifact = { schema_version: "cl.artifact/1", artifact_id: original.artifact.artifact_id, name: original.artifact.name, version: { seq: original.artifact.version_seq, content_hash: original.artifact.content_hash, size_bytes: versionRow?.size_bytes ?? blob.bytes.length, observed_at: versionRow?.observed_at ?? original.as_of }, identity: read.identity, ...read.parsed };
+    const context: ResolvedContext = { workspace_id: original.context.workspace_id, project_id: original.context.project_id, area_ids: original.context.area_ids, work_type: original.context.work_type, status: "resolved", basis: original.context.basis, facts };
+    const out = evaluate({ run_id: runId, artifact, action: { type: original.action.type }, context, rules, sources, exceptions, as_of: original.as_of });
+    const digestMatches = out.inputs_digest === original.reproducibility.inputs_digest;
+    if (!digestMatches && !problems.length) problems.push({ kind: "mismatch", detail: "The rebuilt inputs do not match the recorded inputs digest." });
+    const results = original.results.map((r) => {
+      const again = out.results.find((x) => x.rule_id === r.rule_id);
+      return { rule_id: r.rule_id, title: r.title, recorded: r.outcome, now: again?.outcome ?? null, same: !!again && again.outcome === r.outcome && again.findings.length === r.findings.length };
+    });
+    for (const r of results.filter((x) => !x.same)) problems.push({ kind: "mismatch", detail: `${r.title}: recorded ${r.recorded}, re-run ${r.now ?? "missing"}.` });
+    if (out.verdict !== original.verdict) problems.push({ kind: "mismatch", detail: `Verdict: recorded ${original.verdict}, re-run ${out.verdict}.` });
+    return { run_id: runId, status: problems.length ? (problems.some((p) => p.kind === "purged") ? "purged" : "mismatch") : "identical", problems, results, verdict: out.verdict, inputs_digest_matches: digestMatches };
   }
 }
