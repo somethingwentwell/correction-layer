@@ -129,7 +129,7 @@ export class Pages {
               : html``;
     const body = html`
       <div class="project-head"><p class="lead">Sales proposals${p.facts.customer_name ? ` - Customer: ${p.facts.customer_name}` : ""}</p>
-        <div class="actions"><a class="btn primary" href="#check">Check a file</a>${linkButton(`/projects/${projectId}/rules/new`, "Add a correction")}${p.is_demo ? "" : linkButton(`/import?project=${projectId}`, "Import")}</div></div>
+        <div class="actions">${linkButton(`/projects/${projectId}/check`, "Check a file", "primary")}${linkButton(`/projects/${projectId}/rules/new`, "Add a correction")}${p.is_demo ? "" : linkButton(`/import?project=${projectId}`, "Import")}</div></div>
       <div class="stats">${stat(versions.length, "documents")}${stat(inScope.length, "rules apply", `/projects/${projectId}/rules`)}${stat(needsChanges, "need changes")}${stat(asks, "need you", `/projects/${projectId}/learning`)}${openFixes ? stat(openFixes, "proposed changes") : ""}</div>
       ${guide}
       ${notices.map((n) => {
@@ -182,6 +182,23 @@ export class Pages {
       ${this.events(this.app.ledger.recent({ projectId, limit: 6 }))}
       <p><a href="/projects/${projectId}/activity">See full history</a></p>`;
     return { title: p.name, body, project: p };
+  }
+
+  /** A focused page for checking one file (the project overview links here). */
+  checkFile(projectId: string): Page {
+    const p = this.app.projects.get(projectId);
+    const body = html`
+      <p class="lead">Upload a quote or paste it. It is stored as a version of this project's document with the same name (never overwriting earlier versions) and checked against every rule that applies.</p>
+      <form method="post" action="/app/projects/${projectId}/check" enctype="multipart/form-data" class="card">${this.token()}
+        <label>Upload a file <input type="file" name="file" accept=".md,.markdown,.txt,text/plain,text/markdown"></label>
+        <p class="muted">Or type it in:</p>
+        <label>File name <input type="text" name="name" value="Quote.md" maxlength="200"></label>
+        <label>Content (Markdown or plain text with a pricing table)<textarea name="content"></textarea></label>
+        <label>Check for <select name="action"><option value="release">Release (gated${this.app.gateway.releaseFolder(projectId) ? ": copies to your release folder after approval" : ", SIMULATED"})</option><option value="check_only">Just check</option><option value="send_external">Send to customer (not available: advisory only)</option></select></label>
+        <div class="actions"><button class="primary" type="submit">Check</button></div>
+      </form>
+      <p class="muted">Word, Excel and PDF files are stored but reported as Couldn't verify: this build cannot read them. Save them as Markdown or plain text first.</p>`;
+    return { title: "Check a file", body, project: p };
   }
 
   // ---------------------------------------------------------------- rules overview (OBS-1) and detail (OBS-2)

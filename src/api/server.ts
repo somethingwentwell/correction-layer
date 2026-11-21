@@ -288,6 +288,7 @@ export function buildRoutes(app: App, csrf: string): Route[] {
   add("page", "GET", "/projects/:id/rules", (c) => pages.rules(c.params.id!, c.url.searchParams.get("action") ?? "release", { q: c.url.searchParams.get("q") ?? "", status: c.url.searchParams.get("status") ?? "" }));
   add("page", "GET", "/projects/:id/rules/new", (c) => manage.ruleEditor(c.params.id!, Object.fromEntries(c.url.searchParams)));
   add("page", "GET", "/projects/:id/settings", (c) => manage.projectSettings(c.params.id!));
+  add("page", "GET", "/projects/:id/check", (c) => pages.checkFile(c.params.id!));
   add("page", "GET", "/sources/:id", (c) => manage.source(c.params.id!, c.url.searchParams.get("back")));
   add("page", "GET", "/runs/:id/rerun", (c) => manage.rerun(c.params.id!));
   add("page", "GET", "/fixes/:id", (c) => manage.fix(c.params.id!));
