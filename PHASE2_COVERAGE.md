@@ -16,7 +16,7 @@ CL_SEED_DEMO=1 npm run dev   # with labelled, fictional DEMO data
 npm run cli -- capture say --adapter adp_... --outbox ./outbox.jsonl --binding fld_... "Quotes must always be in SGD."
 ```
 
-Results at the end of Phase 2: type check clean, build clean, **116 tests: 108 pass, 0 fail, 8 todo**, design checker `OK` (unchanged counts: 110 events verified, 8 decisions recomputed). Phase 1 ended at 94 tests: 73 pass, 21 todo.
+Results at the end of Phase 2: type check clean, build clean, **122 tests: 114 pass, 0 fail, 8 todo** (after the UI follow-up in section 6; 116 / 108 / 8 before it), design checker `OK` (unchanged counts: 110 events verified, 8 decisions recomputed). Phase 1 ended at 94 tests: 73 pass, 21 todo.
 
 The store is upgraded in place by migration 2 (additive tables and nullable columns only); a Phase 1 store opens and migrates. The `/healthz` `schema_version` is now 2.
 
@@ -82,3 +82,30 @@ CLI: `correction-layer capture say|agent|flush|backfill|close`.
 - **Event catalogue.** Phase 2 uses only event types already in `schemas/event.schema.json`; removing a suppression therefore has no event and is not offered.
 - **One person, one machine.** No sign-in, no client pairing tokens; the same-account caveat of Phase 1 stands. Exceptions are granted by "owner or steward", which in solo mode is the local person.
 - **Not measured.** Nothing here is a performance or effectiveness measurement; DEMO data stays fictional and labelled.
+
+## 6. Follow-up: UI polish and first-run guidance
+
+A user-requested follow-up, on the same branch, after `e1cff89`. It changes how the app looks and how a newcomer gets started; it adds no new product capability beyond import previews, and the 8 todos above are unchanged.
+
+**Design system** (`src/ui/html.ts`, CSS at `/assets/app.css`, still no client-side script):
+
+- A sidebar with workspace navigation (All projects, Start new, Import existing, History check) and, inside a project, the project's sections; the current page is marked with `aria-current` and a visible indicator, not colour alone. Under 900px wide it becomes a single column with wrapping navigation.
+- The DEMO banner stays on every page that has demo data, shorter and visually separate; the scope note ("Nothing is sent or paid. No AI model is used.") moved to the sidebar.
+- Primary, secondary and destructive buttons: acts that reject, retire, undo, revoke, discard, delete or suppress are styled as destructive and keep their words. Badges keep their text marks (`[OK]`, `[X]`, `[?]`), so status never depends on colour.
+- Cards, stat tiles, a step indicator, a "Next step" card, success and error flashes, calmer headings, focus outlines, skip link.
+
+**First-run guidance** (`src/ui/start.ts`, `src/work/onboarding.ts`, routes in `src/api/server.ts`):
+
+| Path | What it does | Never does |
+|------|--------------|-----------|
+| Home `/` (and `/onboarding`) | On an empty workspace: three choices - Start new, Import existing, Try a fictional demo. Later: your projects, the DEMO projects in a separate "Fictional demo" section, and the choices again | Mix demo and real projects |
+| Start new `/start` | 1 create the project (name; optional customer fact and folder) - 2 first document, uploaded or pasted, with what the reader understood - 3 optional first rule from a list or from ONE sentence matched against the compiler's fixed patterns, added as a note by the person's click - 4 first check - 5 the result explained, with next actions | Turn learning on, choose a release folder, or guess a sentence it cannot read |
+| Import existing `/import` | Markdown / plain-text documents (several files or a paste) into an existing or new project; CSV trusted sources (new or new version). Each goes through a preview that stores nothing; saving re-sends the exact bytes and is refused if they differ from the preview | Overwrite: a same-name document becomes a new version (history kept) or, if chosen, a distinct name like `Quote (2).md`; identical content changes nothing. Read Word, Excel, PDF, other apps' databases or chat/email: these are listed as not supported with the alternative |
+| Try a fictional demo | `POST /app/demo` loads the labelled DEMO data, only into an empty workspace | Load into a workspace that has real work; accept DEMO projects as start or import targets |
+| Project overview | Quick actions, stat tiles, and one context-aware next step (add a document, check documents not yet checked, add a first rule, answer questions, fix documents that need changes); "check all not yet checked"; a dedicated "Check a file" page | — |
+
+New routes: `GET /start`, `GET /import`, `GET /projects/:id/check`; `POST /app/start/{project, document, rule, check}`, `POST /app/import/documents/preview` and `POST /app/import/source/preview` (token-checked POSTs that render a preview and change nothing), `POST /app/import/documents`, `POST /app/import/source`, `POST /app/demo`, `POST /app/projects/:id/check-all`. The trusted-source page's import now goes through the same preview.
+
+Tests: `test/onboarding-import.test.ts` (6 HTTP tests): empty-workspace choices and navigation markup; the guided start with missing fields, the form token, an unsupported (zip/Word) file, an unreadable sentence, a sentence and a template added as notes, the first check explained, learning and release folder untouched; document import with preview-stores-nothing, unsupported PDF/Word named, new version vs keep both vs identical, tampered content refused, a new project created only on confirm; CSV preview/confirm with header problems and rows left out; the demo only into an empty workspace, labelled and kept apart.
+
+UI limits that remain: no document preview with highlighted findings; the guided start covers one kind of work (sales proposals); the sentence path understands only the fixed patterns listed on screen; multiple-file import is limited by the 6 MB request size; no dark mode; screens were checked in headless Chrome at desktop and phone widths, not with assistive technology or with people (AT-U1 to AT-U6 stay todo).

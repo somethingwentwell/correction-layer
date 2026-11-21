@@ -68,38 +68,7 @@ export class Pages {
     return html`<table class="timeline"><thead><tr><th>When</th><th>What</th><th>By</th></tr></thead><tbody>${events.map((e) => html`<tr><td>${this.t(e.occurred_at)}</td><td>${e.summary}<div class="muted mono">${e.type} - ${e.event_id}${e.caused_by.length ? ` - because of ${e.caused_by.join(", ")}` : ""}</div></td><td>${e.actor.display_name ?? this.who(e.actor.id)} <span class="muted">(${e.actor.kind})</span></td></tr>`)}</tbody></table>`;
   }
 
-  // ---------------------------------------------------------------- home and onboarding (UX-1 to UX-4)
-  home(): Page {
-    const projects = this.app.projects.list();
-    const unbound = this.app.learning.inbox(null);
-    const body = html`
-      ${projects.length ? html`<h2>Projects</h2>${projects.map((p) => {
-        const inForce = this.app.rules.selectInScope({ project_id: p.project_id, area_ids: [], artifact_id: null, work_type: p.default_work_type, artifact_type: "document", action: "release" }).rules.length;
-        const asks = this.app.learning.inbox(p.project_id).length;
-        return html`<div class="card"><a href="/projects/${p.project_id}"><strong>${p.name}</strong></a>${p.is_demo ? label("DEMO", "demo-label") : ""}<div class="muted">Sales proposals${p.facts.customer_name ? ` - Customer: ${p.facts.customer_name}` : ""} - ${p.folders.length} folder(s) - ${inForce} rule(s) apply to releases${asks ? html` - <a href="/projects/${p.project_id}/learning">${asks} question(s) need you</a>` : ""}</div></div>`;
-      })}` : html`<div class="card"><strong>No projects yet.</strong> <p>Add a folder of work to get a first check in four steps: <a href="/onboarding">get started</a>.</p></div>`}
-      <p><a href="/onboarding">+ Add a folder / new project</a></p>
-      ${unbound.length ? html`<h2>Needs you (not tied to a project)</h2>${unbound.map((i) => html`<div class="card">${i.question} <div class="muted">${this.t(i.opened_at)}</div>${this.post(`/app/inbox/${i.inbox_id}/resolve`, "Dismiss", { resolution: "dismissed", back: "/" })}</div>`)}` : ""}`;
-    return { title: "All projects", body };
-  }
-
-  onboarding(): Page {
-    const body = html`
-      <p>Step 1 of 4: add a folder. Step 2: confirm the project and the kind of work. Then check a first file.</p>
-      <form method="post" action="/app/projects"><input type="hidden" name="_csrf" value="${this.csrf}">
-        <fieldset><legend>Folder and project</legend>
-          <label>Folder on this computer <input type="text" name="folder" placeholder="/Users/you/Documents/Proposals/Customer" required></label>
-          <label>Project name <input type="text" name="name" required></label>
-          <label>Kind of work <select name="default_work_type"><option value="sales_proposal">Sales proposals</option></select></label>
-          <label>Customer name (a project fact you confirm; optional) <input type="text" name="customer_name"></label>
-        </fieldset>
-        <button class="primary" type="submit">Create project</button>
-      </form>
-      <p class="muted">Next: check a first file on the project page, add corrections, and import a price list (CSV) in Project settings.</p>
-      ${unavailable("suggested project facts and starter rule packs (UX-2, UX-3)", "Facts are typed and confirmed by you; nothing is inferred from file contents.")}
-      ${unavailable("the folder marker file and folder watching", "The folder is bound in the workspace store only; no marker is written into your folder and edits there are not observed.")}`;
-    return { title: "Get started", body };
-  }
+  // Home and onboarding (UX-1 to UX-4) live in start.ts (first-run guidance).
 
   // ---------------------------------------------------------------- project home (UX-5)
   project(projectId: string): Page {
@@ -417,7 +386,7 @@ export class Pages {
     const reasons = (rs: string[]): string => rs.map((r) => REASON_WORDS[r] ?? r).join("; ");
     const body = html`
       <p>${policy && policy.mode !== "off" ? `Learning is set to "${MODE_WORDS[policy.mode]}".` : "Learning is Off for this project: nothing is captured for learning."} <a href="/projects/${projectId}/learning/settings">Settings</a> - <a href="/projects/${projectId}/learning/added">Added automatically (audit)</a> - <a href="/projects/${projectId}/capture">Capture health</a></p>
-      <table><thead><tr><th>Captured</th><th>Identified</th><th>Compiled</th><th>Tested</th><th>On</th><th>Asked</th></tr></thead><tbody><tr><td>${q.funnel.captured}</td><td>${q.funnel.identified}</td><td>${q.funnel.compiled}</td><td>${q.funnel.tested}</td><td>${q.funnel.activated}</td><td>${q.funnel.asked}</td></tr></tbody></table>
+      <div class="stats" role="group" aria-label="Learning stages">${stat(q.funnel.captured, "Captured")}${stat(q.funnel.identified, "Identified")}${stat(q.funnel.compiled, "Compiled")}${stat(q.funnel.tested, "Tested")}${stat(q.funnel.activated, "On")}${stat(q.funnel.asked, "Asked")}</div>
       <p class="muted">Counts for each stage, not rates. Captured is not identified; identified is not on.</p>
       <h2>Needs you (${q.needs_you.length})</h2>
       ${q.needs_you.length ? q.needs_you.map((i) => {
@@ -430,7 +399,7 @@ export class Pages {
         return html`<div class="card"><div>${i.question}</div>${i.detail.text ? html`<div class="muted">"${String(i.detail.text)}"</div>` : ""}<div class="muted">${i.kind.replace(/_/g, " ")} - ${this.t(i.opened_at)}</div>${rule ? html`<div><a href="/rules/${rule.rule_id}?project=${projectId}">${rule.title}</a> (${STATUS_WORDS[rule.status]})</div>` : ""}<div class="actions">${buttons}</div></div>`;
       }) : empty("Nothing is waiting for you.")}
       <h2>Turned on by itself (${q.turned_on.length})</h2>
-      ${q.turned_on.length ? html`<table><tbody>${q.turned_on.map((r) => html`<tr><td>${this.t(r.decided_at)}</td><td><a href="/rules/${r.rule_id}?project=${projectId}">${r.title}</a></td><td>${STATUS_WORDS[r.status]}${r.confirmed ? " (kept by a person)" : ""}</td><td>${(r.status === "active" || r.status === "trial") && !r.confirmed ? html`${this.post(`/app/rules/${r.rule_id}/retire`, "Undo", { back: `/projects/${projectId}/learning` })} ${this.post(`/app/rules/${r.rule_id}/keep`, "Keep", { back: `/projects/${projectId}/learning` })}` : ""}</td></tr>`)}</tbody></table>` : empty("No rule has turned on by itself.")}
+      ${q.turned_on.length ? html`<table><tbody>${q.turned_on.map((r) => html`<tr><td>${this.t(r.decided_at)}</td><td><a href="/rules/${r.rule_id}?project=${projectId}">${r.title}</a></td><td>${STATUS_WORDS[r.status]}${r.confirmed ? " (kept by a person)" : ""}</td><td>${(r.status === "active" || r.status === "trial") && !r.confirmed ? html`${this.post(`/app/rules/${r.rule_id}/retire`, "Undo", { back: `/projects/${projectId}/learning` }, "danger")} ${this.post(`/app/rules/${r.rule_id}/keep`, "Keep", { back: `/projects/${projectId}/learning` })}` : ""}</td></tr>`)}</tbody></table>` : empty("No rule has turned on by itself.")}
       <h2>Waiting for evidence (${q.waiting.length})</h2>
       ${q.waiting.length ? html`<ul>${q.waiting.map((w) => html`<li>"${w.text ?? ""}" - ${reasons(w.reasons)} (until ${this.t(w.expires_at)})</li>`)}</ul>` : empty("Nothing is waiting for evidence.")}
       <h2>Not learned (${q.not_learned.length})</h2>
@@ -493,7 +462,7 @@ export class Pages {
     const policy = this.app.policies.current(projectId);
     const body = html`
       <p>${policy && policy.mode !== "off" ? "" : html`<strong>Learning is off for this project, so nothing is captured for learning.</strong> `}Labels are generated from the adapters actually paired and their live state.</p>
-      <table><thead><tr><th scope="col">Where corrections are made</th><th scope="col">Status</th><th scope="col"></th></tr></thead><tbody>${this.app.intake.surfaceLabels(projectId).map((l) => html`<tr><td>${l.name}${l.simulated ? label("SIMULATED") : ""}</td><td><strong>${l.label}</strong></td><td class="muted">${l.detail}${l.adapter_id && !adapters.find((a) => a.adapter_id === l.adapter_id)?.revoked && !adapters.find((a) => a.adapter_id === l.adapter_id)?.simulated ? html` ${this.post(`/app/capture/adapters/${l.adapter_id}/revoke`, "Revoke", { back: `/projects/${projectId}/capture` })}` : ""}</td></tr>`)}</tbody></table>
+      <table><thead><tr><th scope="col">Where corrections are made</th><th scope="col">Status</th><th scope="col"></th></tr></thead><tbody>${this.app.intake.surfaceLabels(projectId).map((l) => html`<tr><td>${l.name}${l.simulated ? label("SIMULATED") : ""}</td><td><strong>${l.label}</strong></td><td class="muted">${l.detail}${l.adapter_id && !adapters.find((a) => a.adapter_id === l.adapter_id)?.revoked && !adapters.find((a) => a.adapter_id === l.adapter_id)?.simulated ? html` ${this.post(`/app/capture/adapters/${l.adapter_id}/revoke`, "Revoke", { back: `/projects/${projectId}/capture` }, "danger")}` : ""}</td></tr>`)}</tbody></table>
       <details><summary>Connect a command-line capture adapter</summary>
         <form method="post" action="/app/capture/adapters">${this.token()}<input type="hidden" name="back" value="/projects/${projectId}/capture">
           <label>Name for it <input type="text" name="label" value="My command-line outbox" required maxlength="80"></label>
@@ -509,7 +478,7 @@ export class Pages {
         <td>acknowledged through ${s.acked_through}${s.final_seq !== null ? ` of ${s.final_seq}` : ""}; processed through ${s.processed_through}</td>
         <td>${s.duplicates_dropped} duplicate(s) dropped - ${s.held_out_of_order} held out of order - ${s.dead_letters.length} unreadable - ${s.consent_blocked} not kept (no consent)
           ${s.gaps.map((g) => html`<div class="${g.closed_at && !g.acknowledged_at ? "muted" : ""}">Gap ${g.from_seq}-${g.to_seq}: ${g.acknowledged_at ? `LOST - acknowledged by ${this.who(g.acknowledged_by)}, ${this.t(g.acknowledged_at)}; nothing after it turns on by itself` : g.closed_at ? `closed by replay ${this.t(g.closed_at)}; nothing lost` : html`OPEN - corrections made then may not have been seen ${this.post(`/app/capture/${s.stream_id}/gaps/${g.from_seq}/acknowledge`, "These will not arrive: acknowledge as lost", { back: `/projects/${projectId}/capture` })}`}</div>`)}
-          ${s.dead_letters.map((d) => html`<div>Event ${d.source_seq} could not be ${d.stage === "intake" ? "read" : "processed"}: ${d.reason} ${d.stage === "processing" ? this.post(`/app/capture/${s.stream_id}/dead-letters/${d.source_seq}/retry`, "Retry", { back: `/projects/${projectId}/capture` }) : ""} ${this.post(`/app/capture/${s.stream_id}/dead-letters/${d.source_seq}/discard`, "Discard", { back: `/projects/${projectId}/capture` })}</div>`)}
+          ${s.dead_letters.map((d) => html`<div>Event ${d.source_seq} could not be ${d.stage === "intake" ? "read" : "processed"}: ${d.reason} ${d.stage === "processing" ? this.post(`/app/capture/${s.stream_id}/dead-letters/${d.source_seq}/retry`, "Retry", { back: `/projects/${projectId}/capture` }) : ""} ${this.post(`/app/capture/${s.stream_id}/dead-letters/${d.source_seq}/discard`, "Discard", { back: `/projects/${projectId}/capture` }, "danger")}</div>`)}
         </td></tr>`)}</tbody></table>` : empty("No capture stream has delivered events for this project.")}
       <p class="muted">Events that could not be read on arrival cannot be retried (they were never valid); they can be discarded. Events that failed while being processed can be retried.</p>`;
     return { title: `What is captured for learning: ${p.name}`, body, project: p };

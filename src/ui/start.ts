@@ -193,7 +193,7 @@ export class StartPages {
     const r = run as RunRecord;
     const counts = r.counts;
     const body = html`${progress}
-      <div class="card"><p>${verdictBadge(r.verdict)} <strong>${r.artifact.name}</strong>, version ${r.artifact.version_seq}</p><p>${VERDICT_MEANING[r.verdict]}</p>
+      <div class="card"><p>${verdictBadge(r.verdict)} <strong>${r.artifact.name}</strong>, version ${r.artifact.version_seq}</p><p>${VERDICT_MEANING[r.verdict]}</p>${r.verdict === "ready" && counts.notes ? html`<p><strong>${counts.notes} note${counts.notes === 1 ? "" : "s"}:</strong> a rule that is only a note found something below. Look at it; it does not block. Make the rule must-pass on its page once you have one quote it catches and one it allows.</p>` : ""}
         <div class="stats">${stat(counts.in_scope, "rules applied")}${stat(counts.pass, "passed")}${stat(counts.fail, "need changes")}${stat(counts.unknown + counts.error + counts.conflict, "couldn't verify")}${stat(counts.notes, "notes")}</div></div>
       ${r.results.length ? html`<table><thead><tr><th scope="col">Rule</th><th scope="col">Result</th><th scope="col">Why</th></tr></thead><tbody>${r.results.map((x) => html`<tr><td>${x.title}${x.effective_enforcement === "warn" ? label("note") : ""}</td><td><strong>${outcomeWord(x.outcome)}</strong></td><td>${x.reason}${x.findings.slice(0, 3).map((f) => html`<div class="muted">${f.location.label}: ${f.message}</div>`)}</td></tr>`)}</tbody></table>`
         : html`<div class="empty">No rule applies yet, so there was nothing to check against. Add a rule, then check again.</div>`}
@@ -215,10 +215,10 @@ export class StartPages {
     if (!bytes) return empty("The stored bytes are no longer available.");
     const [p] = previewDocuments(this.app, project.project_id, [{ name, bytes: new Uint8Array(bytes) }]);
     void artifactId;
-    return this.previewCard(p!);
+    return this.previewCard(p!, "new_version", false);
   }
 
-  private previewCard(p: DocumentPreview, onExisting: string = "new_version"): Safe {
+  private previewCard(p: DocumentPreview, onExisting: string = "new_version", showOutcome = true): Safe {
     const outcome = !p.importable ? html`<span class="status-bad"><strong>Not imported</strong></span>`
       : p.outcome === "unchanged" ? html`Identical to version ${p.existing!.identical_to}: nothing will change.`
       : p.outcome === "new_version" ? (onExisting === "keep_both" ? html`A document with this name exists. It will be saved under a new name; the existing one is untouched.` : html`A document with this name exists: this becomes <strong>version ${p.existing!.latest_seq + 1}</strong>. Earlier versions are kept.`)
@@ -227,7 +227,7 @@ export class StartPages {
       ${p.problem ? html`<p>${p.problem}</p>` : ""}
       ${p.understood.length || p.line_items ? html`<table><tbody>${p.understood.map((u) => html`<tr><th scope="row">${u.what}</th><td class="mono">${u.value}</td></tr>`)}<tr><th scope="row">Pricing table lines</th><td>${p.line_items}</td></tr></tbody></table>` : p.importable ? html`<p class="muted">No labelled values were found.</p>` : ""}
       ${p.warnings.length ? html`<ul>${p.warnings.map((w) => html`<li>${w}</li>`)}</ul>` : ""}
-      <p class="muted">${outcome}</p></div>`;
+      ${showOutcome ? html`<p class="muted">${outcome}</p>` : ""}</div>`;
   }
 
   // ---------------------------------------------------------------- import

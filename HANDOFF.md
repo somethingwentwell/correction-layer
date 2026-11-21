@@ -12,6 +12,8 @@ What a person can now do through the app and the API (details, tests and limits 
 - **Checks and history.** Four more check kinds; CSV source import with a rejection report (AT-F7, CSV only); content diff joined to findings (AT-O5); re-run as recorded (AT-O7); the joined journey of a correction; proposed changes kept apart from applied changes.
 - **Release.** Optional local release folder (copies exactly the checked bytes after receipt, approval and a person's start; never overwrites); newer-version pause with the person's choice (AT-C9, AT-E1).
 
+- **First run (UI follow-up).** A sidebar design system; the home page offers Start new (`/start`, a five-step guided setup that never turns on learning or a release folder), Import existing (`/import`, Markdown/plain-text documents and CSV sources with a preview that stores nothing and no overwrite) and a fictional demo (empty workspace only). See [PHASE2_COVERAGE.md](PHASE2_COVERAGE.md) section 6.
+
 Still out of scope: DOCX/XLSX/PDF reading, folder markers and moves, folder watching, recurrence, backup/restore, offline and clock checks, two workspaces, any AI model, send and pay, sign-in. See section 6.
 
 Read this file first, then the module header comment of whatever you are about to change. The design documents in `docs/` remain the specification; where the code deviates, section 8 below records it.
@@ -35,7 +37,7 @@ npm run cli -- verify  # verify the ledger hash chain
 npm run cli -- check path/to/quote.md --project prj_... --for release
 ```
 
-Results after Phase 2: type check clean; build clean; **116 tests: 108 pass, 0 fail, 8 todo** (the todo entries are the contracts still not built, section 6, reported as todo, never as passing); design checker `OK` with the same counts as before the implementation existed. (Phase 1 ended at 94 tests: 73 pass, 21 todo.)
+Results after Phase 2: type check clean; build clean; **122 tests: 114 pass, 0 fail, 8 todo** (the todo entries are the contracts still not built, section 6, reported as todo, never as passing); design checker `OK` with the same counts as before the implementation existed. (Phase 1 ended at 94 tests: 73 pass, 21 todo.)
 
 Phase 2 also added: `npm run cli -- capture say|agent|flush|backfill|close --adapter adp_... --outbox <file>` (talks to the running service over loopback; pair the adapter in the app first, on the Capture health screen).
 

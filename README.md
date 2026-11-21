@@ -125,7 +125,7 @@ npm start              # start the built service (after npm run build)
 npm run cli -- capture say --adapter adp_... --outbox ./outbox.jsonl "Quotes must always be in SGD."
 ```
 
-Then open `http://127.0.0.1:4319/`. To look around with fictional, clearly labelled DEMO data, start with `CL_SEED_DEMO=1` or run `npm run seed:demo` once against an empty store.
+Then open `http://127.0.0.1:4319/`. On an empty workspace the home page offers three ways in: **Start new** (a guided setup: project, first quote, optional first rule, first check explained), **Import existing** (Markdown or plain-text quotes and CSV price lists, previewed before anything is saved, never overwriting), and **Try a fictional demo** (clearly labelled DEMO data, only into an empty workspace; or start with `CL_SEED_DEMO=1`).
 
 | Real | Simulated, partial or unavailable (and labelled so in the product) |
 |------|---------------------------------------------------------------------|
