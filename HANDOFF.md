@@ -35,7 +35,7 @@ npm run cli -- verify  # verify the ledger hash chain
 npm run cli -- check path/to/quote.md --project prj_... --for release
 ```
 
-Results after Phase 2: type check clean; build clean; **115 tests: 107 pass, 0 fail, 8 todo** (the todo entries are the contracts still not built, section 6, reported as todo, never as passing); design checker `OK` with the same counts as before the implementation existed. (Phase 1 ended at 94 tests: 73 pass, 21 todo.)
+Results after Phase 2: type check clean; build clean; **116 tests: 108 pass, 0 fail, 8 todo** (the todo entries are the contracts still not built, section 6, reported as todo, never as passing); design checker `OK` with the same counts as before the implementation existed. (Phase 1 ended at 94 tests: 73 pass, 21 todo.)
 
 Phase 2 also added: `npm run cli -- capture say|agent|flush|backfill|close --adapter adp_... --outbox <file>` (talks to the running service over loopback; pair the adapter in the app first, on the Capture health screen).
 

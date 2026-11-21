@@ -216,3 +216,19 @@ test("report_change and propose_change: an assistant can declare a version or pr
   // Applying is an app act: a client imitating the form without the token is refused.
   assert.equal((await form(`/app/fixes/${proposed.json.fix_id}/apply`, {}, null)).status, 403);
 });
+
+test("the correction editor over HTTP: a duplicate of a rule in force is shown before saving; the refusal says what to do; acknowledging saves a candidate", async () => {
+  const learned = app.rules.listForProject(projectId).find((r) => r.authority?.kind === "delegated_learning")!;
+  const preview = await page(`/projects/${projectId}/rules/new?template=currency&currency=SGD&preview=1`);
+  assert.match(preview.text, new RegExp(`I have seen[\\s\\S]*${learned.rule_id}`));
+  const refused = await fetch(server.url + `/app/projects/${projectId}/rules`, { method: "POST", redirect: "manual", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ _csrf: server.csrf, template: "currency", currency: "SGD", enforcement: "block" }) });
+  assert.equal(refused.status, 409);
+  const html = await refused.text();
+  assert.match(html, /already ask for the same thing[\s\S]*What you can do: Open the rules listed/);
+  const before = app.rules.listAll().length;
+  const saved = await form(`/app/projects/${projectId}/rules`, { template: "currency", currency: "SGD", enforcement: "block", acknowledged: learned.rule_id });
+  assert.equal(saved.status, 303);
+  assert.match(saved.location ?? "", /\/rules\/rul_[0-9A-Z]+\?project=/);
+  assert.equal(app.rules.listAll().length, before + 1);
+  assert.equal(app.rules.listAll().filter((r) => r.status === "candidate").length >= 1, true, "saved inactive");
+});

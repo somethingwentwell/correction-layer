@@ -113,7 +113,11 @@ export class Pages {
     const notices = this.app.learning.notices(projectId).slice(0, 3);
     const body = html`
       <p class="muted">Sales proposals${p.facts.customer_name ? ` - Customer: ${p.facts.customer_name}` : ""}</p>
-      ${notices.map((n) => html`<div class="card" role="status"><strong>Learned for ${p.name}</strong><p>${n.text}</p><a href="/rules/${n.rule_id}?project=${projectId}">Details / Undo / Keep</a></div>`)}
+      ${notices.map((n) => {
+        // The person's words are shown live from the signal (they are never copied into the notice, so they can be deleted).
+        const said = (this.app.db.prepare("SELECT s.text FROM learning_decisions d JOIN signals s ON s.signal_id = d.signal_id WHERE d.decision_id = ?").get(n.decision_id) as { text: string | null } | undefined)?.text;
+        return html`<div class="card" role="status"><strong>Learned for ${p.name}</strong><p>${n.text}</p>${said ? html`<p>You said: "${said}"</p>` : html`<p class="muted">Original wording deleted or not kept.</p>`}<a href="/rules/${n.rule_id}?project=${projectId}">Details / Undo / Keep</a></div>`;
+      })}
       <h2>Recent work</h2>
       ${versions.length ? html`<table><tbody>${versions.map((v) => {
         const run = runs.find((r) => r.artifact.artifact_id === v.artifact_id);

@@ -16,7 +16,7 @@ CL_SEED_DEMO=1 npm run dev   # with labelled, fictional DEMO data
 npm run cli -- capture say --adapter adp_... --outbox ./outbox.jsonl --binding fld_... "Quotes must always be in SGD."
 ```
 
-Results at the end of Phase 2: type check clean, build clean, **115 tests: 107 pass, 0 fail, 8 todo**, design checker `OK` (unchanged counts: 110 events verified, 8 decisions recomputed). Phase 1 ended at 94 tests: 73 pass, 21 todo.
+Results at the end of Phase 2: type check clean, build clean, **116 tests: 108 pass, 0 fail, 8 todo**, design checker `OK` (unchanged counts: 110 events verified, 8 decisions recomputed). Phase 1 ended at 94 tests: 73 pass, 21 todo.
 
 The store is upgraded in place by migration 2 (additive tables and nullable columns only); a Phase 1 store opens and migrates. The `/healthz` `schema_version` is now 2.
 
