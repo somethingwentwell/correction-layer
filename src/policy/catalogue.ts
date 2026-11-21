@@ -6,6 +6,11 @@
  * `applies_when` predicate grammar, and no user-level way to add a kind: adding one
  * is a product release.
  *
+ * Phase 2 added `fields_agree`, `date_window`, `arithmetic_consistency` and
+ * `no_unresolved_markup` (the remaining MVP kinds that the readable formats can
+ * honestly support). `attestation` needs an attestation store and the spreadsheet
+ * kinds need a spreadsheet reader; they stay declared and unavailable.
+ *
  * Kinds this build does not evaluate are still declared, with
  * `availability: "unavailable"`. The engine reports them as `unknown` (or
  * `skipped` for note-only AI opinions) - never as `pass`.
@@ -13,7 +18,8 @@
 import type { CheckKind, Finding, Method, RuleRevisionContent, SourceSnapshot, TypedValue } from "../domain/types.ts";
 import { CHECK_KINDS } from "../domain/types.ts";
 import type { EvalEnv, Resolved } from "../engine/fields.ts";
-import { decimalAbsDiffWithin, decimalCompare, isDecimal, resolveTarget, scalar } from "../engine/fields.ts";
+import { addDays } from "../domain/time.ts";
+import { decimalAbsDiffWithin, decimalAdd, decimalCompare, decimalMul, isDecimal, resolveTarget, scalar } from "../engine/fields.ts";
 
 export type KindOutcome = "pass" | "fail" | "unknown";
 export type DraftFinding = Omit<Finding, "finding_id">;
@@ -222,6 +228,134 @@ function fieldMatchesSource(input: KindInput): KindResult {
   return result;
 }
 
+
+// ---------------------------------------------------------------- Phase 2 kinds
+const ID_PATH = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*|\[\*\])*(\.[a-z][a-z0-9_]*)?$/;
+const nonNegInt = (v: unknown): boolean => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 3650;
+
+function fieldsAgree(input: KindInput): KindResult {
+  const { normalize } = input.rule.check.params as { normalize?: "exact" | "casefold" };
+  const [left, right] = input.rule.check.targets as [string, string];
+  const norm = (s: string): string => (normalize === "casefold" ? s.toLowerCase().replace(/\s+/g, " ").trim() : s.trim());
+  const reference = resolveTarget(input.env, right);
+  if (reference.length !== 1) return { outcome: "unknown", reason: reference.length ? `${right} has more than one value` : `${right} could not be found`, compared: 0, findings: [] };
+  if (!reference[0]!.usable) return { ...cantRead(reference[0]!), compared: 0, findings: [] };
+  const ref = scalar(reference[0]!.value);
+  if (!ref) return { outcome: "unknown", reason: `${right} is not a single comparable value`, compared: 0, findings: [] };
+  const values = resolveTarget(input.env, left);
+  if (!values.length) return { outcome: "unknown", reason: `${left} could not be found in the document`, compared: 0, findings: [] };
+  const findings: DraftFinding[] = [];
+  const parts = values.map((r) => {
+    if (!r.usable) return cantRead(r);
+    const s = scalar(r.value);
+    if (!s) return { outcome: "unknown" as const, reason: `${r.path} is not a single comparable value` };
+    if (norm(s.value) === norm(ref.value)) return { outcome: "pass" as const, reason: "" };
+    findings.push(finding(input.rule, r, { type: "text", text: ref.value }, { evidence: { compared_with: right } }));
+    return { outcome: "fail" as const, reason: `${r.path} is ${s.value}, not ${ref.value}` };
+  });
+  return summarize(parts, findings, `${values.length} ${values.length === 1 ? "value agrees" : "values agree"} with ${right}`);
+}
+
+function dateWindow(input: KindInput): KindResult {
+  const params = input.rule.check.params as { min_days_ahead?: number; max_days_ahead?: number; relative_to?: string };
+  const relativeTo = params.relative_to ?? "check_time";
+  let base: string;
+  if (relativeTo === "check_time") base = input.asOf.slice(0, 10);
+  else {
+    const ref = resolveTarget(input.env, relativeTo);
+    const s = ref.length === 1 && ref[0]!.usable ? scalar(ref[0]!.value) : null;
+    if (!s || s.kind !== "date") return { outcome: "unknown", reason: `${relativeTo} is not a single readable date`, compared: 0, findings: [] };
+    base = s.value;
+  }
+  const at = (days: number): string => addDays(`${base}T00:00:00Z`, days).slice(0, 10);
+  const earliest = params.min_days_ahead !== undefined ? at(params.min_days_ahead) : null;
+  const latest = params.max_days_ahead !== undefined ? at(params.max_days_ahead) : null;
+  const { resolved, missing } = resolveAll(input);
+  if (missing.length) return { outcome: "unknown", reason: `${missing[0]} could not be found in the document`, compared: 0, findings: [] };
+  const window = [earliest ? `on or after ${earliest}` : "", latest ? `on or before ${latest}` : ""].filter(Boolean).join(" and ");
+  const findings: DraftFinding[] = [];
+  const parts = resolved.map((r) => {
+    if (!r.usable) return cantRead(r);
+    const s = scalar(r.value);
+    if (!s || s.kind !== "date") return { outcome: "unknown" as const, reason: `${r.path} is not a date` };
+    if ((earliest && s.value < earliest) || (latest && s.value > latest)) {
+      findings.push(finding(input.rule, r, { type: "text", text: window }, { evidence: { base_date: base, relative_to: relativeTo } }));
+      return { outcome: "fail" as const, reason: `${r.path} is ${s.value}; it must be ${window}` };
+    }
+    return { outcome: "pass" as const, reason: "" };
+  });
+  return summarize(parts, findings, `${resolved.length} ${resolved.length === 1 ? "date is" : "dates are"} ${window}`);
+}
+
+function arithmeticConsistency(input: KindInput): KindResult {
+  const p = input.rule.check.params as { rows: string; quantity: string; unit_price: string; amount: string; total?: string; tolerance?: string };
+  const tolerance = p.tolerance ?? "0.00";
+  const amounts = resolveTarget(input.env, `${p.rows}.${p.amount}`);
+  if (!amounts.length) return { outcome: "unknown", reason: `no rows were found at ${p.rows}`, compared: 0, findings: [] };
+  const findings: DraftFinding[] = [];
+  const parts: Array<{ outcome: KindOutcome; reason: string }> = [];
+  const currencies = new Set<string>();
+  let sum = "0";
+  let sumKnown = true;
+  for (const a of amounts) {
+    const rowPath = a.path.slice(0, a.path.length - p.amount.length - 1);
+    const one = (field: string) => resolveTarget(input.env, `${rowPath}.${field}`)[0];
+    const [qty, unit] = [one(p.quantity), one(p.unit_price)];
+    if (!a.usable) { parts.push(cantRead(a)); sumKnown = false; continue; }
+    if (a.value.type === "money") currencies.add(a.value.currency ?? "?");
+    const amount = scalar(a.value);
+    if (!amount || !isDecimal(amount.value)) { parts.push({ outcome: "unknown", reason: `${a.path} is not a number` }); sumKnown = false; continue; }
+    sum = decimalAdd(sum, amount.value);
+    if (!qty || !unit) { parts.push({ outcome: "unknown", reason: `${rowPath} has no ${!qty ? p.quantity : p.unit_price}` }); continue; }
+    if (!qty.usable) { parts.push(cantRead(qty)); continue; }
+    if (!unit.usable) { parts.push(cantRead(unit)); continue; }
+    if (unit.value.type === "money") currencies.add(unit.value.currency ?? "?");
+    const [q, u] = [scalar(qty.value), scalar(unit.value)];
+    if (!q || !u || !isDecimal(q.value) || !isDecimal(u.value)) { parts.push({ outcome: "unknown", reason: `${rowPath} quantity or unit price is not a number` }); continue; }
+    const expected = decimalMul(q.value, u.value);
+    if (decimalAbsDiffWithin(amount.value, expected, tolerance)) parts.push({ outcome: "pass", reason: "" });
+    else {
+      findings.push(finding(input.rule, a, { ...(a.value.type === "money" ? { type: "money" as const, amount: expected, ...(a.value.currency ? { currency: a.value.currency } : {}) } : { type: "number" as const, number: expected }) }, { evidence: { quantity: q.value, unit_price: u.value, computed: expected } }));
+      parts.push({ outcome: "fail", reason: `${a.path} is ${amount.value}; ${q.value} x ${u.value} = ${expected}` });
+    }
+  }
+  if (currencies.size > 1 || currencies.has("?")) return { outcome: "unknown", reason: "the amounts are not all in one stated currency, so they cannot be added up", compared: parts.length, findings: [] };
+  if (p.total) {
+    const totals = resolveTarget(input.env, p.total);
+    const t = totals.length === 1 ? totals[0]! : null;
+    if (!t) parts.push({ outcome: "unknown", reason: `${p.total} ${totals.length ? "has more than one value" : "could not be found"}` });
+    else if (!t.usable) parts.push(cantRead(t));
+    else if (!sumKnown) parts.push({ outcome: "unknown", reason: "a line amount could not be read, so the total cannot be checked" });
+    else {
+      const total = scalar(t.value);
+      if (!total || !isDecimal(total.value)) parts.push({ outcome: "unknown", reason: `${p.total} is not a number` });
+      else if (decimalAbsDiffWithin(total.value, sum, tolerance)) parts.push({ outcome: "pass", reason: "" });
+      else {
+        findings.push(finding(input.rule, t, { ...(t.value.type === "money" ? { type: "money" as const, amount: sum, ...(t.value.currency ? { currency: t.value.currency } : {}) } : { type: "number" as const, number: sum }) }, { evidence: { sum_of_lines: sum } }));
+        parts.push({ outcome: "fail", reason: `${p.total} is ${total.value}; the lines add up to ${sum}` });
+      }
+    }
+  }
+  return summarize(parts, findings, `${amounts.length} line(s) and the total add up`);
+}
+
+const DEFAULT_PLACEHOLDERS = ["TBD", "TBC", "TODO", "XXX", "[[", "]]", "<insert"];
+function noUnresolvedMarkup(input: KindInput): KindResult {
+  const placeholders = (input.rule.check.params.placeholders as string[] | undefined) ?? DEFAULT_PLACEHOLDERS;
+  for (const component of ["body.text", "comments", "tracked_changes"]) {
+    const state = input.env.artifact.coverage.find((c) => c.component === component)?.state;
+    if (state !== "parsed" && state !== "absent") return { outcome: "unknown", reason: `${component} could not be read (${state ?? "not reported"}), so unresolved markup cannot be ruled out`, compared: 0, findings: [] };
+  }
+  const matchers = placeholders.map((ph) => (/^[A-Za-z0-9]+$/.test(ph) ? new RegExp(`(^|[^A-Za-z0-9])${ph}([^A-Za-z0-9]|$)`, "i") : { test: (t: string) => t.toLowerCase().includes(ph.toLowerCase()) }));
+  const hits = input.env.artifact.content.blocks.filter((b) => b.text !== undefined && matchers.some((m) => m.test(b.text!)));
+  const markup = (["comments", "tracked_changes"] as const).filter((c) => input.env.artifact.coverage.find((x) => x.component === c)?.state === "parsed");
+  if (!hits.length) return { outcome: "pass", reason: `no placeholders (${placeholders.join(", ")})${markup.length ? "; comments and tracked changes were read" : ""}`, compared: input.env.artifact.content.blocks.length, findings: [] };
+  return {
+    outcome: "fail", reason: `${hits.length} passage(s) contain a placeholder`, compared: input.env.artifact.content.blocks.length,
+    findings: hits.map((b) => ({ location: { locator: b.locator, label: b.label ?? b.locator }, found: { type: "text" as const, text: b.text! }, expected: { type: "text" as const, text: `no ${placeholders.join(" / ")}` }, message: input.rule.message.problem, ...(input.rule.message.fix_hint ? { fix_hint: input.rule.message.fix_hint } : {}) })),
+  };
+}
+
 // ---------------------------------------------------------------- the table
 const unavailable = (kind: CheckKind, method: Method, phase: CheckKindSpec["phase"], sentence: string, paramKeys: string[]): CheckKindSpec => ({
   kind, method, availability: "unavailable", phase, sentence, validateParams: (params) => onlyKeys(params, paramKeys),
@@ -278,11 +412,47 @@ const specs: CheckKindSpec[] = [
     },
     evaluate: fieldMatchesSource,
   },
-  // Declared and typed, not evaluated in the Phase 1 scaffold (see HANDOFF.md "Check kinds").
-  unavailable("fields_agree", "deterministic", "mvp", "Two fields, or a field and a project fact, are equal after normalization", ["normalize"]),
-  unavailable("date_window", "deterministic", "mvp", "A date relative to the check time or another date", ["min_days_ahead", "max_days_ahead", "relative_to"]),
-  unavailable("arithmetic_consistency", "deterministic", "mvp", "Row products and column sums hold within a tolerance", ["rows", "quantity", "unit_price", "amount", "total", "tolerance"]),
-  unavailable("no_unresolved_markup", "deterministic", "mvp", "No comments, tracked changes or highlighted placeholders", ["placeholders"]),
+  // Declared and typed, not evaluated in this build (see HANDOFF.md "Check kinds").
+  {
+    kind: "fields_agree", method: "deterministic", availability: "implemented", phase: "mvp", sentence: "Two fields, or a field and a project fact, are equal after normalization",
+    validateParams: (params, targets) => [
+      ...onlyKeys(params, ["normalize"]),
+      ...(params.normalize === undefined || params.normalize === "exact" || params.normalize === "casefold" ? [] : ["params.normalize: exact or casefold"]),
+      ...(targets.length === 2 ? [] : ["targets: exactly two paths (the value, and what it must agree with)"]),
+    ],
+    evaluate: fieldsAgree,
+  },
+  {
+    kind: "date_window", method: "deterministic", availability: "implemented", phase: "mvp", sentence: "A date relative to the check time or another date",
+    validateParams: (params) => [
+      ...onlyKeys(params, ["min_days_ahead", "max_days_ahead", "relative_to"]),
+      ...(params.min_days_ahead === undefined || nonNegInt(params.min_days_ahead) ? [] : ["params.min_days_ahead: a whole number of days (0 to 3650)"]),
+      ...(params.max_days_ahead === undefined || nonNegInt(params.max_days_ahead) ? [] : ["params.max_days_ahead: a whole number of days (0 to 3650)"]),
+      ...(params.min_days_ahead === undefined && params.max_days_ahead === undefined ? ["params: give min_days_ahead, max_days_ahead or both"] : []),
+      ...(nonNegInt(params.min_days_ahead) && nonNegInt(params.max_days_ahead) && (params.min_days_ahead as number) > (params.max_days_ahead as number) ? ["params: min_days_ahead is after max_days_ahead"] : []),
+      ...(params.relative_to === undefined || params.relative_to === "check_time" || (str(params.relative_to) && ID_PATH.test(params.relative_to as string)) ? [] : ["params.relative_to: check_time or a field path"]),
+    ],
+    evaluate: dateWindow,
+  },
+  {
+    kind: "arithmetic_consistency", method: "deterministic", availability: "implemented", phase: "mvp", sentence: "Row products and column sums hold within a tolerance",
+    validateParams: (params) => [
+      ...onlyKeys(params, ["rows", "quantity", "unit_price", "amount", "total", "tolerance"]),
+      ...(str(params.rows) && (params.rows as string).endsWith("[*]") ? [] : ["params.rows: a repeating path ending in [*], e.g. quote.line_items[*]"]),
+      ...(["quantity", "unit_price", "amount"].every((k) => str(params[k]) && /^[a-z][a-z0-9_]*$/.test(params[k] as string)) ? [] : ["params.quantity, unit_price, amount: field names within a row"]),
+      ...(params.total === undefined || str(params.total) ? [] : ["params.total: a field path"]),
+      ...(params.tolerance === undefined || (isDecimal(params.tolerance) && !(params.tolerance as string).startsWith("-")) ? [] : ["params.tolerance: a non-negative decimal string"]),
+    ],
+    evaluate: arithmeticConsistency,
+  },
+  {
+    kind: "no_unresolved_markup", method: "deterministic", availability: "implemented", phase: "mvp", sentence: "No comments, tracked changes or highlighted placeholders",
+    validateParams: (params) => [
+      ...onlyKeys(params, ["placeholders"]),
+      ...(params.placeholders === undefined || (Array.isArray(params.placeholders) && params.placeholders.length > 0 && params.placeholders.length <= 20 && params.placeholders.every((x) => str(x) && (x as string).length <= 40)) ? [] : ["params.placeholders: 1 to 20 literal markers"]),
+    ],
+    evaluate: noUnresolvedMarkup,
+  },
   unavailable("attestation", "attested", "mvp", "A person with a named role confirms a statement for this exact version", ["statement", "role"]),
   unavailable("no_hidden_content", "deterministic", "with_spreadsheets", "No hidden sheets, rows, columns or hidden text", ["region"]),
   unavailable("rows_unique", "deterministic", "with_spreadsheets", "No duplicate rows by key columns", ["key_columns"]),
@@ -299,17 +469,77 @@ export function isCheckKind(kind: unknown): kind is CheckKind {
 }
 
 /**
- * Static pairwise analysis for comparable kinds (docs/03 §10.5). Phase 1 covers
- * allowed sets on the same target; other comparable kinds are a Phase 2 extension.
+ * Static pairwise analysis for comparable kinds (docs/03 §10.5): two rules that ask
+ * for the same thing are duplicates; two that cannot both be met on any document
+ * are a conflict. Phase 1 covered allowed sets; Phase 2 adds numeric bounds, date
+ * windows, required/forbidden phrases and identical presence checks. Anything else
+ * is "unrelated" - the analysis never guesses at overlaps it cannot prove.
  */
 export type Relation = "duplicate" | "conflict" | "unrelated";
+const sameSet = (a: readonly unknown[], b: readonly unknown[]): boolean => a.length === b.length && a.every((x) => b.includes(x)) && b.every((x) => a.includes(x));
+const foldText = (s: unknown): string => String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+
+interface Bound { value: string; inclusive: boolean }
+function interval(op: string, value: string): { lo: Bound | null; hi: Bound | null } | null {
+  switch (op) {
+    case "lt": return { lo: null, hi: { value, inclusive: false } };
+    case "le": return { lo: null, hi: { value, inclusive: true } };
+    case "gt": return { lo: { value, inclusive: false }, hi: null };
+    case "ge": return { lo: { value, inclusive: true }, hi: null };
+    case "eq": return { lo: { value, inclusive: true }, hi: { value, inclusive: true } };
+    default: return null; // "ne" excludes one point: never provably conflicting with a range
+  }
+}
+function disjoint(a: { lo: Bound | null; hi: Bound | null }, b: { lo: Bound | null; hi: Bound | null }): boolean {
+  const below = (hi: Bound | null, lo: Bound | null): boolean => {
+    if (!hi || !lo) return false;
+    const c = decimalCompare(hi.value, lo.value);
+    return c < 0 || (c === 0 && !(hi.inclusive && lo.inclusive));
+  };
+  return below(a.hi, b.lo) || below(b.hi, a.lo);
+}
+
 export function relate(a: RuleRevisionContent, b: RuleRevisionContent): Relation {
-  if (a.check.kind !== "field_in_set" || b.check.kind !== "field_in_set") return "unrelated";
-  const shared = a.check.targets.filter((t) => b.check.targets.includes(t));
-  if (!shared.length) return "unrelated";
-  const [x, y] = [a.check.params.allowed as string[], b.check.params.allowed as string[]];
-  if (!x.some((v) => y.includes(v))) return "conflict";
-  const sameSet = x.length === y.length && x.every((v) => y.includes(v));
-  const sameTargets = a.check.targets.length === b.check.targets.length && shared.length === a.check.targets.length;
-  return sameSet && sameTargets ? "duplicate" : "unrelated";
+  if (a.check.kind !== b.check.kind) return "unrelated";
+  const pa = a.check.params;
+  const pb = b.check.params;
+  const sameTargets = sameSet(a.check.targets, b.check.targets);
+  switch (a.check.kind) {
+    case "field_in_set": {
+      const shared = a.check.targets.filter((t) => b.check.targets.includes(t));
+      if (!shared.length) return "unrelated";
+      const [x, y] = [pa.allowed as string[], pb.allowed as string[]];
+      if (!x.some((v) => y.includes(v))) return "conflict";
+      return sameSet(x, y) && sameTargets ? "duplicate" : "unrelated";
+    }
+    case "field_present":
+    case "fields_agree":
+      return sameTargets && (a.check.kind === "field_present" || foldText(pa.normalize ?? "exact") === foldText(pb.normalize ?? "exact")) ? "duplicate" : "unrelated";
+    case "section_present":
+      return foldText(pa.heading) === foldText(pb.heading) ? "duplicate" : "unrelated";
+    case "text_contains":
+      if (foldText(pa.phrase) !== foldText(pb.phrase)) return "unrelated";
+      return pa.mode === pb.mode ? "duplicate" : "conflict";
+    case "no_unresolved_markup":
+      return sameSet((pa.placeholders as string[] | undefined) ?? DEFAULT_PLACEHOLDERS, (pb.placeholders as string[] | undefined) ?? DEFAULT_PLACEHOLDERS) ? "duplicate" : "unrelated";
+    case "number_compare": {
+      if (!a.check.targets.some((t) => b.check.targets.includes(t))) return "unrelated";
+      if (sameTargets && pa.op === pb.op && isDecimal(pa.value) && isDecimal(pb.value) && decimalCompare(pa.value as string, pb.value as string) === 0) return "duplicate";
+      const [x, y] = [interval(pa.op as string, pa.value as string), interval(pb.op as string, pb.value as string)];
+      return x && y && disjoint(x, y) ? "conflict" : "unrelated";
+    }
+    case "date_window": {
+      if (!a.check.targets.some((t) => b.check.targets.includes(t)) || (pa.relative_to ?? "check_time") !== (pb.relative_to ?? "check_time")) return "unrelated";
+      if (sameTargets && pa.min_days_ahead === pb.min_days_ahead && pa.max_days_ahead === pb.max_days_ahead) return "duplicate";
+      const lo = (p: Record<string, unknown>): number => (p.min_days_ahead as number | undefined) ?? -Infinity;
+      const hi = (p: Record<string, unknown>): number => (p.max_days_ahead as number | undefined) ?? Infinity;
+      return hi(pa) < lo(pb) || hi(pb) < lo(pa) ? "conflict" : "unrelated";
+    }
+    case "field_matches_source":
+      return sameTargets && a.source?.source_id === b.source?.source_id && pa.source_value === pb.source_value ? "duplicate" : "unrelated";
+    case "arithmetic_consistency":
+      return pa.rows === pb.rows && pa.amount === pb.amount && pa.total === pb.total ? "duplicate" : "unrelated";
+    default:
+      return "unrelated";
+  }
 }

@@ -45,7 +45,7 @@ test("Phase 2 extension points are explicit: each throws a typed NotImplementedY
     assert.throws(call, (e: unknown) => e instanceof NotImplementedYet && e.contract === contract && e.status === 501 && e.code === "unavailable", contract);
   }
   const unavailable = Object.values(CATALOGUE).filter((k) => k.availability === "unavailable").map((k) => k.kind).sort();
-  assert.deepEqual(unavailable, ["arithmetic_consistency", "attestation", "date_window", "fields_agree", "model_review", "no_hidden_content", "no_unresolved_markup", "rows_unique", "value_is_formula"]);
+  assert.deepEqual(unavailable, ["attestation", "model_review", "no_hidden_content", "rows_unique", "value_is_formula"], "attestation needs an attestation store; the rest need a spreadsheet reader or a model");
   assert.ok(Object.values(CATALOGUE).filter((k) => k.availability === "unavailable").every((k) => k.evaluate === undefined));
 });
 
@@ -55,7 +55,6 @@ test("Phase 2 extension points are explicit: each throws a typed NotImplementedY
 // ---------------------------------------------------------------------------------------------
 const PHASE_2: Array<[string, string]> = [
   ["AT-G4", "rules.createCandidate shows a structural duplicate BEFORE a candidate can be created (analysis exists: RuleService.analyse; the UX-7b flow does not)"],
-  ["AT-G5 (static half)", "conflict shown when the second rule is proposed, beyond field_in_set pairs (catalogue.relate for numeric bounds, date windows, present/absent, phrases)"],
   ["AT-G8", "engine/adapter upgrade is staged against stored rule examples; changed outcomes hold the upgrade and queue the rule"],
   ["AT-C3", "pending action request survives assistant and service restart with a fresh hello (store side is covered; the session side is not)"],
   ["AT-C4 / AT-C5 / AT-C7 / AT-C8", "context.resolveByMarker: renamed, moved and copied files and folders; foreign markers; the one-time question (ProjectService.resolveByMarker)"],

@@ -41,7 +41,7 @@ test("the service starts on loopback and answers the health endpoint", async () 
   const { status, json } = await api("/healthz");
   assert.equal(status, 200);
   assert.equal(json.status, "ok");
-  assert.equal(json.schema_version, 1);
+  assert.equal(json.schema_version, 2);
   assert.ok(json.ledger_head_seq > 0);
   assert.match(server.url, /^http:\/\/127\.0\.0\.1:\d+$/);
   assert.throws(() => loadConfig({ CL_HOST: "0.0.0.0" }), /loopback/, "the service refuses to listen on a network interface");

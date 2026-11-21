@@ -12,14 +12,19 @@ import { activeRule, fixture, quote, scenario, T0, tmpDir } from "./helpers.ts";
 
 test("migrations: versioned, applied once, and an edited applied migration is refused", () => {
   const db = openDb(":memory:");
-  assert.deepEqual(migrate(db).applied, [1]);
+  assert.deepEqual(migrate(db).applied, [1, 2]);
   assert.deepEqual(migrate(db).applied, [], "second run applies nothing");
   assert.equal(schemaVersion(db), MIGRATIONS.length);
-  assert.throws(() => migrate(db, [{ ...MIGRATIONS[0]!, sql: MIGRATIONS[0]!.sql + "\n-- edited" }]), /changed after it was applied/);
-  assert.throws(() => migrate(db, [MIGRATIONS[0]!, { version: 3, name: "gap", sql: "SELECT 1" }]), /contiguously/);
-  migrate(db, [...MIGRATIONS, { version: 2, name: "additive", sql: "CREATE TABLE later_addition (id TEXT PRIMARY KEY)" }]);
-  assert.equal(schemaVersion(db), 2);
+  assert.throws(() => migrate(db, [{ ...MIGRATIONS[0]!, sql: MIGRATIONS[0]!.sql + "\n-- edited" }, MIGRATIONS[1]!]), /changed after it was applied/);
+  assert.throws(() => migrate(db, [...MIGRATIONS, { version: 4, name: "gap", sql: "SELECT 1" }]), /contiguously/);
+  migrate(db, [...MIGRATIONS, { version: 3, name: "additive", sql: "CREATE TABLE later_addition (id TEXT PRIMARY KEY)" }]);
+  assert.equal(schemaVersion(db), 3);
   assert.throws(() => migrate(db), /newer than this build/, "an older build refuses a newer store");
+  // A Phase 1 store (migration 1 only) is upgraded in place by migration 2.
+  const old = openDb(":memory:");
+  assert.deepEqual(migrate(old, [MIGRATIONS[0]!]).applied, [1]);
+  assert.deepEqual(migrate(old).applied, [2]);
+  assert.equal(schemaVersion(old), 2);
 });
 
 test("immutable tables reject UPDATE and DELETE (revisions, runs, events, decisions, ...)", () => {

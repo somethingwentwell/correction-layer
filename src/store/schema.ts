@@ -528,3 +528,107 @@ CREATE TABLE suppressions (
 );
 ${IMMUTABLE_TABLES.map((t) => immutable(t, t.replace(/_/g, " "))).join("\n")}
 `;
+
+/**
+ * Migration 002: Phase 2 product functions. Additive only: new tables and new
+ * nullable columns; nothing in migration 001 changes meaning.
+ */
+export const M002_PHASE2 = `
+-- Re-run as recorded (AT-O7): the exact inputs the engine received, beside the run.
+CREATE TABLE run_inputs (
+  run_id            TEXT PRIMARY KEY REFERENCES runs(run_id) DEFERRABLE INITIALLY DEFERRED,
+  facts_json        TEXT NOT NULL,
+  snapshot_ids_json TEXT NOT NULL,
+  exceptions_json   TEXT NOT NULL,
+  rules_json        TEXT NOT NULL,
+  inputs_digest     TEXT NOT NULL,
+  recorded_at       TEXT NOT NULL
+);
+-- Exceptions (AT-E7): one rule, one document lineage, one project, a person's grant, an end date.
+CREATE TABLE exceptions (
+  exception_id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL,
+  project_id   TEXT NOT NULL,
+  rule_id      TEXT NOT NULL,
+  artifact_id  TEXT NOT NULL,
+  reason       TEXT NOT NULL,
+  days         INTEGER NOT NULL,
+  requested_by TEXT NOT NULL,
+  requested_at TEXT NOT NULL,
+  status       TEXT NOT NULL CHECK (status IN ('requested','granted','rejected','revoked','expired')),
+  decided_by   TEXT,
+  decided_at   TEXT,
+  expires_at   TEXT,
+  closed_at    TEXT
+);
+CREATE INDEX exceptions_lookup ON exceptions (project_id, artifact_id, status);
+-- A person's pause of a rule. A pause always has an end date (AT-O3).
+CREATE TABLE rule_suspensions (
+  suspension_id   TEXT PRIMARY KEY,
+  rule_id         TEXT NOT NULL,
+  suspended_by    TEXT NOT NULL,
+  suspended_at    TEXT NOT NULL,
+  until           TEXT NOT NULL,
+  reason          TEXT NOT NULL,
+  previous_status TEXT NOT NULL,
+  ended_at        TEXT,
+  ended_by        TEXT,
+  end_reason      TEXT
+);
+-- "This finding is wrong" (docs/12 §9): two on distinct documents pause an unconfirmed learned rule.
+CREATE TABLE finding_disputes (
+  dispute_id  TEXT PRIMARY KEY,
+  project_id  TEXT NOT NULL,
+  rule_id     TEXT NOT NULL,
+  run_id      TEXT NOT NULL,
+  artifact_id TEXT NOT NULL,
+  finding_id  TEXT,
+  disputed_by TEXT NOT NULL,
+  reason      TEXT NOT NULL,
+  at          TEXT NOT NULL,
+  UNIQUE (rule_id, artifact_id, disputed_by)
+);
+-- Proposed changes: kept apart from versions until a person applies one.
+CREATE TABLE fix_proposals (
+  fix_id           TEXT PRIMARY KEY,
+  workspace_id     TEXT NOT NULL,
+  project_id       TEXT NOT NULL,
+  artifact_id      TEXT NOT NULL,
+  base_version_seq INTEGER NOT NULL,
+  base_hash        TEXT NOT NULL,
+  run_id           TEXT,
+  rule_id          TEXT,
+  finding_id       TEXT,
+  source           TEXT NOT NULL CHECK (source IN ('engine','client')),
+  proposed_by_json TEXT NOT NULL,
+  proposed_at      TEXT NOT NULL,
+  summary          TEXT NOT NULL,
+  proposed_hash    TEXT NOT NULL,
+  status           TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','applied','dismissed','superseded')),
+  decided_by       TEXT,
+  decided_at       TEXT,
+  applied_version_seq INTEGER
+);
+CREATE INDEX fix_proposals_by_artifact ON fix_proposals (artifact_id, status);
+-- The local release folder a person chose for a project (release sandbox adapter).
+CREATE TABLE release_targets (
+  project_id TEXT PRIMARY KEY REFERENCES projects(project_id),
+  folder     TEXT NOT NULL,
+  set_by     TEXT NOT NULL,
+  set_at     TEXT NOT NULL
+);
+-- What a CSV import found: rows refused, and why (AT-F7).
+CREATE TABLE source_import_reports (
+  snapshot_id TEXT PRIMARY KEY,
+  source_id   TEXT NOT NULL,
+  file_name   TEXT NOT NULL,
+  report_json TEXT NOT NULL,
+  created_at  TEXT NOT NULL
+);
+ALTER TABLE action_requests ADD COLUMN version_choice_json TEXT;
+ALTER TABLE capture_gaps ADD COLUMN acknowledged_by TEXT;
+ALTER TABLE capture_gaps ADD COLUMN acknowledged_at TEXT;
+ALTER TABLE signals ADD COLUMN text_deleted_at TEXT;
+ALTER TABLE signals ADD COLUMN text_deleted_by TEXT;
+${["run_inputs", "source_import_reports"].map((t) => immutable(t, t.replace(/_/g, " "))).join("\n")}
+`;

@@ -128,6 +128,37 @@ export function decimalCompare(a: string, b: string): number {
   return x < y ? -1 : x > y ? 1 : 0;
 }
 
+/** Exact decimal arithmetic on strings (no binary floats): `{ units, scale }` with value = units / 10^scale. */
+interface Dec {
+  units: bigint;
+  scale: number;
+}
+function toDec(s: string): Dec {
+  if (!isDecimal(s)) throw new RangeError(`not a decimal string: ${JSON.stringify(s)}`);
+  const negative = s.startsWith("-");
+  const [int, frac = ""] = (negative ? s.slice(1) : s).split(".");
+  const units = BigInt(int! + frac);
+  return { units: negative ? -units : units, scale: frac.length };
+}
+function fromDec(d: Dec): string {
+  const negative = d.units < 0n;
+  const digits = (negative ? -d.units : d.units).toString().padStart(d.scale + 1, "0");
+  const body = d.scale ? `${digits.slice(0, digits.length - d.scale)}.${digits.slice(digits.length - d.scale)}` : digits;
+  return negative ? `-${body}` : body;
+}
+function align(a: Dec, b: Dec): [bigint, bigint, number] {
+  const scale = Math.max(a.scale, b.scale);
+  return [a.units * 10n ** BigInt(scale - a.scale), b.units * 10n ** BigInt(scale - b.scale), scale];
+}
+export function decimalAdd(a: string, b: string): string {
+  const [x, y, scale] = align(toDec(a), toDec(b));
+  return fromDec({ units: x + y, scale });
+}
+export function decimalMul(a: string, b: string): string {
+  const [x, y] = [toDec(a), toDec(b)];
+  return fromDec({ units: x.units * y.units, scale: x.scale + y.scale });
+}
+
 export function decimalAbsDiffWithin(a: string, b: string, tolerance: string): boolean {
   const scale = Math.max(...[a, b, tolerance].map((s) => s.split(".")[1]?.length ?? 0));
   const toBig = (s: string): bigint => {

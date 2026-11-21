@@ -7,7 +7,7 @@
 import { sha256 } from "../domain/canonical.ts";
 import type { Db } from "./db.ts";
 import { all, run, tx } from "./db.ts";
-import { M001_INIT } from "./schema.ts";
+import { M001_INIT, M002_PHASE2 } from "./schema.ts";
 
 export interface Migration {
   version: number;
@@ -15,7 +15,7 @@ export interface Migration {
   sql: string;
 }
 
-export const MIGRATIONS: readonly Migration[] = Object.freeze([{ version: 1, name: "init", sql: M001_INIT }]);
+export const MIGRATIONS: readonly Migration[] = Object.freeze([{ version: 1, name: "init", sql: M001_INIT }, { version: 2, name: "phase2", sql: M002_PHASE2 }]);
 
 export function migrate(db: Db, migrations: readonly Migration[] = MIGRATIONS, now: () => string = () => new Date().toISOString()): { applied: number[]; version: number } {
   db.exec("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL, checksum TEXT NOT NULL, applied_at TEXT NOT NULL)");
