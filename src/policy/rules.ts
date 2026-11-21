@@ -7,8 +7,11 @@
  *    or a delegated-learning grant that this module re-verifies end to end
  *    (policy set by a person, scoped to the project, exact check kind, real
  *    failing and passing evidence, no blockers, no model confidence).
- *  - Retiring, rejecting, confirming are acts of a person. There is no operation by
- *    which a system or learning actor can pause, retire or weaken a rule.
+ *  - Retiring, rejecting, confirming, revising and pausing are acts of a person.
+ *    The single exception is `autoPause` (docs/12 §9, ADR-016): it moves a rule
+ *    that was added automatically and never confirmed to shadow (note only), and
+ *    refuses every other rule. Nothing automatic retires or weakens a rule.
+ *  - A pause by a person always has an end date (AT-O3).
  *  - In-scope rules are selected by an exact-or-any index lookup: complete,
  *    unranked, reproducible. No model, no similarity search (ADR-004).
  */
@@ -28,6 +31,7 @@ import { isProtectedTarget } from "../engine/fields.ts";
 import type { Ledger, LedgerEvent } from "../ledger/ledger.ts";
 import type { Db } from "../store/db.ts";
 import { all, get, json, parse, run, tx } from "../store/db.ts";
+import { addDays } from "../domain/time.ts";
 import { CATALOGUE, isCheckKind, relate } from "./catalogue.ts";
 import { predicateFields, predicateProblems } from "./predicate.ts";
 
@@ -62,6 +66,23 @@ export interface DelegatedGrant {
   };
   decision_event_id: string;
 }
+
+export type AutoPauseTrigger = "direct_contradiction" | "disputes" | "example_regression" | "conflict_with_approved_rule";
+
+export interface Suspension {
+  suspension_id: string;
+  rule_id: string;
+  suspended_by: string;
+  suspended_at: string;
+  until: string;
+  reason: string;
+  previous_status: RuleStatus;
+  ended_at: string | null;
+  ended_by: string | null;
+  end_reason: string | null;
+}
+
+export const MAX_PAUSE_DAYS = 90;
 
 export function requireHuman(actor: Actor, act: string): void {
   if (actor.kind !== "human") throw new PermissionDenied(`${act} is done by a person in the app; ${actor.kind} actors cannot perform it`);
@@ -381,6 +402,168 @@ export class RuleService {
         authority: { kind: "individual_approval", zero_click: false, confirmed: { by: actor.id, at: now } },
         approval: { approved_by: actor.id, approved_at: now, self_approval: rule.owner === actor.id, policy_rev: this.policyRev() },
       });
+      return this.get(ruleId);
+    });
+  }
+
+  // ------------------------------------------------------------ Phase 2 lifecycle: revise, pause, resume, automatic pause
+  /**
+   * A person changes what a rule requires: a new immutable revision. The person's
+   * act is the approval of the new revision, so its lifecycle status is kept; a
+   * learned rule a person edits becomes person-approved. The caller supplies the
+   * re-tested results of the stored examples; a must-pass rule whose examples no
+   * longer behave cannot stay must-pass (the caller must choose trial).
+   */
+  revise(next: RuleRevisionContent, actor: Actor, caseResults: Array<{ case_id: string; result: RuleCase["last_result"] | null }>, opts: { trial?: boolean } = {}): Rule {
+    requireHuman(actor, "Changing a rule");
+    this.validateContent(next);
+    return tx(this.db, () => {
+      const rule = this.get(next.rule_id);
+      if (rule.status === "retired" || rule.status === "rejected") throw new InvariantViolation("rule_lifecycle", `a ${rule.status} rule cannot be changed`);
+      if (next.revision !== rule.revision + 1 || next.supersedes !== rule.revision) throw new InvariantViolation("immutable_revision", `the next revision of ${rule.rule_id} is ${rule.revision + 1}, superseding ${rule.revision}`);
+      if (next.scope.project_id !== rule.scope.project_id || next.scope.level !== rule.scope.level) throw new InvariantViolation("rule_lifecycle", "changing a rule keeps its scope; widening or moving a rule is a new rule");
+      const now = ts(this.clock.now());
+      const byCase = new Map(caseResults.map((c) => [c.case_id, c.result]));
+      const regressed = rule.cases.filter((c) => {
+        const r = byCase.get(c.case_id);
+        return r !== undefined && r !== null && r !== c.expect;
+      });
+      let status: RuleStatus = rule.status;
+      if (opts.trial && (status === "active")) status = "trial";
+      if (status === "active" && next.enforcement === "block" && regressed.length) {
+        throw new InvariantViolation("examples_regressed", `${regressed.length} stored example(s) no longer behave as expected under the change (${regressed.map((c) => c.description).join("; ")}); save it on trial instead`);
+      }
+      run(this.db, "INSERT INTO rule_revisions (rule_id, revision, workspace_id, content_json, content_digest, created_at) VALUES (?,?,?,?,?,?)",
+        next.rule_id, next.revision, this.workspaceId, json({ ...next, cases: [] }), digestOf({ ...next, cases: [] }), now);
+      for (const c of rule.cases) {
+        const r = byCase.get(c.case_id);
+        if (r !== undefined) run(this.db, "UPDATE rule_cases SET last_result = ?, last_run_at = ? WHERE case_id = ?", r, r === null ? null : now, c.case_id);
+      }
+      run(this.db, "UPDATE rule_state SET current_revision = ? WHERE rule_id = ?", next.revision, next.rule_id);
+      const inForce = status === "active" || status === "trial";
+      const rev = inForce ? this.bumpPolicyRev(`rule ${next.rule_id} revised to revision ${next.revision}`) : this.policyRev();
+      this.ledger.append({
+        type: "rule.revised", project_id: this.projectOf(rule), actor, subject: { kind: "rule", id: next.rule_id }, refs: { rule_id: next.rule_id, rule_revision: next.revision },
+        caused_by: this.lastEventId(next.rule_id), summary: `${actor.display_name ?? actor.id} changed the rule to revision ${next.revision}: ${next.statement}${inForce ? ` Rules revision is now ${rev}.` : ""}`,
+        payload: { supersedes: rule.revision, status, examples_retested: caseResults.filter((c) => c.result !== null).length, examples_regressed: regressed.length }, classification: "rule_text",
+      });
+      this.setState(next.rule_id, status, inForce
+        ? { authority: { kind: "individual_approval", zero_click: false, ...(rule.authority?.kind === "delegated_learning" ? { confirmed: { by: actor.id, at: now } } : {}) }, approval: { proposed_by: rule.owner, approved_by: actor.id, approved_at: now, activated_at: now, self_approval: rule.owner === actor.id, policy_rev: rev } }
+        : {});
+      return this.get(next.rule_id);
+    });
+  }
+
+  suspension(ruleId: string): Suspension | null {
+    return get<Suspension>(this.db, "SELECT * FROM rule_suspensions WHERE rule_id = ? AND ended_at IS NULL ORDER BY suspended_at DESC LIMIT 1", ruleId) ?? null;
+  }
+
+  /** A person pauses a rule until a date (at most 90 days ahead). A pause without an end date cannot be created. */
+  suspend(ruleId: string, actor: Actor, until: string, reason: string): Rule {
+    requireHuman(actor, "Pausing a rule");
+    const today = ts(this.clock.now()).slice(0, 10);
+    const problems: string[] = [];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(until ?? "") || Number.isNaN(Date.parse(until))) problems.push("until: an end date (YYYY-MM-DD) is required; a pause always ends");
+    else if (until <= today) problems.push("until: the end date must be after today");
+    else if (until > addDays(`${today}T00:00:00Z`, MAX_PAUSE_DAYS).slice(0, 10)) problems.push(`until: at most ${MAX_PAUSE_DAYS} days ahead`);
+    if (!reason?.trim()) problems.push("reason: say why the rule is paused");
+    if (problems.length) throw new ValidationError("pause", problems);
+    return tx(this.db, () => {
+      const rule = this.get(ruleId);
+      if (rule.status !== "active" && rule.status !== "trial") throw new InvariantViolation("rule_lifecycle", `only a rule that is on can be paused; this one is ${rule.status}`);
+      if (rule.locked) throw new InvariantViolation("locked_rule", "a locked rule cannot be paused from a project");
+      const now = ts(this.clock.now());
+      run(this.db, "INSERT INTO rule_suspensions (suspension_id, rule_id, suspended_by, suspended_at, until, reason, previous_status) VALUES (?,?,?,?,?,?,?)", this.ids("sup"), ruleId, actor.id, now, until, reason.trim(), rule.status);
+      const rev = this.bumpPolicyRev(`rule ${ruleId} paused until ${until}`);
+      this.ledger.append({
+        type: "rule.suspended", project_id: this.projectOf(rule), actor, subject: { kind: "rule", id: ruleId }, refs: { rule_id: ruleId, rule_revision: rule.revision },
+        caused_by: this.lastEventId(ruleId), summary: `${actor.display_name ?? actor.id} paused: ${rule.title} until ${until} (${reason.trim()}). Rules revision is now ${rev}.`,
+        payload: { until, reason: reason.trim(), previous_status: rule.status, policy_rev: rev }, classification: "rule_text",
+      });
+      this.setState(ruleId, "suspended");
+      return this.get(ruleId);
+    });
+  }
+
+  /** End a pause: by a person now, or by the date the person set. */
+  resume(ruleId: string, actor: Actor): Rule {
+    requireHuman(actor, "Resuming a rule");
+    return this.endSuspension(ruleId, actor, "resumed by a person");
+  }
+
+  private endSuspension(ruleId: string, actor: Actor, why: string): Rule {
+    return tx(this.db, () => {
+      const rule = this.get(ruleId);
+      const s = this.suspension(ruleId);
+      if (rule.status !== "suspended" || !s) throw new InvariantViolation("rule_lifecycle", "the rule is not paused");
+      const now = ts(this.clock.now());
+      run(this.db, "UPDATE rule_suspensions SET ended_at = ?, ended_by = ?, end_reason = ? WHERE suspension_id = ?", now, actor.id, why, s.suspension_id);
+      const rev = this.bumpPolicyRev(`rule ${ruleId} resumed`);
+      this.ledger.append({
+        type: "rule.resumed", project_id: this.projectOf(rule), actor, subject: { kind: "rule", id: ruleId }, refs: { rule_id: ruleId, rule_revision: rule.revision },
+        caused_by: this.lastEventId(ruleId), summary: `${rule.title} is on again (${why}). Rules revision is now ${rev}.`, payload: { reason: why, status: s.previous_status, policy_rev: rev }, classification: "rule_text",
+      });
+      this.setState(ruleId, s.previous_status);
+      return this.get(ruleId);
+    });
+  }
+
+  /** Pauses whose end date has come resume, as the person who paused them decided. Returns the rules resumed. */
+  endDueSuspensions(): string[] {
+    const today = ts(this.clock.now()).slice(0, 10);
+    const due = all<{ rule_id: string; suspended_by: string; until: string }>(this.db, "SELECT s.rule_id, s.suspended_by, s.until FROM rule_suspensions s JOIN rule_state r ON r.rule_id = s.rule_id WHERE s.ended_at IS NULL AND s.until <= ? AND r.status = 'suspended' AND r.workspace_id = ?", today, this.workspaceId);
+    for (const d of due) this.endSuspension(d.rule_id, { kind: "system", id: SYS.service, on_behalf_of: d.suspended_by }, `the pause ended on ${d.until}, as set`);
+    return due.map((d) => d.rule_id);
+  }
+
+  /**
+   * Automatic pause (docs/12 §9, ADR-016): the ONE way a rule moves away from
+   * enforcement without a click. It only ever applies to a rule that was activated
+   * automatically, never confirmed, not locked, project-level or narrower, and is
+   * on; it only ever moves it to shadow (trial, note only). Any other rule is left
+   * exactly as it is, and the call says why.
+   */
+  autoPause(ruleId: string, trigger: AutoPauseTrigger, detail: string, causedBy: string[] = []): { paused: boolean; reason: string } {
+    return tx(this.db, () => {
+      const rule = this.get(ruleId);
+      const a = rule.authority;
+      const refuse = (reason: string) => ({ paused: false, reason });
+      if (a?.kind !== "delegated_learning") return refuse("the rule was approved by a person; only automatically added rules can pause by themselves");
+      if (a.confirmed) return refuse("a person kept this rule");
+      if (rule.locked) return refuse("the rule is locked");
+      if (!["project", "area", "artifact"].includes(rule.scope.level)) return refuse("workspace and group rules never pause by themselves");
+      if (rule.origin.kind !== "human_correction") return refuse("imported and starter rules never pause by themselves");
+      if (rule.status !== "active") return refuse(`the rule is ${rule.status}, not on`);
+      const policy = get<{ content_json: string }>(this.db, "SELECT content_json FROM learning_policies WHERE learning_policy_id = ? ORDER BY revision DESC LIMIT 1", a.learning_policy_id ?? "");
+      const autoPause = policy ? (parse<LearningPolicy>(policy.content_json).auto_pause as { enabled?: boolean }) : null;
+      if (autoPause && autoPause.enabled === false) return refuse("automatic pause is switched off in the learning setting");
+      const now = ts(this.clock.now());
+      const rev = this.bumpPolicyRev(`rule ${ruleId} paused automatically (${trigger})`);
+      this.ledger.append({
+        type: "rule.auto_paused", project_id: this.projectOf(rule), actor: { kind: "system", id: SYS.learning, ...(a.delegated_by ? { on_behalf_of: a.delegated_by } : {}) }, subject: { kind: "rule", id: ruleId },
+        refs: { rule_id: ruleId, rule_revision: rule.revision, ...(a.decision_id ? { decision_id: a.decision_id } : {}) }, caused_by: [...causedBy, ...this.lastEventId(ruleId)].slice(0, 2),
+        summary: `${rule.title} moved to note only, automatically (${trigger.replace(/_/g, " ")}): ${detail} It was learned and never confirmed. Resume is available. Rules revision is now ${rev}.`,
+        payload: { trigger, detail, paused_from: "active", status: "trial", policy_rev: rev }, classification: "rule_text",
+      });
+      this.setState(ruleId, "trial", { authority: { ...a, auto_paused: { at: now, reason: trigger, paused_from: "active" } } });
+      return { paused: true, reason: detail };
+    });
+  }
+
+  /** Resume a rule that paused itself. A person's act; the rule keeps its learned authority. */
+  resumeAutoPaused(ruleId: string, actor: Actor): Rule {
+    requireHuman(actor, "Resuming a paused learned rule");
+    return tx(this.db, () => {
+      const rule = this.get(ruleId);
+      const a = rule.authority;
+      if (rule.status !== "trial" || !a?.auto_paused) throw new InvariantViolation("rule_lifecycle", "the rule did not pause by itself");
+      const rev = this.bumpPolicyRev(`rule ${ruleId} resumed after automatic pause`);
+      this.ledger.append({
+        type: "rule.resumed", project_id: this.projectOf(rule), actor, subject: { kind: "rule", id: ruleId }, refs: { rule_id: ruleId, rule_revision: rule.revision },
+        caused_by: this.lastEventId(ruleId), summary: `${actor.display_name ?? actor.id} resumed ${rule.title}; it can block again. Rules revision is now ${rev}.`,
+        payload: { status: a.auto_paused.paused_from ?? "active", after: "auto_pause", policy_rev: rev }, classification: "rule_text",
+      });
+      this.setState(ruleId, a.auto_paused.paused_from ?? "active", { authority: { ...a, auto_paused: null } });
       return this.get(ruleId);
     });
   }

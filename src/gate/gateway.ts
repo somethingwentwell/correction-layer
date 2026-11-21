@@ -25,6 +25,8 @@ import { ENGINE_VERSION } from "../engine/evaluate.ts";
 import { readArtifact } from "../formats/adapters.ts";
 import type { Ledger } from "../ledger/ledger.ts";
 import type { RuleService } from "../policy/rules.ts";
+import type { ExceptionService } from "../policy/exceptions.ts";
+import { rulesetDigest } from "../engine/evaluate.ts";
 import { requireHuman } from "../policy/rules.ts";
 import type { Db } from "../store/db.ts";
 import { all, get, json, parse, run, tx } from "../store/db.ts";
@@ -86,8 +88,9 @@ export class Gateway {
   private projects: ProjectService;
   private signer: Signer;
   private adapters: Map<string, ActionAdapter>;
+  private exceptions: ExceptionService;
 
-  constructor(deps: { db: Db; ledger: Ledger; clock: Clock; ids: IdGen; rules: RuleService; projects: ProjectService; signer: Signer; adapters: readonly ActionAdapter[] }) {
+  constructor(deps: { db: Db; ledger: Ledger; clock: Clock; ids: IdGen; rules: RuleService; projects: ProjectService; signer: Signer; adapters: readonly ActionAdapter[]; exceptions: ExceptionService }) {
     this.db = deps.db;
     this.ledger = deps.ledger;
     this.clock = deps.clock;
@@ -96,6 +99,7 @@ export class Gateway {
     this.projects = deps.projects;
     this.signer = deps.signer;
     this.adapters = new Map(deps.adapters.map((a) => [a.capability.adapter_id, a]));
+    this.exceptions = deps.exceptions;
   }
 
   adapterList(): ActionAdapter[] {
@@ -116,7 +120,7 @@ export class Gateway {
    * Issue a receipt for a Ready run. Throws (and so issues nothing) if the verdict is
    * not Ready, the context is unresolved, or the signing key is unusable.
    */
-  issueReceipt(runRecord: RunRecord, causedBy: string): Receipt {
+  issueReceipt(runRecord: RunRecord, causedBy: string, exceptionsApplied: string[] = []): Receipt {
     if (runRecord.verdict !== "ready") throw new InvariantViolation("receipt_requires_ready", "a receipt is issued only for a Ready verdict");
     if (!runRecord.context.project_id || runRecord.context.status !== "resolved") throw new InvariantViolation("receipt_requires_context", "no receipt without a resolved project");
     const issuedAt = runRecord.completed_at;
@@ -128,7 +132,7 @@ export class Gateway {
       artifact: { artifact_id: runRecord.artifact.artifact_id, version_seq: runRecord.artifact.version_seq, content_hash: runRecord.artifact.content_hash },
       action: runRecord.action, policy: { policy_rev: runRecord.policy.policy_rev, ruleset_digest: runRecord.policy.ruleset_digest },
       sources: runRecord.sources, parser: runRecord.artifact.parser, engine_version: runRecord.policy.engine_version,
-      exceptions_applied: [], attestations: [], verdict: "ready", issued_at: issuedAt,
+      exceptions_applied: [...exceptionsApplied].sort(), attestations: [], verdict: "ready", issued_at: issuedAt,
       // Default 24 hours, shortened to the earliest freshness limit of any source used.
       expires_at: freshness[0] && freshness[0] < lifetimeEnd ? freshness[0] : lifetimeEnd,
       single_use: true, status: "valid", grants_permission: false,
@@ -189,7 +193,10 @@ export class Gateway {
       project_id: receipt.project_id, area_ids: receipt.area_ids, artifact_id: receipt.artifact.artifact_id, work_type: receipt.work_type,
       artifact_type: runRecord.artifact.artifact_type, action: receipt.action.type,
     }) : null;
-    add(6, "In-scope rule set digest unchanged", selection?.ruleset_digest === receipt.policy.ruleset_digest, "a rule in scope was added, changed, paused or retired since the check");
+    // The digest covers the rules in scope AND the exceptions in force for this document now (granted, revoked or expired since: changed).
+    const exceptionIds = this.exceptions.applicable(receipt.project_id, receipt.artifact.artifact_id, now).map((e) => e.exception_id);
+    const digestNow = selection ? rulesetDigest(selection.rules.map((r) => r.content), exceptionIds) : null;
+    add(6, "In-scope rule set digest unchanged", digestNow === receipt.policy.ruleset_digest, "a rule in scope was added, changed, paused or retired, or an exception changed, since the check");
     const stale = receipt.sources.find((s) => {
       const current = this.projects.latestSnapshot(s.source_id);
       return !current || current.snapshot_id !== s.snapshot_id || (s.fresh_until !== undefined && now > s.fresh_until);

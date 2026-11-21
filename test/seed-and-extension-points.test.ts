@@ -70,7 +70,6 @@ const PHASE_2: Array<[string, string]> = [
   ["AT-L19", "learning.markAsCorrection: a missed correction recovered by its author within the review window"],
   ["AT-O5 (content)", "CheckService.compare content_diff: changed cells and passages before and after"],
   ["AT-O7", "re-run as recorded: replay a stored run from its inputs and report mismatches or purged inputs"],
-  ["AT-E7", "exceptions: request, grant by the rule's owner, expiry event (engine already reports `waived`)"],
   ["AT-E10 / AT-E11 / AT-E12", "offline matrix, clock-jump hold on receipts, backup and restore"],
   ["AT-I5 / AT-I6", "two workspaces on one machine; translator outbound-request canary (no AI translator exists in Phase 1)"],
   ["AT-U1 to AT-U6, AT-R3", "usability tests with people; not automatable here"],

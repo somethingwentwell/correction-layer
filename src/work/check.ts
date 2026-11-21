@@ -14,7 +14,8 @@ import type { IdGen } from "../domain/ids.ts";
 import { SYS } from "../domain/ids.ts";
 import type { Clock } from "../domain/time.ts";
 import { ts } from "../domain/time.ts";
-import type { ActionEnvelope, Actor, Finding, NormalizedArtifact, ResolvedContext, RunRecord, SourceSnapshot, Verdict } from "../domain/types.ts";
+import type { ActionEnvelope, Actor, Finding, NormalizedArtifact, Outcome, ResolvedContext, RuleRevisionContent, RunRecord, SourceSnapshot, Verdict } from "../domain/types.ts";
+import type { ExceptionService } from "../policy/exceptions.ts";
 import type { ProjectService } from "../context/projects.ts";
 import type { EngineOutput } from "../engine/evaluate.ts";
 import { ENGINE_VERSION, effectiveEnforcement, evaluate } from "../engine/evaluate.ts";
@@ -77,11 +78,12 @@ export class CheckService {
   private rules: RuleService;
   private projects: ProjectService;
   private gateway: Gateway;
+  private exceptions: ExceptionService;
   private displayTz: string;
   private listeners: VersionListener[] = [];
   private lastSessionProject = new Map<string, string>();
 
-  constructor(deps: { db: Db; ledger: Ledger; clock: Clock; ids: IdGen; rules: RuleService; projects: ProjectService; gateway: Gateway; displayTz: string }) {
+  constructor(deps: { db: Db; ledger: Ledger; clock: Clock; ids: IdGen; rules: RuleService; projects: ProjectService; gateway: Gateway; exceptions: ExceptionService; displayTz: string }) {
     this.db = deps.db;
     this.ledger = deps.ledger;
     this.clock = deps.clock;
@@ -89,6 +91,7 @@ export class CheckService {
     this.rules = deps.rules;
     this.projects = deps.projects;
     this.gateway = deps.gateway;
+    this.exceptions = deps.exceptions;
     this.displayTz = deps.displayTz;
   }
 
@@ -172,6 +175,9 @@ export class CheckService {
   }
 
   check(req: CheckRequest): CheckResponse {
+    // Scheduled ends recorded first: a pause or an exception that has run out no longer applies.
+    this.rules.endDueSuspensions();
+    this.exceptions.expireDue();
     const context = this.projects.resolve({ project_id: req.project_id, path: req.path });
     const policyRev = this.rules.policyRev();
     if (context.status !== "resolved" || !context.project_id) {
@@ -194,8 +200,10 @@ export class CheckService {
       const artifactType = version.normalized?.artifact_type ?? "document";
       const selection = this.rules.selectInScope({ project_id: projectId, area_ids: context.area_ids, artifact_id: version.artifact_id, work_type: context.work_type, artifact_type: artifactType, action: req.action.type });
       let output: EngineOutput;
+      const sources = this.sourcesFor(selection);
+      const exceptions = version.normalized ? this.exceptions.applicable(projectId, version.artifact_id, now) : [];
       if (version.normalized) {
-        output = evaluate({ run_id: runId, artifact: version.normalized, action: req.action, context, rules: selection.rules, sources: this.sourcesFor(selection), exceptions: [], as_of: now });
+        output = evaluate({ run_id: runId, artifact: version.normalized, action: req.action, context, rules: selection.rules, sources, exceptions, as_of: now });
       } else {
         // The file could not be read: every in-scope rule is `unknown`, and the verdict cannot be Ready.
         const results = selection.rules.map((r) => ({
@@ -242,7 +250,7 @@ export class CheckService {
       else if (!this.gateway.gateable(req.action.type)) receiptReason = req.action.type === "check_only" ? "check_only" : "no_gated_route_for_action";
       else {
         try {
-          record.receipt_id = tx(this.db, () => this.gateway.issueReceipt(record, completed.event_id).receipt_id);
+          record.receipt_id = tx(this.db, () => this.gateway.issueReceipt(record, completed.event_id, exceptions.map((e) => e.exception_id)).receipt_id);
         } catch (error) {
           // Fail closed: the check stands, but nothing that looks like permission exists.
           receiptReason = `receipt_could_not_be_issued: ${error instanceof Error ? error.message : String(error)}`;
@@ -251,6 +259,9 @@ export class CheckService {
       assertValid("run", record, "run record");
       run(this.db, "INSERT INTO runs (run_id, trace_id, workspace_id, project_id, artifact_id, version_seq, content_hash, action_type, verdict, policy_rev, ruleset_digest, record_json, completed_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
         runId, record.trace_id, context.workspace_id, projectId, version.artifact_id, version.version_seq, version.content_hash, req.action.type, output.verdict, policyRev, output.ruleset_digest, json(record), now);
+      // The exact inputs, so the run can be re-run as recorded (AT-O7).
+      run(this.db, "INSERT INTO run_inputs (run_id, facts_json, snapshot_ids_json, exceptions_json, rules_json, inputs_digest, recorded_at) VALUES (?,?,?,?,?,?,?)",
+        runId, json(context.facts), json(version.normalized ? sources.map((x) => x.snapshot_id) : []), json(exceptions), json(selection.rules.map((r) => [r.content.rule_id, r.content.revision, r.content_digest, r.status])), output.inputs_digest, now);
       for (const r of output.results) run(this.db, "INSERT INTO check_results (run_id, rule_id, revision, outcome, effective_enforcement) VALUES (?,?,?,?,?)", runId, r.rule_id, r.revision, r.outcome, r.effective_enforcement);
       if (output.verdict !== "ready" && req.action.type !== "check_only") {
         this.ledger.append({
@@ -273,6 +284,31 @@ export class CheckService {
     if (output.verdict === "needs_changes") return `Advisory check: Needs changes. ${c.blocking_findings} thing${c.blocking_findings === 1 ? "" : "s"} to fix${forAction ? ` before this can go ahead${forAction}` : ""}.${notes}`;
     const unverified = c.unknown + c.error + c.conflict;
     return `Advisory check: Couldn't verify. ${unverified || output.coverage_gaps.length} item${(unverified || output.coverage_gaps.length) === 1 ? "" : "s"} could not be verified.${notes}`;
+  }
+
+  // ------------------------------------------------------------ one rule on stored work (examples, dry runs)
+  /** Evaluate one rule revision on one stored version, as of now, in that version's project. Unreadable work decides nothing: `unknown`. */
+  evaluateRuleOn(rule: RuleRevisionContent, artifactId: string, contentHash: string): { outcome: Outcome; reason: string; findings: Finding[]; version_seq: number | null } {
+    const a = this.artifact(artifactId);
+    const v = this.versions(artifactId).find((x) => x.content_hash === contentHash);
+    if (!v) return { outcome: "unknown", reason: "that version is not stored", findings: [], version_seq: null };
+    if (!v.normalized) return { outcome: "unknown", reason: "that version could not be read", findings: [], version_seq: v.version_seq };
+    const now = ts(this.clock.now());
+    const out = evaluate({
+      run_id: `run_DRY${digestOf([rule.rule_id, rule.revision, contentHash]).slice(7, 20).toUpperCase()}`, artifact: v.normalized, action: { type: rule.scope.actions[0] ?? "release" },
+      context: this.projects.resolve({ project_id: a.project_id }), rules: [{ content: rule, status: "active", content_digest: digestOf(rule) }],
+      sources: rule.source ? [this.projects.latestSnapshot(rule.source.source_id)].filter((x): x is SourceSnapshot => x !== null) : [], exceptions: [], as_of: now,
+    });
+    const r = out.results[0]!;
+    return { outcome: r.outcome, reason: r.reason, findings: r.findings, version_seq: v.version_seq };
+  }
+
+  /** Dry run (UX-7c): the rule against the latest version of every document in the project. Changes nothing. */
+  dryRun(rule: RuleRevisionContent, projectId: string): Array<{ artifact_id: string; name: string; version_seq: number; content_hash: string; outcome: Outcome; reason: string; findings: number }> {
+    return this.latestVersions(projectId).map((v) => {
+      const r = this.evaluateRuleOn(rule, v.artifact_id, v.content_hash);
+      return { artifact_id: v.artifact_id, name: v.name, version_seq: v.version_seq, content_hash: v.content_hash, outcome: r.outcome, reason: r.reason, findings: r.findings.length };
+    });
   }
 
   getRun(runId: string): RunRecord {
