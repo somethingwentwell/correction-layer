@@ -63,7 +63,21 @@ Your assistant checks that your computer has what Correction Layer needs (Git an
 
 If Correction Layer is already set up and running, asking again just gives you the link. Nothing is started twice.
 
+![Correction Layer welcome page in an empty workspace, with three cards: Start new, Import existing, and Try a fictional demo](docs/screenshots/01-empty-home.png)
+
+*This is what the assistant's "Here's the app" link opens the first time: an empty workspace. (The screenshots in this section are the app in a browser, from one recorded session with fictional Willowbank files. They are not pictures of the assistant's chat.)*
+
 **2. Make your first project, in the app.** Open the link, choose **Start new**, and name a project after a customer or job, for example *Willowbank Veterinary Group - 2027 supply*. You do this step yourself: an assistant cannot create projects or rules for you. [The walkthrough](docs/walkthrough.md) shows every screen.
+
+![Start new, step 1: Project name "Willowbank Veterinary Group - 2027 supply", Customer name "Willowbank Veterinary Group", the folder left blank, and the Create project and continue button](docs/screenshots/03-start-step1-filled.png)
+
+*You type the project name (and, if you like, the customer name) and click **Create project and continue**. A person does this in the app; the assistant did not create this project. Learning stays off until you turn it on.*
+
+**Start new** then walks you through adding one quote, adding a first rule (for example "quotes for this customer are in SGD"; again, you add rules yourself) and running a first check:
+
+![First check result for Willowbank-Quote-2027-01.md version 1: Ready with 1 note; the SGD rule, still a note on trial, says 3 of 3 values are not SGD at table rows 2, 3 and the total row](docs/screenshots/09-start-step5-result-explained.png)
+
+*The first check points at the exact rows that are in USD instead of SGD. The new rule starts as a note on trial, so it shows the problem without blocking; the page says what to do next.*
 
 **3. Then just ask, in your own words.** For example:
 
@@ -74,6 +88,10 @@ If Correction Layer is already set up and running, asking again just gives you t
 > Show me my Willowbank project in Correction Layer.
 
 The assistant answers in plain words: what needs changing, why, and what to do next, with a link into the app when it helps. A correction you mention goes to the project's learning inbox for you to review. It does not turn itself into a rule.
+
+![Before and after for Willowbank-Quote-2027-01.md: version 1 and version 2 both Ready; 3 findings resolved, 0 introduced, 0 still open; the changed rows from USD to SGD](docs/screenshots/19-compare-before-after.png)
+
+*Once someone has fixed the quote and it has been checked again, the app's before/after page shows which findings the change resolved and exactly which values changed. The check itself never edits your file.*
 
 **Why the first message includes a web address.** Your assistant doesn't know about Correction Layer until it has read Correction Layer's instructions for assistants (the *skill*, one text file). There is no app-store entry, marketplace listing or one-click installer, so pointing your assistant at that file (or at the repository) is how it learns. After setup it can offer to remember the skill for your project, so next time "check this quote" is enough. Assistants differ: many must ask your permission before running commands, downloading code or keeping a program running in the background; some (web or cloud assistants) run on a different computer and cannot set anything up on yours, and a link to `127.0.0.1` would not open for you from there. A good assistant tells you when it can't do a step. The technical steps below are the fallback.
 
@@ -122,7 +140,7 @@ The commands the skill runs, by hand: `npm run cli -- projects`, `npm run cli --
 - Only Markdown or plain-text quotes and CSV price lists are read. Word, Excel and PDF files get *Couldn't verify*. A CSV is previewed by the assistant and imported by you.
 - Learning is off until you turn it on for a project.
 
-More: [Your first walkthrough, with screenshots](docs/walkthrough.md) (the app by hand, step by step), [Running the local app](docs/local-setup.md) (configuration, every command, the JSON results, development), [Implementation status](#implementation-status-phase-1-and-phase-2), [HANDOFF.md](HANDOFF.md), [PHASE2_COVERAGE.md](PHASE2_COVERAGE.md).
+More: [Your first walkthrough, with screenshots](docs/walkthrough.md) (the app by hand, step by step, all 19 screenshots; the four above come from it), [Running the local app](docs/local-setup.md) (configuration, every command, the JSON results, development), [Implementation status](#implementation-status-phase-1-and-phase-2), [HANDOFF.md](HANDOFF.md), [PHASE2_COVERAGE.md](PHASE2_COVERAGE.md).
 
 ## The concerns this design answers
 
@@ -205,7 +223,7 @@ To run it, see the [Quick start](#quick-start). [Running the local app](docs/loc
 
 ## Your first walkthrough, with screenshots
 
-The walkthrough has moved to **[docs/walkthrough.md](docs/walkthrough.md)**. It is one real session in the browser: nine steps with 19 screenshots, from an empty workspace to a before/after comparison. It uses the fictional Willowbank sample files in [examples/readme-walkthrough/](examples/readme-walkthrough/README.md).
+[Quick start](#quick-start) shows four screenshots from it inline. The full walkthrough is in **[docs/walkthrough.md](docs/walkthrough.md)**. It is one real session in the browser: nine steps with 19 screenshots, from an empty workspace to a before/after comparison. It uses the fictional Willowbank sample files in [examples/readme-walkthrough/](examples/readme-walkthrough/README.md).
 
 ## Checking this repository
 
