@@ -71,6 +71,8 @@ App acts (same-origin, form token, the local person): `/app/projects/:id/{check 
 
 CLI: `correction-layer capture say|agent|flush|backfill|close`.
 
+Agent skill (after Phase 2): `skills/correction-layer/SKILL.md` and the commands `projects`, `rules`, `check --json`, `import` (documents as versions declared by an assistant; CSV preview only), `correct` (relay), `ui`, `status`, `skill install|uninstall` (`src/agent/`, `test/agent-skill.test.ts`, `test/skill-install.test.ts`). Results carry `ui_url` / `ui_markdown` (loopback only); `/api/v1` responses and `/healthz` (`workspace_fingerprint`) gained the same. It is invoked on request; it is not capture. See [docs/local-setup.md](docs/local-setup.md).
+
 ## 5. Limitations, stated plainly
 
 - **Pattern and semantic limits.** The compiler is a fixed list of English patterns (section 2). It does not understand paraphrases, synonyms, negation beyond a few words, compound requests or other languages; anything else goes to a person as "not compilable". Phrases and headings must be in double quotes. The field dictionary has four entries (quote reference, customer name, valid-until date, total). There is no AI model and no optional model adapter in this build.

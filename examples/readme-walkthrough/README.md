@@ -1,6 +1,6 @@
 # Sample files for the README walkthrough
 
-**FICTIONAL / ILLUSTRATIVE.** Willowbank Veterinary Group, its quote references, items and prices are made up for the screenshots in the [README walkthrough](../../README.md#your-first-walkthrough-with-screenshots). They are not real customers, quotes or prices, and they are not output of the product.
+**FICTIONAL / ILLUSTRATIVE.** Willowbank Veterinary Group, its quote references, items and prices are made up for the screenshots in the [walkthrough](../../docs/walkthrough.md) (linked from the [README](../../README.md#your-first-walkthrough-with-screenshots)). They are not real customers, quotes or prices, and they are not output of the product.
 
 These are the exact files used for those screenshots. You can use them to repeat the walkthrough on your own machine.
 

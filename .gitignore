@@ -12,6 +12,10 @@ dist/
 coverage/
 *.tsbuildinfo
 
+# The agent skill installed into this clone (`skill install --project-dir .`):
+# install.json records this computer's clone path.
+/.claude/skills/correction-layer/
+
 # Local workspace stores never belong in the repository (ADR-001).
 .data/
 *.db

@@ -2,7 +2,7 @@
 
 **Turn the corrections you give once into checks that are applied whenever that kind of work is checked or sent through it: proposals, spreadsheets, PDFs, records. No Git, no terminal, no JSON required.**
 
-> **Status: design, plus a local MVP implementation (Phase 1 framework + Phase 2 functions, 2026-11-21).** The documents, schemas and examples in this repository are a specification: every schema and example file is a *proposed* contract, and the example files are not the output of running software. Alongside them there is a **local-first implementation** (`src/`, `test/`) that builds, starts and passes its tests. It is **not the finished product**: one person, one machine, Markdown/plain-text quotes only, a command-line capture adapter but no connected assistant, and release either simulated or copied to a local folder you choose. Nothing is sent or paid, and no AI model is used. See [Implementation status](#implementation-status-phase-1-and-phase-2), [HANDOFF.md](HANDOFF.md) and [PHASE2_COVERAGE.md](PHASE2_COVERAGE.md). Nothing here has been measured; performance figures are stated goals.
+> **Status: design, plus a local MVP implementation (Phase 1 framework + Phase 2 functions, 2026-11-21).** The documents, schemas and examples in this repository are a specification: every schema and example file is a *proposed* contract, and the example files are not the output of running software. Alongside them there is a **local-first implementation** (`src/`, `test/`) that builds, starts and passes its tests. It is **not the finished product**: one person, one machine, Markdown/plain-text quotes only, a command-line capture adapter but no connected assistant, an agent skill that runs the command line when asked, and release either simulated or copied to a local folder you choose. Nothing is sent or paid, and no AI model is used. See [Implementation status](#implementation-status-phase-1-and-phase-2), [HANDOFF.md](HANDOFF.md) and [PHASE2_COVERAGE.md](PHASE2_COVERAGE.md). Nothing here has been measured; performance figures are stated goals.
 
 ## The idea in one minute
 
@@ -49,6 +49,48 @@ Five things it is careful about:
 
 It generalizes [encode-the-correction](https://github.com/somethingwentwell/encode-the-correction), a developer tool that turns corrections to coding agents into deterministic checks run automatically whenever code changes ("CI"), to everyday non-developer work. It is agent-neutral, meaning it is not tied to any one AI assistant: any assistant, or none at all, can use it.
 
+## Quick start
+
+You need Node.js 24 or newer and git. Everything runs on your computer. Nothing is sent anywhere, and no AI model is used.
+
+```sh
+git clone https://github.com/somethingwentwell/correction-layer.git
+cd correction-layer
+npm install            # TypeScript toolchain only; no runtime dependencies
+cp .env.example .env   # optional; no secrets are needed
+npm run dev            # the local app at http://127.0.0.1:4319/ (loopback only)
+```
+
+**1. Make a project.** Open `http://127.0.0.1:4319/`, choose **Start new**, and name a project, for example `Willowbank Veterinary Group - 2027 supply`. Projects and rules are made by you in the app. An assistant cannot make them.
+
+**2. Add the agent skill** (for Claude Code). In a second terminal, in the clone, look first with `--dry-run`, then install:
+
+```sh
+npm run cli -- skill install --project-dir . --dry-run   # shows the two files it would write; writes nothing
+npm run cli -- skill install --project-dir .             # writes ./.claude/skills/correction-layer/
+npm run cli -- skill uninstall --project-dir .           # later: removes only what install wrote
+```
+
+`--project-dir .` installs into this clone, where the sample files are. For another project use `--project-dir ~/work/my-project`. `--user` installs into `~/.claude/skills`, for all your projects; use it only if you want that. Install never overwrites anything. Other assistants can use the same `SKILL.md` with the [generic recipe](docs/local-setup.md#other-agents-generic-recipe).
+
+**3. Ask your assistant.** Start Claude Code in the clone and type, for example:
+
+> Check examples/readme-walkthrough/01-usd/Willowbank-Quote-2027-01.md in my Correction Layer project "Willowbank Veterinary Group - 2027 supply" and give me the link.
+
+It runs `projects --json` to find the project id, then `check ... --project prj_... --json`, and replies with the result and a link such as `[Open this check in Correction Layer (Willowbank-Quote-2027-01.md, version 1)](http://127.0.0.1:4319/runs/run_...)`. You can also ask it to "import the Willowbank files in examples/readme-walkthrough into that project and check them", or to "remember that Willowbank quotes must be in SGD". That correction goes to the project's learning inbox, and you decide what happens to it.
+
+**4. Open the app** whenever you like: `npm run cli -- ui` prints the address. `npm run cli -- ui project prj_...` prints the address of one page.
+
+**Limits, in short.**
+
+- Links are loopback addresses (`http://127.0.0.1:4319/...`). They open only in a browser on the computer running the app, while it runs. An assistant on another computer cannot use them. Nothing is hosted publicly.
+- An assistant can check, import documents, preview price lists and pass on corrections. It cannot create projects, add or approve rules, turn learning on, import a trusted price list, or approve, release, send or pay. A Ready result is evidence, not permission.
+- The skill runs when you ask. It is not capture: it does not watch your chats or apps. Reliable capture needs a capture adapter you pair in the app, with a durable outbox ([how](docs/local-setup.md#invoking-the-skill-is-not-capture)).
+- Only Markdown or plain-text quotes and CSV price lists are read. Word, Excel and PDF files get *Couldn't verify*. A CSV is previewed by the assistant and imported by you.
+- Learning is off until you turn it on for a project.
+
+More: [Your first walkthrough, with screenshots](docs/walkthrough.md) (the app by hand, step by step), [Running the local app](docs/local-setup.md) (configuration, every command, the JSON results, development), [Implementation status](#implementation-status-phase-1-and-phase-2), [HANDOFF.md](HANDOFF.md), [PHASE2_COVERAGE.md](PHASE2_COVERAGE.md).
+
 ## The concerns this design answers
 
 | # | Concern | Where it is designed |
@@ -83,6 +125,8 @@ Read in this order if you are new. The first three are written for non-developer
 | [examples/learning/README.md](examples/learning/README.md) | Worked cases: a rule added with no click, a one-off that is not learned, a malicious document ignored, a lost connection recovered, a contradiction that pauses a learned rule |
 | [docs/glossary.md](docs/glossary.md) | Screen words and their technical equivalents |
 | [schemas/README.md](schemas/README.md) | Proposed JSON Schemas for rules, artifacts, runs, receipts, actions, context, events |
+| [docs/walkthrough.md](docs/walkthrough.md) | Guide to the local implementation: a first session in the app, with real screenshots |
+| [docs/local-setup.md](docs/local-setup.md) | Guide to the local implementation: setup, configuration, the agent skill and its commands, capture, development |
 
 ## Where visual observability lives
 
@@ -113,19 +157,7 @@ Observability is a product capability with its own screens and data model, not a
 
 The design documents above stay the source of truth, and their "nothing is implemented" banners describe the design as written. What exists in code today is deliberately narrower: [HANDOFF.md](HANDOFF.md) lists exactly what is real and simulated, and [PHASE2_COVERAGE.md](PHASE2_COVERAGE.md) lists what Phase 2 added, which acceptance tests now pass, and what is still deferred.
 
-Requirements: Node.js 24 or newer (built-in SQLite; TypeScript runs directly). No runtime dependencies; `npm install` only fetches the TypeScript compiler.
-
-```sh
-npm install            # TypeScript toolchain only
-npm run verify         # type check, build, tests (deferred contracts are "todo", never passing), design checker
-
-cp .env.example .env   # optional; no secrets are needed
-npm run dev            # start from source with reload (loopback only, port 4319)
-npm start              # start the built service (after npm run build)
-npm run cli -- capture say --adapter adp_... --outbox ./outbox.jsonl "Quotes must always be in SGD."
-```
-
-Then open `http://127.0.0.1:4319/`. On an empty workspace the home page offers three ways in: **Start new** (a guided setup: project, first quote, optional first rule, first check explained), **Import existing** (Markdown or plain-text quotes and CSV price lists, previewed before anything is saved, never overwriting), and **Try a fictional demo** (clearly labelled DEMO data, only into an empty workspace; or start with `CL_SEED_DEMO=1`). For a step-by-step first session with real screenshots, see [Your first walkthrough, with screenshots](#your-first-walkthrough-with-screenshots) below.
+To run it, see the [Quick start](#quick-start). [Running the local app](docs/local-setup.md) covers configuration, every command (including `npm run verify`, `npm start` and the command-line capture adapter), the JSON results with their links, and development.
 
 | Real | Simulated, partial or unavailable (and labelled so in the product) |
 |------|---------------------------------------------------------------------|
@@ -136,130 +168,11 @@ Then open `http://127.0.0.1:4319/`. On an empty workspace the home page offers t
 | Durable capture: acknowledgements, replay, duplicates, gaps (acknowledge as lost), dead letters (retry), a command-line adapter over loopback HTTP, transcript backfill capped at the inbox | No assistant, chat app, email or office app is connected: each is named NOT CAPTURED |
 | Content diff of passages and values, re-run as recorded, a correction's journey by stored references, proposed changes kept apart from applied changes | Document preview with highlighted findings |
 | Receipts, approval by a person, a gateway that re-verifies every binding; release to a local folder you choose (exactly the checked bytes, never overwriting), with a newer-version choice | Send and pay do not exist. Release is simulated unless you choose a folder |
+| An agent skill ([skills/correction-layer/SKILL.md](skills/correction-layer/SKILL.md)) with JSON commands that reuse the same services: check, import documents as versions declared by an assistant, preview CSV, relay a correction, list rules, links (`ui_url`) to the local app; an installer with dry run that never overwrites | No editor, browser or marketplace extension. Links work only on the same computer. An assistant cannot import a trusted source, add or approve a rule, or approve a release |
 
 ## Your first walkthrough, with screenshots
 
-This is one real session in the local app, captured in a browser from an empty workspace. Everything in it is **fictional**: "Willowbank Veterinary Group" and its quotes and prices are made up. The fictional demo was **not** loaded; every step uses **Start new** or **Import existing**. The sample files are in [examples/readme-walkthrough/](examples/readme-walkthrough/README.md) (fictional / illustrative), so you can repeat the walkthrough yourself.
-
-What you will do: create a project, add a quote priced in USD, add a rule that the quote should be in SGD, see the first check explain the problem, import the corrected quote, an addendum and a price list, check again, and compare before with after.
-
-**Before you start.** Run `npm install` and `npm run dev` as shown [above](#implementation-status-phase-1-and-phase-2), then open `http://127.0.0.1:4319/`. To see the first-run home page you need an empty workspace. If you have used the app before, point `CL_DATA_DIR` at a new, empty folder in your `.env` (see `.env.example`).
-
-Two things to know first:
-
-- **A rule added during Start new starts as a note.** A note is shown on every check but never blocks. So in step 5 the USD quote is **Ready with 1 note**, not blocked. You can make a rule must-pass later, on its own page.
-- **Ready is evidence, not permission.** A Ready check comes with a receipt, and the app says so: "It is evidence, not permission." Releasing is a separate act by a person. In this build release is simulated (or a copy to a local folder you choose), and **send and pay do not exist**. This walkthrough never presses **Request release (SIMULATED)**.
-
-### 1. Open the app and choose Start new
-
-![Welcome page of an empty workspace with three cards: Start new, Import existing, and Try a fictional demo](docs/screenshots/01-empty-home.png)
-
-*The empty workspace offers three ways in. Click **Start new**. The line under the cards says it plainly: everything stays on this computer, nothing is sent or paid, and no AI model is used.*
-
-### 2. Create the project
-
-![Start new, step 1: Project name "Willowbank Veterinary Group - 2027 supply", Customer name "Willowbank Veterinary Group", folder left blank, and the Create project and continue button](docs/screenshots/03-start-step1-filled.png)
-
-*Type a **Project name** (here `Willowbank Veterinary Group - 2027 supply`) and, optionally, a **Customer name** (`Willowbank Veterinary Group`). The folder field was left blank. Learning stays off and releases stay simulated until you change them yourself. Click **Create project and continue**.*
-
-### 3. Add your first document
-
-Choose [examples/readme-walkthrough/01-usd/Willowbank-Quote-2027-01.md](examples/readme-walkthrough/01-usd/Willowbank-Quote-2027-01.md) (Markdown or plain text, UTF-8) and click **Add document**. The app shows what it read: customer Willowbank Veterinary Group, quote reference WV-2027-014, valid until 2027-03-18, total **USD 5,700.00**, and 2 pricing table lines. Check that this matches the file: every check works on what was read.
-
-### 4. Add an optional first rule
-
-![Start new, step 3: the quote as read (total USD 5700.00, 2 pricing lines), a confirmation "Rule added as a note", and the rule listed with a note badge; below, the All amounts in one currency card set to SGD](docs/screenshots/07-start-step3-currency-rule.png)
-
-*Under **Or pick one**, in **All amounts in one currency**, leave the currency at **SGD** and click **Add this rule**. The confirmation reads "Rule added as a note". Under "Rules in this project" the rule carries a **note** badge, not must-pass. Then click **Continue to the check**.*
-
-### 5. Run the first check and read the result
-
-On step 4 the Willowbank quote, version 1, is already selected. Click **Run the check**.
-
-![First check result: OK Ready, Willowbank-Quote-2027-01.md version 1, with 1 note; the SGD rule says 3 of 3 values are not SGD at table rows 2, 3 and the total row 4; learning is off](docs/screenshots/09-start-step5-result-explained.png)
-
-*The result is **[OK] Ready** with **1 note**. That is correct, not a mistake: the SGD rule is only a note, so it reports the problem without blocking. Its explanation says "3 of 3 values are not SGD": table rows 2 and 3, and the total in row 4. The page also says "A pass is evidence, not permission". The learning card at the bottom confirms learning is **off** for this project. Click **Open the full check**.*
-
-![Full check page for version 1: every rule in scope, three findings each saying Currency is not SGD, found USD, expected SGD, and a receipt notice that it is evidence, not permission](docs/screenshots/10-run-findings.png)
-
-*The full check lists every rule in scope, each finding with its location ("Table 1, row 2 (line 11)") and a suggested fix. A check finds problems; it does not fix them. The receipt box says the receipt "is evidence, not permission". The **Request release (SIMULATED)** button was not used.*
-
-### 6. Import the corrected quote and an addendum
-
-Open **Import existing** from the sidebar. Keep the Willowbank project selected, choose both [02-sgd-corrected/Willowbank-Quote-2027-01.md](examples/readme-walkthrough/02-sgd-corrected/Willowbank-Quote-2027-01.md) and [Willowbank-Addendum-2027-02.md](examples/readme-walkthrough/Willowbank-Addendum-2027-02.md), and leave "If a document with the same name already exists" at **Add it as a new version**.
-
-![Import existing page: the Willowbank project selected, Files shows 2 files, Add it as a new version selected, the Preview button; lower down the CSV price list section and the Not supported table for Word, Excel, PowerPoint and PDF](docs/screenshots/12-import-documents-chosen.png)
-
-*Under **Quotes and proposals**, click **Preview**. The bottom of the page lists what is **not supported**: Word, Excel and PowerPoint files (save them as Markdown or plain text, and export price lists as CSV), PDFs and scanned documents (copy the text into a .txt or .md file), and another app's database (not importable). Assistants, email and chat apps are not connected.*
-
-![Preview of the document import: the corrected quote, total SGD 7600.00, becomes version 2; the addendum, total SGD 280.00, is a new document; button Import 2 document(s)](docs/screenshots/13-import-documents-preview.png)
-
-*Nothing has been saved yet. The corrected quote has the same name, so it **becomes version 2** (total SGD 7,600.00), and earlier versions are kept. The addendum is a **new document** (SGD 280.00). Click **Import 2 document(s)**.*
-
-![Project home after the import: Imported confirmation, Next step Check 2 documents not yet checked with a Check them now button, and both documents marked Not checked](docs/screenshots/14-import-documents-saved.png)
-
-*Both files are stored, and both are marked **Not checked**. Importing never checks anything by itself. Leave **Check them now** for step 8. This page also shows what is enforced: release is GATED but SIMULATED, and send and pay are NOT COVERED.*
-
-### 7. Import a price list (CSV)
-
-Open **Import existing** again and scroll to **Price lists and other trusted sources (CSV)**.
-
-![CSV section: A new source, Name Willowbank price list 2027, key column item_code, value column unit_price, re-confirm within 30 days, the CSV file chosen, and the Preview button](docs/screenshots/15-import-csv-form.png)
-
-*Choose **A new source**, name it `Willowbank price list 2027`, keep the key column `item_code`, the value column `unit_price` and 30 days, choose [willowbank-price-list-2027.csv](examples/readme-walkthrough/willowbank-price-list-2027.csv), and click **Preview**.*
-
-![CSV preview: 3 rows read, 3 will be imported, 0 left out; VB-12 3200.00, CAL-1Y 600.00, CAL-VISIT 280.00; button Import 3 row(s)](docs/screenshots/16-import-csv-preview.png)
-
-*Nothing is saved yet: 3 rows read, 3 will be imported, 0 left out. Rows that cannot be read are listed and left out; they are never read as zero. Click **Import 3 row(s)**. The source page then shows 3 of 3 rows imported. (No price rule uses this list in this walkthrough. To make quotes match it, add a rule such as "Unit prices must match a trusted price list".)*
-
-### 8. Check again
-
-Go back to the project (**Overview** in the sidebar) and click **Check them now**. Both new documents are checked. Open the check of the quote's version 2.
-
-![Check of Willowbank-Quote-2027-01.md version 2: OK Ready, the SGD rule Passed with 3 values in the allowed set (SGD), 0 notes, a receipt that is evidence, not permission, and the link Compare with the previous check](docs/screenshots/18-recheck-new-version.png)
-
-*Version 2 is **Ready** and the SGD rule now **Passed**: "3 values are in the allowed set (SGD)", with 0 notes left. The receipt is again evidence, not permission, and release was not requested. Click **Compare with the previous check**.*
-
-### 9. Compare before with after
-
-![Before and after: version 1 and version 2 both Ready; Findings resolved after the change (3), Findings introduced (0), Findings still open (0); the changed lines and values from USD to SGD](docs/screenshots/19-compare-before-after.png)
-
-*The comparison shows **3 findings resolved**, **0 introduced** and **0 still open**, and exactly which lines and values changed: USD 2,400.00 → SGD 3,200.00, USD 450.00 → SGD 600.00, total USD 5,700.00 → SGD 7,600.00. The page says plainly that the check did not change the file: a person did, and the recheck no longer reports those findings.*
-
-<details>
-<summary>More screenshots from the same session (in-between steps and the final project page)</summary>
-
-**Start new, step 1, before typing.** The five steps are listed at the top: create the project, add your first document, add a first rule (optional), run the first check, learning (optional).
-
-![Start new, step 1, empty form: Project name, Customer name and an optional folder field](docs/screenshots/02-start-step1-create-project.png)
-
-**Step 2, add your first document.** Upload a Markdown or plain-text file, or paste the text.
-
-![Start new, step 2: upload or paste a Markdown or plain-text UTF-8 document](docs/screenshots/04-start-step2-add-document.png)
-
-**Step 2, file chosen.** The USD quote is selected; nothing is stored until you click **Add document**.
-
-![Start new, step 2 with the USD quote file selected and the Add document button](docs/screenshots/05-start-step2-file-chosen.png)
-
-**Step 3, what was read, before adding a rule.** Every rule starts as a note. The sentence box understands a few fixed patterns only, and refuses anything else with the reason; nothing is guessed.
-
-![Start new, step 3: what was read from the quote, the Say it in one sentence box, and four rule cards including All amounts in one currency](docs/screenshots/06-start-step3-read-preview-and-rule.png)
-
-**Step 4, run the first check.** Version 1 of the quote is selected; the check is advisory.
-
-![Start new, step 4: the quote version 1 selected and the Run the check button](docs/screenshots/08-start-step4-run-check.png)
-
-**The price list after Import 3 row(s).** 3 of 3 rows imported; every row was usable.
-
-![Trusted source page for Willowbank price list 2027: 3 of 3 rows imported, current version with VB-12, CAL-1Y and CAL-VISIT](docs/screenshots/17-import-csv-saved.png)
-
-**The project at the end.** Both documents are Ready, the trusted source is listed, one rule applies (a note, 0 must-pass), learning is still off, and send and pay are NOT COVERED.
-
-![Project overview after the recheck: both documents Ready, Willowbank price list 2027 under trusted sources, learning off, recent activity including receipts issued](docs/screenshots/20-project-home-after.png)
-
-</details>
-
-**What this walkthrough did not do.** It did not switch learning on, request a release, or make the rule must-pass. Send and pay do not exist in this build. Word, Excel, PowerPoint and PDF files are not read (see the Not supported table in step 6). [HANDOFF.md](HANDOFF.md) lists what is real and what is simulated.
+The walkthrough has moved to **[docs/walkthrough.md](docs/walkthrough.md)**. It is one real session in the browser: nine steps with 19 screenshots, from an empty workspace to a before/after comparison. It uses the fictional Willowbank sample files in [examples/readme-walkthrough/](examples/readme-walkthrough/README.md).
 
 ## Checking this repository
 
@@ -276,12 +189,16 @@ It verifies that internal links and anchors resolve, that every JSON file and ev
 ```text
 README.md
 HANDOFF.md   what the Phase 1 scaffold implements, and what Phase 2 must complete
+PHASE2_COVERAGE.md           what Phase 2 added, and what is still deferred
 docs/        design documents (start with 01 and 02)
-docs/screenshots/            real browser screenshots used by the README walkthrough
+docs/walkthrough.md          guide: your first session in the app, with screenshots
+docs/local-setup.md          guide: setup, the agent skill, every command, development
+docs/screenshots/            real browser screenshots used by the walkthrough
 examples/    worked examples with proposed fixture files
-examples/readme-walkthrough/ fictional sample files for the README walkthrough (not design fixtures)
+examples/readme-walkthrough/ fictional sample files for the walkthrough (not design fixtures)
 schemas/     proposed JSON Schemas (draft 2020-12 subset); also the scaffold's wire contracts
-src/         Phase 1 framework scaffold (TypeScript, runs on Node 24)
-test/        baseline tests for the scaffold
+skills/correction-layer/     the agent skill (SKILL.md), installed by `npm run cli -- skill install`
+src/         the local implementation (TypeScript, runs on Node 24); src/agent/ is the skill's tool surface
+test/        tests for the implementation
 tools/       check_repo.py - consistency checks for the design documents only
 ```

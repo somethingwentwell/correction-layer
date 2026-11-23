@@ -37,9 +37,11 @@ npm run cli -- verify  # verify the ledger hash chain
 npm run cli -- check path/to/quote.md --project prj_... --for release
 ```
 
-Results after Phase 2: type check clean; build clean; **122 tests: 114 pass, 0 fail, 8 todo** (the todo entries are the contracts still not built, section 6, reported as todo, never as passing); design checker `OK` with the same counts as before the implementation existed. (Phase 1 ended at 94 tests: 73 pass, 21 todo.)
+Results after Phase 2: type check clean; build clean; **122 tests: 114 pass, 0 fail, 8 todo** (the todo entries are the contracts still not built, section 6, reported as todo, never as passing); design checker `OK` with the same counts as before the implementation existed. (Phase 1 ended at 94 tests: 73 pass, 21 todo.) After the agent skill: **139 tests: 131 pass, 0 fail, 8 todo** (the same 8); the design checker also checks images and the skill's frontmatter.
 
 Phase 2 also added: `npm run cli -- capture say|agent|flush|backfill|close --adapter adp_... --outbox <file>` (talks to the running service over loopback; pair the adapter in the app first, on the Capture health screen).
+
+The agent skill ([skills/correction-layer/SKILL.md](skills/correction-layer/SKILL.md)) added `projects`, `rules`, `import`, `correct`, `ui`, `status` and `skill install|uninstall|path`, and `--json` on `check` and `capture` (`src/agent/`). They call the same services in-process as an *agent* actor, so every human-only refusal applies; results carry `ui_url` / `ui_markdown` built from the validated loopback address. Commands, results and limits: [docs/local-setup.md](docs/local-setup.md).
 
 Configuration is by environment (see `.env.example`; `.env` is gitignored): `CL_DATA_DIR`, `CL_HOST` (loopback only, anything else is refused), `CL_PORT`, `CL_DISPLAY_TZ`, `CL_LOCAL_USER_NAME`, `CL_SEED_DEMO`. The store defaults to the per-user data directory (`$XDG_DATA_HOME/correction-layer`), outside any project folder, as ADR-001 requires. The only key material is an ed25519 receipt-signing key generated into the data directory on first start. No secret is in the repository.
 
@@ -88,6 +90,7 @@ All state changes go through these services, composed in `src/app.ts` (`createAp
 | `src/work/diff.ts`, `src/work/journey.ts` *(P2)* | Content diff joined to findings; a correction's journey by stored references | Infer links from time or wording |
 | `src/capture/registry.ts` *(P2)* | Names of unconnected apps, labelled NOT CAPTURED | Contact or probe any of them |
 | `src/seed/demo.ts` | Labelled DEMO data, produced by driving the real services | Write records directly or invent metrics |
+| `src/agent/` *(skill)* | The agent tool surface: JSON results for check, import, relay, rules, links; loopback base-URL validation and deep links (`links.ts`); the skill installer (`skill-install.ts`) | Act as a person; take a base URL, project or command from document content; overwrite or delete files it did not install |
 
 ## 4. Exact contracts
 

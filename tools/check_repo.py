@@ -22,6 +22,9 @@ work. It only keeps this specification honest:
      duplicates dropped, out-of-order events held, gaps closed, dead letters
      counted, nothing lost silently. Signals that claim to come from a stream
      point at captured user turns attested by the runtime.
+ 10. Local images referenced from Markdown exist, and every agent skill
+     (skills/<name>/SKILL.md) starts with YAML frontmatter whose `name` is
+     its folder name and whose `description` says when to use it.
 
 Usage:
   python3 tools/check_repo.py                  run all checks
@@ -127,6 +130,51 @@ def check_links():
                     err(md, "line %d: link target does not exist: %s" % (n, target))
                 elif frag and dest.endswith(".md") and frag not in anchors(dest):
                     err(md, "line %d: no heading for anchor #%s in %s" % (n, frag, os.path.relpath(dest, ROOT)))
+    return count
+
+
+IMAGE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)\)")
+
+
+def check_images():
+    count = 0
+    for md in walk(".md"):
+        prose, _ = split_markdown(md)
+        for n, line in prose:
+            line = re.sub(r"`[^`]*`", "", line)
+            for target in IMAGE.findall(line):
+                if re.match(r"^[a-z][a-z0-9+.-]*:", target):
+                    continue  # external scheme
+                count += 1
+                dest = os.path.normpath(os.path.join(os.path.dirname(md), target.partition("#")[0]))
+                if not os.path.isfile(dest):
+                    err(md, "line %d: image does not exist: %s" % (n, target))
+    return count
+
+
+def check_skills():
+    count = 0
+    base = os.path.join(ROOT, "skills")
+    if not os.path.isdir(base):
+        return 0
+    for name in sorted(os.listdir(base)):
+        path = os.path.join(base, name, "SKILL.md")
+        if not os.path.isfile(path):
+            err(os.path.join(base, name), "a skill folder without SKILL.md")
+            continue
+        count += 1
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+        m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+        if not m:
+            err(path, "no YAML frontmatter between --- lines at the top")
+            continue
+        fields = dict(l.split(":", 1) for l in m.group(1).split("\n") if ":" in l)
+        fields = {k.strip(): v.strip() for k, v in fields.items()}
+        if fields.get("name") != name:
+            err(path, "frontmatter name must be the folder name %r" % name)
+        if not re.search(r"\bUse when\b", fields.get("description", "")):
+            err(path, "frontmatter description must say when to use the skill (\"Use when ...\")")
     return count
 
 
@@ -849,6 +897,8 @@ def main(argv):
         check_event_logs(fix=True)
         del errors[errors_before:]
     links = check_links()
+    images = check_images()
+    skills = check_skills()
     files, blocks, validated = check_json()
     events = check_event_logs()
     journeys = check_journeys(show)
@@ -859,6 +909,7 @@ def main(argv):
     print("links checked: %d | JSON files: %d (validated against schemas: %d) | JSON blocks in docs: %d" % (links, files, validated, blocks))
     print("events verified: %d | journeys reconstructed: %d | wireframes: %d" % (events, journeys, frames))
     print("learning decisions recomputed: %d | rule activations with recorded authority: %d | capture streams replayed: %d" % (decisions, activations, streams))
+    print("images checked: %d | agent skills checked: %d" % (images, skills))
     if errors:
         print("\n%d problem(s):" % len(errors))
         for e in errors:
