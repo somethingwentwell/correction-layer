@@ -7,7 +7,7 @@ This is one real session in the local app, captured in a browser from an empty w
 
 What you will do: create a project, add a quote priced in USD, add a rule that the quote should be in SGD, see the first check explain the problem, import the corrected quote, an addendum and a price list, check again, and compare before with after.
 
-**Before you start.** Run `npm install` and `npm run dev` as shown in the [README quick start](../README.md#quick-start) (more detail in [Running the local app](local-setup.md)), then open `http://127.0.0.1:4319/`. To see the first-run home page you need an empty workspace. If you have used the app before, point `CL_DATA_DIR` at a new, empty folder in your `.env` (see `.env.example`).
+**Before you start.** Ask your assistant to set Correction Layer up, or run `npm install` and `npm run dev` yourself, as shown in the [README quick start](../README.md#quick-start) (more detail in [Running the local app](local-setup.md)), then open `http://127.0.0.1:4319/`. To see the first-run home page you need an empty workspace. If you have used the app before, point `CL_DATA_DIR` at a new, empty folder in your `.env` (see `.env.example`).
 
 Two things to know first:
 

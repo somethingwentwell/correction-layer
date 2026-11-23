@@ -193,7 +193,7 @@ export function buildRoutes(app: App, csrf: string): Route[] {
     human_only_operations: HUMAN_ONLY_OPERATIONS,
     client_pairing: "unavailable",
     agent_skill: {
-      name: SKILL_NAME, skill_file: "skills/correction-layer/SKILL.md", cli: "npm run --silent cli -- <projects|rules|check|import|correct|ui|status> ... --json",
+      name: SKILL_NAME, skill_file: "skills/correction-layer/SKILL.md", cli: "npm run --silent cli -- <setup|projects|rules|check|import|correct|ui|status> ... --json",
       install: "npm run cli -- skill install --project-dir <project> [--dry-run]",
       note: "Invoking the skill runs these commands when asked. It does not capture conversations; capture needs a paired adapter with a durable outbox.",
     },

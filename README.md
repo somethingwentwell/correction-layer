@@ -51,6 +51,35 @@ It generalizes [encode-the-correction](https://github.com/somethingwentwell/enco
 
 ## Quick start
 
+Correction Layer runs on your own computer. The easiest way to get it is to ask an AI assistant that can work on your computer (for example Claude Code) to set it up for you. You don't need to type any commands.
+
+**1. Ask your assistant to set it up.** Copy this into your assistant:
+
+> Set up Correction Layer for me. First read its instructions at https://raw.githubusercontent.com/somethingwentwell/correction-layer/main/skills/correction-layer/SKILL.md (from https://github.com/somethingwentwell/correction-layer), then follow them.
+
+Your assistant checks that your computer has what Correction Layer needs (Git and Node.js 24 or newer; if something is missing, it tells you rather than installing it), downloads Correction Layer, starts it, and replies with something like:
+
+> It's ready. Here's the app: [Open Correction Layer](http://127.0.0.1:4319/). It opens in a browser on this computer while the app is running.
+
+If Correction Layer is already set up and running, asking again just gives you the link. Nothing is started twice.
+
+**2. Make your first project, in the app.** Open the link, choose **Start new**, and name a project after a customer or job, for example *Willowbank Veterinary Group - 2027 supply*. You do this step yourself: an assistant cannot create projects or rules for you. [The walkthrough](docs/walkthrough.md) shows every screen.
+
+**3. Then just ask, in your own words.** For example:
+
+> Check the Willowbank quote against my Willowbank project.
+
+> Remember that Willowbank quotes should be in SGD.
+
+> Show me my Willowbank project in Correction Layer.
+
+The assistant answers in plain words: what needs changing, why, and what to do next, with a link into the app when it helps. A correction you mention goes to the project's learning inbox for you to review. It does not turn itself into a rule.
+
+**Why the first message includes a web address.** Your assistant doesn't know about Correction Layer until it has read Correction Layer's instructions for assistants (the *skill*, one text file). There is no app-store entry, marketplace listing or one-click installer, so pointing your assistant at that file (or at the repository) is how it learns. After setup it can offer to remember the skill for your project, so next time "check this quote" is enough. Assistants differ: many must ask your permission before running commands, downloading code or keeping a program running in the background; some (web or cloud assistants) run on a different computer and cannot set anything up on yours, and a link to `127.0.0.1` would not open for you from there. A good assistant tells you when it can't do a step. The technical steps below are the fallback.
+
+<details>
+<summary><b>Technical setup</b> (for people comfortable with a terminal, and for assistants)</summary>
+
 You need Node.js 24 or newer and git. Everything runs on your computer. Nothing is sent anywhere, and no AI model is used.
 
 ```sh
@@ -61,9 +90,17 @@ cp .env.example .env   # optional; no secrets are needed
 npm run dev            # the local app at http://127.0.0.1:4319/ (loopback only)
 ```
 
-**1. Make a project.** Open `http://127.0.0.1:4319/`, choose **Start new**, and name a project, for example `Willowbank Veterinary Group - 2027 supply`. Projects and rules are made by you in the app. An assistant cannot make them.
+`.env` is optional; `npm run dev` and `npm run cli` load it with `node --env-file-if-exists=.env` (settings already in your environment win). What the assistant actually runs is the same sequence with two safety checks, from the clone:
 
-**2. Add the agent skill** (for Claude Code). In a second terminal, in the clone, look first with `--dry-run`, then install:
+```sh
+npm run --silent cli -- setup --create-env --json   # .env from the example only if absent (never overwrites);
+                                                    # exit 0: already running with this data (reuse, prints the link)
+                                                    # exit 3: port free, safe to start; exit 4: not safe (nothing is stopped)
+npm run dev                                         # only after exit 3, kept running in the background
+npm run --silent cli -- setup --wait 30 --json      # health check: exit 0 and the link once it answers
+```
+
+The skill, for Claude Code (look first with `--dry-run`; install never overwrites anything):
 
 ```sh
 npm run cli -- skill install --project-dir . --dry-run   # shows the two files it would write; writes nothing
@@ -71,15 +108,11 @@ npm run cli -- skill install --project-dir .             # writes ./.claude/skil
 npm run cli -- skill uninstall --project-dir .           # later: removes only what install wrote
 ```
 
-`--project-dir .` installs into this clone, where the sample files are. For another project use `--project-dir ~/work/my-project`. `--user` installs into `~/.claude/skills`, for all your projects; use it only if you want that. Install never overwrites anything. Other assistants can use the same `SKILL.md` with the [generic recipe](docs/local-setup.md#other-agents-generic-recipe).
+`--project-dir .` installs into this clone, where the sample files are. For another project use `--project-dir ~/work/my-project`. `--user` installs into `~/.claude/skills`, for all your projects; use it only if you want that. Other assistants can use the same `SKILL.md` with the [generic recipe](docs/local-setup.md#other-agents-generic-recipe).
 
-**3. Ask your assistant.** Start Claude Code in the clone and type, for example:
+The commands the skill runs, by hand: `npm run cli -- projects`, `npm run cli -- check examples/readme-walkthrough/01-usd/Willowbank-Quote-2027-01.md --project prj_...` (add `--json` for one JSON object with a `ui_url` link), `npm run cli -- correct "Willowbank quotes must be in SGD" --project prj_...`, `npm run cli -- ui` (the app's address), `npm run cli -- ui project prj_...` (one page). Every command, the JSON results, configuration and development: [Running the local app](docs/local-setup.md).
 
-> Check examples/readme-walkthrough/01-usd/Willowbank-Quote-2027-01.md in my Correction Layer project "Willowbank Veterinary Group - 2027 supply" and give me the link.
-
-It runs `projects --json` to find the project id, then `check ... --project prj_... --json`, and replies with the result and a link such as `[Open this check in Correction Layer (Willowbank-Quote-2027-01.md, version 1)](http://127.0.0.1:4319/runs/run_...)`. You can also ask it to "import the Willowbank files in examples/readme-walkthrough into that project and check them", or to "remember that Willowbank quotes must be in SGD". That correction goes to the project's learning inbox, and you decide what happens to it.
-
-**4. Open the app** whenever you like: `npm run cli -- ui` prints the address. `npm run cli -- ui project prj_...` prints the address of one page.
+</details>
 
 **Limits, in short.**
 
@@ -168,7 +201,7 @@ To run it, see the [Quick start](#quick-start). [Running the local app](docs/loc
 | Durable capture: acknowledgements, replay, duplicates, gaps (acknowledge as lost), dead letters (retry), a command-line adapter over loopback HTTP, transcript backfill capped at the inbox | No assistant, chat app, email or office app is connected: each is named NOT CAPTURED |
 | Content diff of passages and values, re-run as recorded, a correction's journey by stored references, proposed changes kept apart from applied changes | Document preview with highlighted findings |
 | Receipts, approval by a person, a gateway that re-verifies every binding; release to a local folder you choose (exactly the checked bytes, never overwriting), with a newer-version choice | Send and pay do not exist. Release is simulated unless you choose a folder |
-| An agent skill ([skills/correction-layer/SKILL.md](skills/correction-layer/SKILL.md)) with JSON commands that reuse the same services: check, import documents as versions declared by an assistant, preview CSV, relay a correction, list rules, links (`ui_url`) to the local app; an installer with dry run that never overwrites | No editor, browser or marketplace extension. Links work only on the same computer. An assistant cannot import a trusted source, add or approve a rule, or approve a release |
+| An agent skill ([skills/correction-layer/SKILL.md](skills/correction-layer/SKILL.md)) that sets the app up (a `setup` command that never overwrites `.env`, reuses an app already serving the same data, and refuses a port held by anything else without stopping it) and runs JSON commands that reuse the same services: check, import documents as versions declared by an assistant, preview CSV, relay a correction, list rules, links (`ui_url`) to the local app; an installer with dry run that never overwrites | No editor, browser or marketplace extension. Links work only on the same computer. An assistant cannot import a trusted source, add or approve a rule, or approve a release |
 
 ## Your first walkthrough, with screenshots
 

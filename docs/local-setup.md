@@ -17,6 +17,34 @@ npm start              # or: start the built service (after npm run build)
 
 Then open `http://127.0.0.1:4319/` in a browser on the same computer. On an empty workspace the home page offers three ways in: **Start new** (a guided setup: project, first quote, optional first rule, first check explained), **Import existing** (Markdown or plain-text quotes and CSV price lists, previewed before anything is saved, never overwriting), and **Try a fictional demo** (clearly labelled DEMO data, only into an empty workspace; or start with `CL_SEED_DEMO=1`). [Your first walkthrough, with screenshots](walkthrough.md) goes through Start new and Import existing step by step.
 
+### Letting an assistant set it up
+
+The README's [Quick start](../README.md#quick-start) asks an assistant to do the steps above for you, following the [skill](../skills/correction-layer/SKILL.md). The assistant runs the same sequence, with the `setup` command for the parts that must not be left to judgement:
+
+```sh
+npm run --silent cli -- setup --create-env --json   # look before starting
+npm run dev                                         # only if setup said it is safe (exit 3), in the background
+npm run --silent cli -- setup --wait 30 --json      # health check; exit 0 with the link
+```
+
+`setup` never starts, stops or signals a process, never binds a port, and writes nothing except `.env` (and the workspace store, created exactly as `npm run migrate` would). It answers with one of these states, deterministically:
+
+| `state` | Exit | Meaning |
+|---------|------|---------|
+| `ready` | 0 | The app at the configured loopback address is Correction Layer serving **this same store** (its `/healthz` `workspace_fingerprint` matches). Reuse it; the result carries the home `ui_url`. Running `setup` again gives the same answer and starts nothing. |
+| `not_running` | 3 | Nothing accepts connections on the port: safe to start `npm run dev`. With `--wait <seconds>` it keeps looking until the app answers. |
+| `port_in_use` | 4 | Something that is not Correction Layer holds the port. Not safe; it is left alone. |
+| `other_workspace` | 4 | Correction Layer is answering there, but with a **different store** (another `CL_DATA_DIR`). Not safe to start a second one; it is left alone. |
+| `unverifiable` | 4 | Correction Layer is answering there but does not report a `workspace_fingerprint` (an older build), so it cannot be confirmed to be the same store. Left alone. |
+| `no_fixed_port` | 4 | `CL_PORT=0`: the address cannot be known in advance. |
+| `node_too_old` | 4 | Node.js older than 24. |
+
+Every result also has `person_message`, a plain-language sentence without ids, paths or commands that an assistant can pass on, and `env_file.status`: `created`, `kept` (an existing `.env` is never touched), `absent` or `no_example`. `--create-env` copies `.env.example` to `.env` with an exclusive copy, so an existing `.env` is never overwritten, even in a race.
+
+### `.env` is optional, and how it is loaded
+
+`npm run dev`, `npm start`, `npm run cli`, `npm run migrate` and `npm run seed:demo` all start Node with `--env-file-if-exists=.env`, so a `.env` in the clone is loaded when present and ignored when absent. A variable already set in the environment wins over the same variable in `.env` (Node's rule). `setup` reads `.env` the same way, including a `.env` it has just created. No secrets belong in it; the signing key is generated into `CL_DATA_DIR`.
+
 ## Configuration
 
 Everything comes from the environment or `.env` (see `.env.example`):
@@ -77,6 +105,7 @@ Run them in the clone as `npm run cli -- <command>`, or from anywhere as `npm --
 | `correct "<text>" --project <prj_...>` | Passes on a correction the person gave, marked RELAYED. It lands in the project's learning inbox and turns nothing on. Text that matches a stored document is discarded as an instruction planted in content. |
 | `ui [<kind> [<id>]]` | Prints a link to a page: `home`, `start`, `import`, `history`, `project`, `rules`, `learning`, `activity`, `capture`, `coverage`, `rule`, `run`, `source`, `action`, `fix`. An unknown id is an error, not a guessed link. |
 | `status` | Whether the app answers at its address, and whether it serves the same store as the command. |
+| `setup [--create-env] [--wait <seconds>]` | Whether this clone's app is already running (reuse it), safe to start, or blocked by something else on the port. See [Letting an assistant set it up](#letting-an-assistant-set-it-up). |
 | `skill install`, `skill uninstall`, `skill path` | See above. |
 
 Options: `--json`; `--base-url http://127.0.0.1:<port>` to override the address used for links (loopback only, origin only).

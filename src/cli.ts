@@ -23,9 +23,18 @@ import { UI_NOTE, configBaseUrl, loopbackBaseUrl, uiLink, UI_ROUTES } from "./ag
 import type { AgentEnv, AgentResult } from "./agent/tool.ts";
 import { AGENT_ACTOR, AGENT_RESULT_SCHEMA, BOUNDARY, checkFile, errorResult, importFiles, listProjects, listRules, relayCorrection, uiFor, workspaceFingerprint } from "./agent/tool.ts";
 import { installSkill, skillSourcePath, uninstallSkill } from "./agent/skill-install.ts";
+import { effectiveEnv, ensureEnvFile, inspect, setupResult, waitFor } from "./agent/setup.ts";
+import { repoRoot } from "./paths.ts";
 
 const USAGE = `correction-layer <command>
 
+  setup [--create-env] [--wait <seconds>] [--json]
+                             is it safe to start the app here, or is this workspace already running?
+                             exit 0 ready (reuse it; prints the link), 3 not running and the port is
+                             free (start it with npm run dev, then setup --wait 30), 4 not safe to start
+                             (another program, another store or an older app holds the port; nothing
+                             is stopped). --create-env copies .env.example to .env only if .env does
+                             not exist (never overwrites). Never starts, stops or signals a process.
   serve                      start the local service and app (loopback only)
   migrate                    create or upgrade the workspace store
   seed-demo                  load labelled DEMO data into an empty workspace
@@ -77,7 +86,7 @@ const USAGE = `correction-layer <command>
 
 Configuration comes from the environment (see .env.example).`;
 
-const BOOL_FLAGS = new Set(["json", "dry-run", "check", "user", "help"]);
+const BOOL_FLAGS = new Set(["json", "dry-run", "check", "user", "help", "create-env"]);
 
 export interface ParsedArgs {
   positional: string[];
@@ -150,6 +159,7 @@ async function main(argv: string[]): Promise<number> {
     return 64;
   }
   if (command === "skill") return skill(parsed);
+  if (command === "setup") return setup(parsed);
   const config = loadConfig();
   if (command === "capture") return capture(parsed, config);
   if (command === "serve") {
@@ -300,6 +310,46 @@ function printHuman(out: AgentResult): void {
       break;
   }
   if (out.ui_url) console.log(`open: ${out.ui_url}${out.ui.app_running === false ? "  (the app is not running; start it with npm run dev)" : ""}`);
+}
+
+/**
+ * setup: .env from the example only if absent, then one deterministic look at the configured
+ * loopback address (ready / safe to start / not safe). Starts and stops nothing.
+ */
+async function setup(parsed: ParsedArgs): Promise<number> {
+  const json = parsed.flags.has("json");
+  try {
+    const root = repoRoot();
+    const envFile = ensureEnvFile(root, parsed.flags.has("create-env"));
+    // A .env created just now was not there when npm's --env-file-if-exists ran: read it the same way.
+    const config = loadConfig(effectiveEnv(root));
+    const waitRaw = parsed.flags.get("wait");
+    const wait = typeof waitRaw === "string" ? Number(waitRaw) : null;
+    if (wait !== null && (!Number.isFinite(wait) || wait < 0 || wait > 300)) throw new ClError("usage", "--wait takes a number of seconds (0-300)", 64);
+    const base = configBaseUrl(config);
+    const app = createAppFromConfig(config);
+    let fingerprint: string | null;
+    try {
+      fingerprint = workspaceFingerprint(app);
+    } finally {
+      app.close();
+    }
+    const look = () => inspect(config.host, config.port, base, fingerprint);
+    const found = wait === null ? await look() : await waitFor(look, wait);
+    const { out, exit } = setupResult(found, envFile, { waited: wait !== null });
+    if (json) console.log(JSON.stringify(out, null, 2));
+    else {
+      if (envFile.status === "created" || parsed.flags.has("create-env")) console.log(envFile.note);
+      console.log(out.person_message);
+      if (out.next === "start") console.log(`Safe to start: run ${out.start_command} in this folder, then: npm run cli -- setup --wait 30`);
+    }
+    return exit;
+  } catch (error) {
+    const usage = error instanceof ClError && error.code === "usage";
+    if (json) console.log(JSON.stringify(errorResult(null, "setup", error), null, 2));
+    else console.error(error instanceof ClError ? `${error.code}: ${error.message}` : String(error));
+    return usage ? 64 : 65;
+  }
 }
 
 /** skill install | uninstall | path. Writes only under the destination named; never edits agent settings. */
